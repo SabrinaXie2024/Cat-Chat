@@ -1,0 +1,24 @@
+{
+  "name": "cat-chat",
+  "private": true,
+  "packageManager": "pnpm@12.23.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "gen": "pnpm --filter @cat-chat/web gen && cd apps/api && go generate ./...",
+    "dev:web": "pnpm --filter @cat-chat/web dev",
+    "dev:api": "cd apps/api && go run ./cmd/server",
+    "build": "pnpm --filter @cat-chat/web build && cd apps/api && go build ./...",
+    "test": "pnpm --filter @cat-chat/web test && cd apps/api && go test ./...",
+    "typecheck": "pnpm --filter @cat-chat/web typecheck",
+    "lint": "biome check . && cd apps/api && go vet ./...",
+    "format": "biome check --write .",
+    "audit:ghsa": "node scripts/check-ghsa.mjs",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.15",
+    "lefthook": "2.1.6"
+  }
+}

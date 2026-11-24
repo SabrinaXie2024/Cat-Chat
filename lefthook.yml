@@ -1,0 +1,16 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: biome
+      glob: "*.{js,ts,tsx,json,jsonc,css}"
+      run: pnpm exec biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+    - name: gofmt
+      root: apps/api/
+      glob: "*.go"
+      run: test -z "$(gofmt -l {staged_files})" || (gofmt -l {staged_files}; exit 1)
+pre-push:
+  jobs:
+    - name: ghsa
+      run: pnpm audit:ghsa
+    - name: test
+      run: pnpm test

@@ -1,0 +1,161 @@
+openapi: 3.0.3
+info:
+  title: Cat Chat API
+  version: 0.1.0
+  description: |
+    Single source of truth for the Cat Chat HTTP API.
+    Go server types (apps/api) and the TS client + MSW mocks (apps/web) are
+    generated from this file — edit here, then run `pnpm gen`.
+
+    Upload limits (decided from comparable sites; enforced client + server):
+    images are JPEG/PNG/WebP, ≤ 5 MB each before client compression, and are
+    resized server-side to ≤ 1920px on the long edge with EXIF stripped.
+servers:
+  - url: /api
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [system]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+  /posts:
+    get:
+      operationId: listPosts
+      tags: [posts]
+      responses:
+        "200":
+          description: Newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Post" }
+    post:
+      operationId: createPost
+      tags: [posts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewPost" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Post" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /posts/{postId}/replies:
+    parameters:
+      - name: postId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: listReplies
+      tags: [posts]
+      responses:
+        "200":
+          description: Oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Reply" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createReply
+      tags: [posts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewReply" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reply" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Thread already has the maximum of 10 replies
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+components:
+  responses:
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok] }
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    ImageUrl:
+      type: string
+      format: uri
+    NewPost:
+      type: object
+      required: [content, images]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 500 }
+        images:
+          type: array
+          maxItems: 5
+          items: { $ref: "#/components/schemas/ImageUrl" }
+    Post:
+      type: object
+      required: [id, author, content, images, replyCount, createdAt]
+      properties:
+        id: { type: string }
+        author: { type: string }
+        content: { type: string, maxLength: 500 }
+        images:
+          type: array
+          maxItems: 5
+          items: { $ref: "#/components/schemas/ImageUrl" }
+        replyCount: { type: integer, minimum: 0, maximum: 10 }
+        createdAt: { type: string, format: date-time }
+    NewReply:
+      type: object
+      required: [content, images]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 100 }
+        images:
+          type: array
+          maxItems: 3
+          items: { $ref: "#/components/schemas/ImageUrl" }
+    Reply:
+      type: object
+      required: [id, postId, author, content, images, createdAt]
+      properties:
+        id: { type: string }
+        postId: { type: string }
+        author: { type: string }
+        content: { type: string, maxLength: 100 }
+        images:
+          type: array
+          maxItems: 3
+          items: { $ref: "#/components/schemas/ImageUrl" }
+        createdAt: { type: string, format: date-time }

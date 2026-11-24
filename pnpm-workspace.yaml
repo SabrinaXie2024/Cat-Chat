@@ -1,0 +1,22 @@
+packages:
+  - apps/web
+  - packages/*
+
+# --- Supply-chain hygiene (see CLAUDE.md) ---
+
+# Refuse versions published < 7 days ago: most npm worm/hijack releases
+# (incl. GHSA-g7cv-rxg3-hmpx) are caught and pulled within days.
+minimumReleaseAge: 10080
+
+# Install scripts are blocked by default; allowlist only what's needed.
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  msw: true
+
+# Deny extra capabilities packages request (router-plugin ships agent skills).
+permissions:
+  '@tanstack/router-plugin':
+    skills: false
+
+saveExact: true
