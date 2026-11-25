@@ -37,7 +37,7 @@ func (s *Server) SessionMiddleware(next http.Handler) http.Handler {
 		if c, err := r.Cookie(auth.CookieName); err == nil && c.Value != "" {
 			// Kept so Logout can delete the session even if it already expired.
 			r = r.WithContext(context.WithValue(r.Context(), rawTokenKey{}, c.Value))
-			if u, err := s.Store.UserBySession(auth.HashToken(c.Value), s.Now()); err == nil {
+			if u, err := s.Store.UserBySession(r.Context(), auth.HashToken(c.Value), s.Now()); err == nil {
 				r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, u))
 			}
 		}
@@ -45,7 +45,7 @@ func (s *Server) SessionMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) Register(_ context.Context, req RegisterRequestObject) (RegisterResponseObject, error) {
+func (s *Server) Register(ctx context.Context, req RegisterRequestObject) (RegisterResponseObject, error) {
 	if req.Body == nil {
 		return Register400JSONResponse{BadRequestJSONResponse{Message: "missing body"}}, nil
 	}
@@ -64,21 +64,21 @@ func (s *Server) Register(_ context.Context, req RegisterRequestObject) (Registe
 	if err != nil {
 		return nil, err
 	}
-	u, err := s.Store.CreateUser(email, nickname, hash)
+	u, err := s.Store.CreateUser(ctx, email, nickname, hash)
 	if errors.Is(err, ErrEmailTaken) {
 		return Register409JSONResponse{Message: "this email is already registered"}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	cookie, err := s.startSession(u.Id)
+	cookie, err := s.startSession(ctx, u.Id)
 	if err != nil {
 		return nil, err
 	}
 	return Register201JSONResponse{Body: u, Headers: Register201ResponseHeaders{SetCookie: &cookie}}, nil
 }
 
-func (s *Server) Login(_ context.Context, req LoginRequestObject) (LoginResponseObject, error) {
+func (s *Server) Login(ctx context.Context, req LoginRequestObject) (LoginResponseObject, error) {
 	if req.Body == nil {
 		return Login401JSONResponse{UnauthorizedJSONResponse{Message: msgBadCreds}}, nil
 	}
@@ -91,7 +91,7 @@ func (s *Server) Login(_ context.Context, req LoginRequestObject) (LoginResponse
 	if s.Limiter.Blocked(email) {
 		return Login429JSONResponse{Message: "too many failed attempts, try again in 15 minutes"}, nil
 	}
-	u, hash, err := s.Store.UserByEmail(email)
+	u, hash, err := s.Store.UserByEmail(ctx, email)
 	if errors.Is(err, ErrNotFound) {
 		hash = auth.DummyHash // equalize timing with the found-user path
 	} else if err != nil {
@@ -103,7 +103,7 @@ func (s *Server) Login(_ context.Context, req LoginRequestObject) (LoginResponse
 		return Login401JSONResponse{UnauthorizedJSONResponse{Message: msgBadCreds}}, nil
 	}
 	s.Limiter.Reset(email)
-	cookie, err := s.startSession(u.Id)
+	cookie, err := s.startSession(ctx, u.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,9 @@ func (s *Server) Login(_ context.Context, req LoginRequestObject) (LoginResponse
 
 func (s *Server) Logout(ctx context.Context, _ LogoutRequestObject) (LogoutResponseObject, error) {
 	if token, ok := ctx.Value(rawTokenKey{}).(string); ok {
-		s.Store.DeleteSession(auth.HashToken(token))
+		if err := s.Store.DeleteSession(ctx, auth.HashToken(token)); err != nil {
+			return nil, err
+		}
 	}
 	cookie := s.cookie("", -1).String()
 	return Logout204Response{Headers: Logout204ResponseHeaders{SetCookie: &cookie}}, nil
@@ -126,12 +128,14 @@ func (s *Server) GetMe(ctx context.Context, _ GetMeRequestObject) (GetMeResponse
 	return GetMe200JSONResponse(u), nil
 }
 
-func (s *Server) startSession(userID string) (string, error) {
+func (s *Server) startSession(ctx context.Context, userID string) (string, error) {
 	token, err := auth.NewSessionToken()
 	if err != nil {
 		return "", err
 	}
-	s.Store.CreateSession(auth.HashToken(token), userID, s.Now().Add(auth.SessionTTL))
+	if err := s.Store.CreateSession(ctx, auth.HashToken(token), userID, s.Now().Add(auth.SessionTTL)); err != nil {
+		return "", err
+	}
 	return s.cookie(token, int(auth.SessionTTL.Seconds())).String(), nil
 }
 
