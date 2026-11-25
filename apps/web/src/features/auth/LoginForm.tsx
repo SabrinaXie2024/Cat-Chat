@@ -40,7 +40,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         <input
           id="email"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
           className={inputClass}
           {...form.register('email')}
         />

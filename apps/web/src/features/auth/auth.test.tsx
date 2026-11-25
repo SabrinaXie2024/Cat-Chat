@@ -75,6 +75,26 @@ describe('auth', () => {
   })
 })
 
+// Password managers save the field marked `username` (or, failing that, the
+// one right before the password) as the login. It must be the email, or
+// autofill puts the nickname into the login form's email box.
+describe('password manager hints', () => {
+  const credentialFields = () =>
+    Array.from(document.querySelectorAll('input')).map((i) => `${i.id}:${i.autocomplete}`)
+
+  it.each([
+    ['/login', ['email:username', 'password:current-password']],
+    [
+      '/register',
+      ['nickname:nickname', 'email:username', 'password:new-password', 'confirm:new-password'],
+    ],
+  ])('%s', async (path, want) => {
+    renderApp(path)
+    await screen.findByLabelText('邮箱')
+    expect(credentialFields()).toEqual(want)
+  })
+})
+
 describe('safeRedirect', () => {
   it.each([
     ['/community', '/community'],
