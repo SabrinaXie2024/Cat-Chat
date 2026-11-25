@@ -75,10 +75,29 @@ Guards in `pnpm-workspace.yaml`:
 - `permissions` — `@tanstack/router-plugin`'s bundled agent skills are denied.
 - `saveExact: true` — all versions pinned exactly.
 
+## Auth (email + password)
+
+- Passwords: argon2id (`apps/api/internal/auth/password.go`), PHC string with
+  params embedded. Unknown-email logins verify against `DummyHash` so timing
+  doesn't reveal which emails exist.
+- Sessions: 256-bit random token in the `cc_session` cookie (httpOnly,
+  SameSite=Lax, Path=/api, 30 days, Secure unless `INSECURE_COOKIES=1`, which
+  `pnpm dev:api` sets). The store keeps only the SHA-256 of the token; logout
+  deletes it server-side.
+- CSRF: `http.CrossOriginProtection` wraps the whole API — cross-origin
+  POST/PUT/DELETE get 403. Never make GET handlers change state.
+- Login limiter: 5 failures / 15 min per normalized email → 429 (in-memory,
+  per process).
+- `SessionMiddleware` puts the user in ctx; handlers call `UserFrom(ctx)` and
+  return 401 themselves. Reads (`listPosts`, `listReplies`) are public.
+- Frontend: `useCurrentUser()` (`null` = signed out), login/register pages
+  take `?redirect=` filtered by `safeRedirect` (same-site paths only).
+- MSW dev account: `demo@catchat.dev` / `password123`. In tests, sign in with
+  `db.sessionUserId = 'demo'`.
+
 ## Not built yet
 
-- Auth (planned: argon2id passwords, httpOnly session cookie, CSRF protection).
-  Writes are currently attributed to `guest`.
+- Email verification and password reset (need an email provider).
 - Persistence: `apps/api/internal/store` is in-memory; planned PostgreSQL with
   pgx + sqlc, migrations via goose.
 - Image/video upload endpoint + S3-compatible storage (R2/OSS; MinIO locally)

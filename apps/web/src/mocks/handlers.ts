@@ -1,5 +1,13 @@
 import { HttpResponse, http } from 'msw'
-import type { NewPost, NewReply, Post, Reply } from '../api/generated/model'
+import type {
+  LoginRequest,
+  NewPost,
+  NewReply,
+  Post,
+  RegisterRequest,
+  Reply,
+  User,
+} from '../api/generated/model'
 import { getGetHealthMockHandler } from '../api/generated/system/system.msw'
 import {
   charCount,
@@ -14,14 +22,33 @@ import {
 // Stateful so create → list round-trips work; mirrors the Go server's rules.
 // Types come from the generated client, so spec drift breaks typecheck.
 
-type Db = { posts: Post[]; replies: Map<string, Reply[]> }
+type MockUser = User & { password: string } // plaintext: mock only
+type Db = {
+  posts: Post[]
+  replies: Map<string, Reply[]>
+  users: MockUser[]
+  /** Signed-in user id. Stands in for the httpOnly session cookie. */
+  sessionUserId: string | null
+}
 
-export const db: Db = { posts: [], replies: new Map() }
+/** Dev convenience account: demo@catchat.dev / password123 */
+export const DEMO_USER = {
+  email: 'demo@catchat.dev',
+  password: 'password123',
+  nickname: '演示用户',
+}
+
+export const db: Db = { posts: [], replies: new Map(), users: [], sessionUserId: null }
 
 export function resetDb(seed: Post[] = defaultSeed()) {
   db.posts = structuredClone(seed)
   db.replies = new Map()
+  db.users = [{ id: 'demo', createdAt: new Date(0).toISOString(), ...DEMO_USER }]
+  db.sessionUserId = null
 }
+
+const currentUser = () => db.users.find((u) => u.id === db.sessionUserId)
+const publicUser = ({ password: _, ...u }: MockUser): User => u
 
 function defaultSeed(): Post[] {
   return [
@@ -44,9 +71,51 @@ const id = () => `mock-${++seq}`
 export const handlers = [
   getGetHealthMockHandler({ status: 'ok' }),
 
+  http.post<never, RegisterRequest>('*/api/auth/register', async ({ request }) => {
+    const body = await request.json()
+    const email = body.email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad('invalid email address')
+    const nickname = body.nickname.trim()
+    if (charCount(nickname) < 1 || charCount(nickname) > 20)
+      return bad('nickname must be 1–20 characters')
+    if (body.password.length < 8 || body.password.length > 128)
+      return bad('password must be 8–128 characters')
+    if (db.users.some((u) => u.email === email)) return bad('this email is already registered', 409)
+    const user: MockUser = {
+      id: id(),
+      email,
+      nickname,
+      password: body.password,
+      createdAt: new Date().toISOString(),
+    }
+    db.users.push(user)
+    db.sessionUserId = user.id
+    return HttpResponse.json(publicUser(user), { status: 201 })
+  }),
+
+  http.post<never, LoginRequest>('*/api/auth/login', async ({ request }) => {
+    const body = await request.json()
+    const user = db.users.find((u) => u.email === body.email.trim().toLowerCase())
+    if (!user || user.password !== body.password) return bad('incorrect email or password', 401)
+    db.sessionUserId = user.id
+    return HttpResponse.json(publicUser(user))
+  }),
+
+  http.post('*/api/auth/logout', () => {
+    db.sessionUserId = null
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get('*/api/auth/me', () => {
+    const user = currentUser()
+    return user ? HttpResponse.json(publicUser(user)) : bad('please sign in', 401)
+  }),
+
   http.get('*/api/posts', () => HttpResponse.json(db.posts)),
 
   http.post<never, NewPost>('*/api/posts', async ({ request }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
     const body = await request.json()
     const n = charCount(body.content)
     if (n === 0) return bad('content is required')
@@ -55,7 +124,7 @@ export const handlers = [
       return bad(`at most ${POST_MAX_IMAGES} images allowed`)
     const post: Post = {
       id: id(),
-      author: 'guest',
+      author: user.nickname,
       content: body.content,
       images: body.images,
       replyCount: 0,
@@ -73,6 +142,8 @@ export const handlers = [
   http.post<{ postId: string }, NewReply>(
     '*/api/posts/:postId/replies',
     async ({ params, request }) => {
+      const user = currentUser()
+      if (!user) return bad('please sign in', 401)
       const post = db.posts.find((p) => p.id === params.postId)
       if (!post) return bad('post not found', 404)
       const body = await request.json()
@@ -88,7 +159,7 @@ export const handlers = [
       const reply: Reply = {
         id: id(),
         postId: post.id,
-        author: 'guest',
+        author: user.nickname,
         content: body.content,
         images: body.images,
         createdAt: new Date().toISOString(),

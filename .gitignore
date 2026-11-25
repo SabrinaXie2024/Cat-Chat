@@ -8,3 +8,4 @@ coverage/
 .DS_Store
 apps/api/bin/
 apps/web/src/routeTree.gen.ts
+*.tsbuildinfo

@@ -6,7 +6,6 @@ package store
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"slices"
 	"sync"
 	"time"
@@ -17,20 +16,36 @@ import (
 // MaxRepliesPerPost is the product limit on interaction rounds per post.
 const MaxRepliesPerPost = 10
 
-var (
-	ErrNotFound   = errors.New("not found")
-	ErrThreadFull = errors.New("thread is full")
-)
-
-type Memory struct {
-	mu      sync.RWMutex
-	posts   []api.Post // newest last
-	replies map[string][]api.Reply
-	now     func() time.Time
+type userRow struct {
+	user api.User
+	hash string
 }
 
+type session struct {
+	userID  string
+	expires time.Time
+}
+
+type Memory struct {
+	mu       sync.RWMutex
+	posts    []api.Post // newest last
+	replies  map[string][]api.Reply
+	users    map[string]userRow // by id
+	byEmail  map[string]string  // email -> id
+	sessions map[string]session // token hash -> session
+	now      func() time.Time
+}
+
+var _ api.Store = (*Memory)(nil)
+
 func NewMemory() *Memory {
-	return &Memory{replies: map[string][]api.Reply{}, now: time.Now}
+	return &Memory{
+		replies:  map[string][]api.Reply{},
+		users:    map[string]userRow{},
+		byEmail:  map[string]string{},
+		sessions: map[string]session{},
+		now:      time.Now,
+	}
 }
 
 func newID() string {
@@ -38,6 +53,63 @@ func newID() string {
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
+
+// --- users & sessions ---
+
+func (m *Memory) CreateUser(email, nickname, hash string) (api.User, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, taken := m.byEmail[email]; taken {
+		return api.User{}, api.ErrEmailTaken
+	}
+	u := api.User{Id: newID(), Email: email, Nickname: nickname, CreatedAt: m.now().UTC()}
+	m.users[u.Id] = userRow{user: u, hash: hash}
+	m.byEmail[email] = u.Id
+	return u, nil
+}
+
+func (m *Memory) UserByEmail(email string) (api.User, string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	id, ok := m.byEmail[email]
+	if !ok {
+		return api.User{}, "", api.ErrNotFound
+	}
+	row := m.users[id]
+	return row.user, row.hash, nil
+}
+
+func (m *Memory) CreateSession(tokenHash, userID string, expires time.Time) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sessions[tokenHash] = session{userID: userID, expires: expires}
+}
+
+func (m *Memory) UserBySession(tokenHash string, now time.Time) (api.User, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	s, ok := m.sessions[tokenHash]
+	if !ok {
+		return api.User{}, api.ErrNotFound
+	}
+	if !now.Before(s.expires) {
+		delete(m.sessions, tokenHash)
+		return api.User{}, api.ErrNotFound
+	}
+	row, ok := m.users[s.userID]
+	if !ok {
+		return api.User{}, api.ErrNotFound
+	}
+	return row.user, nil
+}
+
+func (m *Memory) DeleteSession(tokenHash string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.sessions, tokenHash)
+}
+
+// --- posts & replies ---
 
 func (m *Memory) ListPosts() []api.Post {
 	m.mu.RLock()
@@ -65,7 +137,7 @@ func (m *Memory) ListReplies(postID string) ([]api.Reply, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.findPost(postID) < 0 {
-		return nil, ErrNotFound
+		return nil, api.ErrNotFound
 	}
 	return slices.Clone(nonNil(m.replies[postID])), nil
 }
@@ -75,10 +147,10 @@ func (m *Memory) CreateReply(postID, author string, in api.NewReply) (api.Reply,
 	defer m.mu.Unlock()
 	i := m.findPost(postID)
 	if i < 0 {
-		return api.Reply{}, ErrNotFound
+		return api.Reply{}, api.ErrNotFound
 	}
 	if len(m.replies[postID]) >= MaxRepliesPerPost {
-		return api.Reply{}, ErrThreadFull
+		return api.Reply{}, api.ErrThreadFull
 	}
 	r := api.Reply{
 		Id:        newID(),

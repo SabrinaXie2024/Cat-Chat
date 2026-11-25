@@ -12,21 +12,93 @@ info:
     resized server-side to ≤ 1920px on the long edge with EXIF stripped.
 servers:
   - url: /api
+security:
+  - sessionCookie: []
 paths:
   /health:
     get:
       operationId: getHealth
       tags: [system]
+      security: []
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Health" }
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: Account created and signed in
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SessionCookie" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Signed in
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SessionCookie" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429":
+          description: Too many failed attempts; retry later
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      responses:
+        "204":
+          description: Signed out (idempotent)
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SessionCookie" }
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /posts:
     get:
       operationId: listPosts
       tags: [posts]
+      security: []
       responses:
         "200":
           description: Newest first
@@ -50,6 +122,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Post" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /posts/{postId}/replies:
     parameters:
       - name: postId
@@ -59,6 +132,7 @@ paths:
     get:
       operationId: listReplies
       tags: [posts]
+      security: []
       responses:
         "200":
           description: Oldest first
@@ -83,6 +157,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Reply" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
           description: Thread already has the maximum of 10 replies
@@ -90,7 +165,24 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: cc_session
+      description: |
+        Opaque random token, httpOnly + SameSite=Lax (+ Secure in prod).
+        Unsafe methods are also guarded by Go's CrossOriginProtection (CSRF).
+  headers:
+    SessionCookie:
+      description: Sets or clears the `cc_session` cookie
+      schema: { type: string }
   responses:
+    Unauthorized:
+      description: Not signed in, or bad credentials
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
     BadRequest:
       description: Validation failed
       content:
@@ -112,6 +204,27 @@ components:
       required: [message]
       properties:
         message: { type: string }
+    User:
+      type: object
+      required: [id, email, nickname, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        nickname: { type: string, minLength: 1, maxLength: 20 }
+        createdAt: { type: string, format: date-time }
+    RegisterRequest:
+      type: object
+      required: [email, password, nickname]
+      properties:
+        email: { type: string, maxLength: 254, description: "Validated server-side (net/mail) so errors use the JSON Error shape" }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        nickname: { type: string, minLength: 1, maxLength: 20 }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, maxLength: 254, description: "Validated server-side (net/mail) so errors use the JSON Error shape" }
+        password: { type: string, maxLength: 128 }
     ImageUrl:
       type: string
       format: uri

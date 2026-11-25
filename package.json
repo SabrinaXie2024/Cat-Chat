@@ -8,7 +8,7 @@
   "scripts": {
     "gen": "pnpm --filter @cat-chat/web gen && cd apps/api && go generate ./...",
     "dev:web": "pnpm --filter @cat-chat/web dev",
-    "dev:api": "cd apps/api && go run ./cmd/server",
+    "dev:api": "cd apps/api && INSECURE_COOKIES=1 go run ./cmd/server",
     "build": "pnpm --filter @cat-chat/web build && cd apps/api && go build ./...",
     "test": "pnpm --filter @cat-chat/web test && cd apps/api && go test ./...",
     "typecheck": "pnpm --filter @cat-chat/web typecheck",

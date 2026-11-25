@@ -8,14 +8,22 @@ import (
 	"time"
 
 	"github.com/cat-chat/api/internal/api"
+	"github.com/cat-chat/api/internal/auth"
 	"github.com/cat-chat/api/internal/store"
 )
 
 func main() {
 	addr := envOr("ADDR", ":8080")
 	srv := &http.Server{
-		Addr:              addr,
-		Handler:           newHandler(store.NewMemory()),
+		Addr: addr,
+		Handler: newHandler(&api.Server{
+			Store:   store.NewMemory(),
+			Limiter: auth.NewLoginLimiter(),
+			// Secure cookies need HTTPS; local dev over plain http sets
+			// INSECURE_COOKIES=1 (see root package.json dev:api).
+			SecureCookies: os.Getenv("INSECURE_COOKIES") != "1",
+			Now:           time.Now,
+		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	slog.Info("api listening", "addr", addr)
@@ -25,17 +33,17 @@ func main() {
 	}
 }
 
-func newHandler(st *store.Memory) http.Handler {
-	s := &api.Server{
-		Store:        st,
-		IsNotFound:   func(err error) bool { return errors.Is(err, store.ErrNotFound) },
-		IsThreadFull: func(err error) bool { return errors.Is(err, store.ErrThreadFull) },
-	}
-	h := api.NewStrictHandler(s, nil)
+func newHandler(s *api.Server) http.Handler {
 	mux := http.NewServeMux()
-	api.HandlerWithOptions(h, api.StdHTTPServerOptions{BaseURL: "/api", BaseRouter: mux})
+	api.HandlerWithOptions(api.NewStrictHandler(s, nil), api.StdHTTPServerOptions{BaseURL: "/api", BaseRouter: mux})
+
+	var h http.Handler = mux
+	h = s.SessionMiddleware(h)
+	// CSRF: reject cross-origin browser POST/PUT/DELETE (Sec-Fetch-Site /
+	// Origin check). SameSite=Lax cookies are the second layer.
+	h = http.NewCrossOriginProtection().Handler(h)
 	// Cap JSON bodies; image bytes go to object storage, not through here.
-	return http.MaxBytesHandler(mux, 64<<10)
+	return http.MaxBytesHandler(h, 64<<10)
 }
 
 func envOr(k, def string) string {
