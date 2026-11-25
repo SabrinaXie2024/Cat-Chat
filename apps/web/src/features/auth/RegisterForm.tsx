@@ -47,21 +47,25 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
       className="space-y-4"
       noValidate
     >
-      <Field id="email" label="邮箱" error={errors.email?.message}>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          className={inputClass}
-          {...form.register('email')}
-        />
-      </Field>
+      {/* Nickname first: password managers treat the field right before the
+          password as the username when hints are missing. The email is the
+          login identifier, so it must be `autocomplete="username"` and sit
+          directly above the password. */}
       <Field id="nickname" label="昵称" error={errors.nickname?.message}>
         <input
           id="nickname"
           autoComplete="nickname"
           className={inputClass}
           {...form.register('nickname')}
+        />
+      </Field>
+      <Field id="email" label="邮箱" error={errors.email?.message}>
+        <input
+          id="email"
+          type="email"
+          autoComplete="username"
+          className={inputClass}
+          {...form.register('email')}
         />
       </Field>
       <Field id="password" label="密码（至少 8 位）" error={errors.password?.message}>
