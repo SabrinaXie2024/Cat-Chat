@@ -19,18 +19,25 @@ const (
 )
 
 // Store is what the HTTP layer needs from persistence.
+// Implementations: store.Postgres (prod) and store.Memory (tests); both
+// pass the same conformance suite in internal/store.
+//
+// Errors: ErrNotFound for unknown/invalid ids, ErrThreadFull, ErrEmailTaken.
 type Store interface {
-	ListPosts() []Post
-	CreatePost(author string, in NewPost) Post
-	ListReplies(postID string) ([]Reply, error)
-	CreateReply(postID, author string, in NewReply) (Reply, error)
+	ListPosts(ctx context.Context) ([]Post, error)
+	CreatePost(ctx context.Context, author User, in NewPost) (Post, error)
+	ListReplies(ctx context.Context, postID string) ([]Reply, error)
+	CreateReply(ctx context.Context, postID string, author User, in NewReply) (Reply, error)
 
-	CreateUser(email, nickname, passwordHash string) (User, error)
-	UserByEmail(email string) (u User, passwordHash string, err error)
-	CreateSession(tokenHash, userID string, expires time.Time)
-	UserBySession(tokenHash string, now time.Time) (User, error)
-	DeleteSession(tokenHash string)
+	CreateUser(ctx context.Context, email, nickname, passwordHash string) (User, error)
+	UserByEmail(ctx context.Context, email string) (u User, passwordHash string, err error)
+	CreateSession(ctx context.Context, tokenHash, userID string, expires time.Time) error
+	UserBySession(ctx context.Context, tokenHash string, now time.Time) (User, error)
+	DeleteSession(ctx context.Context, tokenHash string) error
 }
+
+// MaxRepliesPerPost is the product limit on interaction rounds per post.
+const MaxRepliesPerPost = 10
 
 type Server struct {
 	Store   Store
@@ -53,8 +60,12 @@ func (s *Server) GetHealth(context.Context, GetHealthRequestObject) (GetHealthRe
 	return GetHealth200JSONResponse{Status: Ok}, nil
 }
 
-func (s *Server) ListPosts(context.Context, ListPostsRequestObject) (ListPostsResponseObject, error) {
-	return ListPosts200JSONResponse(s.Store.ListPosts()), nil
+func (s *Server) ListPosts(ctx context.Context, _ ListPostsRequestObject) (ListPostsResponseObject, error) {
+	posts, err := s.Store.ListPosts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ListPosts200JSONResponse(posts), nil
 }
 
 func (s *Server) CreatePost(ctx context.Context, req CreatePostRequestObject) (CreatePostResponseObject, error) {
@@ -68,11 +79,15 @@ func (s *Server) CreatePost(ctx context.Context, req CreatePostRequestObject) (C
 	if err := validate(req.Body.Content, req.Body.Images, PostMaxChars, PostMaxImages); err != nil {
 		return CreatePost400JSONResponse{BadRequestJSONResponse{Message: err.Error()}}, nil
 	}
-	return CreatePost201JSONResponse(s.Store.CreatePost(user.Nickname, *req.Body)), nil
+	p, err := s.Store.CreatePost(ctx, user, *req.Body)
+	if err != nil {
+		return nil, err
+	}
+	return CreatePost201JSONResponse(p), nil
 }
 
-func (s *Server) ListReplies(_ context.Context, req ListRepliesRequestObject) (ListRepliesResponseObject, error) {
-	rs, err := s.Store.ListReplies(req.PostId)
+func (s *Server) ListReplies(ctx context.Context, req ListRepliesRequestObject) (ListRepliesResponseObject, error) {
+	rs, err := s.Store.ListReplies(ctx, req.PostId)
 	if errors.Is(err, ErrNotFound) {
 		return ListReplies404JSONResponse{NotFoundJSONResponse{Message: "post not found"}}, nil
 	}
@@ -93,7 +108,7 @@ func (s *Server) CreateReply(ctx context.Context, req CreateReplyRequestObject) 
 	if err := validate(req.Body.Content, req.Body.Images, ReplyMaxChars, ReplyMaxImages); err != nil {
 		return CreateReply400JSONResponse{BadRequestJSONResponse{Message: err.Error()}}, nil
 	}
-	r, err := s.Store.CreateReply(req.PostId, user.Nickname, *req.Body)
+	r, err := s.Store.CreateReply(ctx, req.PostId, user, *req.Body)
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return CreateReply404JSONResponse{NotFoundJSONResponse{Message: "post not found"}}, nil

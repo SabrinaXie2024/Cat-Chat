@@ -13,17 +13,20 @@ scripts/                         repo tooling (GHSA lockfile check)
 ```
 
 Toolchain: Node 24 (`/opt/homebrew/opt/node@24/bin`, keg-only — must be on
-PATH), pnpm 12, Go 1.27, all via Homebrew.
+PATH), pnpm 12, Go 1.27, PostgreSQL 18 (`brew services start postgresql@18`;
+binaries in `/opt/homebrew/opt/postgresql@18/bin`), all via Homebrew.
+Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
 
 ## Commands (run from repo root)
 
 | | |
 |---|---|
 | `pnpm dev:web` | Vite on :5173, API served by MSW (no backend needed) |
-| `pnpm dev:api` | Go server on :8080 |
+| `pnpm dev:api` | Go server on :8080 against local `catchat` DB (migrates on boot) |
 | `VITE_API=real pnpm dev:web` | Vite with MSW off, `/api` proxied to :8080 |
 | `pnpm gen` | Regenerate Go server + TS client/mocks from the spec |
-| `pnpm test` / `pnpm lint` / `pnpm typecheck` / `pnpm build` | |
+| `pnpm test` | Vitest + `go test` (needs Postgres running; uses `catchat_test`) |
+| `pnpm lint` / `pnpm typecheck` / `pnpm build` | |
 | `pnpm audit:ghsa` | Fail if lockfile has any GHSA-g7cv-rxg3-hmpx version |
 
 ## Changing the API
@@ -33,6 +36,25 @@ PATH), pnpm 12, Go 1.27, all via Homebrew.
    `apps/web/src/api/generated/**` (both committed; never hand-edit).
 3. Fix compile errors in `apps/api/internal/api/server.go` (it asserts
    `StrictServerInterface`) and in `apps/web/src/mocks/handlers.ts`.
+
+## Database (apps/api/internal/db)
+
+- Migrations: goose SQL files in `internal/db/migrations/`, embedded and
+  applied on server boot (`db.Migrate`). Add a new numbered file; never edit
+  an applied one.
+- Queries: write SQL in `internal/db/queries/*.sql`, then
+  `cd apps/api && go generate ./...` (sqlc → `internal/db/dbq`, committed).
+- `store.Postgres` maps sqlc rows to API types. `store.Memory` is a test
+  double; `internal/store/conformance_test.go` runs one suite against both
+  — add cases there when you change store behavior. The Postgres half skips
+  unless `TEST_DATABASE_URL` is set (root `pnpm test` sets it).
+- IDs are UUIDv7 (`uuidv7()`, Postgres 18). Non-UUID ids from URLs map to
+  `api.ErrNotFound`.
+- The schema repeats the content limits as CHECK constraints (char_length,
+  so CJK counts per character) as a backstop.
+- Reply limit is enforced atomically (`ClaimReplySlot` conditional UPDATE in
+  the same tx as the insert), so concurrent replies can't exceed 10.
+- Expired sessions are purged hourly by `main`.
 
 ## Conventions
 
@@ -88,6 +110,7 @@ Guards in `pnpm-workspace.yaml`:
   POST/PUT/DELETE get 403. Never make GET handlers change state.
 - Login limiter: 5 failures / 15 min per normalized email → 429 (in-memory,
   per process).
+- Sessions and users live in Postgres; the login limiter doesn't (see below).
 - `SessionMiddleware` puts the user in ctx; handlers call `UserFrom(ctx)` and
   return 401 themselves. Reads (`listPosts`, `listReplies`) are public.
 - Frontend: `useCurrentUser()` (`null` = signed out), login/register pages
@@ -98,8 +121,9 @@ Guards in `pnpm-workspace.yaml`:
 ## Not built yet
 
 - Email verification and password reset (need an email provider).
-- Persistence: `apps/api/internal/store` is in-memory; planned PostgreSQL with
-  pgx + sqlc, migrations via goose.
+- Login limiter is still in-memory (per process) — move to Postgres/Redis
+  before running more than one API instance.
+- Post list returns the newest 100; no pagination yet.
 - Image/video upload endpoint + S3-compatible storage (R2/OSS; MinIO locally)
   and server-side resize/EXIF strip (`disintegration/imaging`).
 - Gallery page and reply UI (reply API + mocks exist).

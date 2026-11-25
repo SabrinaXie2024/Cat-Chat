@@ -212,7 +212,7 @@ func TestReplyThreadLimit(t *testing.T) {
 	path := "/api/posts/" + p.Id + "/replies"
 
 	c.mustStatus(400, "POST", path, `{"content":"`+strings.Repeat("喵", 101)+`","images":[]}`)
-	for range store.MaxRepliesPerPost {
+	for range api.MaxRepliesPerPost {
 		c.mustStatus(201, "POST", path, `{"content":"r","images":[]}`)
 	}
 	c.mustStatus(409, "POST", path, `{"content":"r","images":[]}`)

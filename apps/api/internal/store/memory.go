@@ -1,9 +1,9 @@
-// Package store is a temporary in-memory store. It will be replaced by
-// PostgreSQL (pgx + sqlc, migrations via goose) — keep the method set small
-// so the swap is mechanical.
+// Package store implements api.Store: Postgres for real use, Memory as a
+// fast test double. conformance_test.go runs the same suite against both.
 package store
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"slices"
@@ -12,9 +12,6 @@ import (
 
 	"github.com/cat-chat/api/internal/api"
 )
-
-// MaxRepliesPerPost is the product limit on interaction rounds per post.
-const MaxRepliesPerPost = 10
 
 type userRow struct {
 	user api.User
@@ -26,6 +23,7 @@ type session struct {
 	expires time.Time
 }
 
+// Memory is an in-process store for tests. Not durable.
 type Memory struct {
 	mu       sync.RWMutex
 	posts    []api.Post // newest last
@@ -56,7 +54,7 @@ func newID() string {
 
 // --- users & sessions ---
 
-func (m *Memory) CreateUser(email, nickname, hash string) (api.User, error) {
+func (m *Memory) CreateUser(_ context.Context, email, nickname, hash string) (api.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, taken := m.byEmail[email]; taken {
@@ -68,7 +66,7 @@ func (m *Memory) CreateUser(email, nickname, hash string) (api.User, error) {
 	return u, nil
 }
 
-func (m *Memory) UserByEmail(email string) (api.User, string, error) {
+func (m *Memory) UserByEmail(_ context.Context, email string) (api.User, string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	id, ok := m.byEmail[email]
@@ -79,13 +77,14 @@ func (m *Memory) UserByEmail(email string) (api.User, string, error) {
 	return row.user, row.hash, nil
 }
 
-func (m *Memory) CreateSession(tokenHash, userID string, expires time.Time) {
+func (m *Memory) CreateSession(_ context.Context, tokenHash, userID string, expires time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.sessions[tokenHash] = session{userID: userID, expires: expires}
+	return nil
 }
 
-func (m *Memory) UserBySession(tokenHash string, now time.Time) (api.User, error) {
+func (m *Memory) UserBySession(_ context.Context, tokenHash string, now time.Time) (api.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	s, ok := m.sessions[tokenHash]
@@ -103,37 +102,38 @@ func (m *Memory) UserBySession(tokenHash string, now time.Time) (api.User, error
 	return row.user, nil
 }
 
-func (m *Memory) DeleteSession(tokenHash string) {
+func (m *Memory) DeleteSession(_ context.Context, tokenHash string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	delete(m.sessions, tokenHash)
+	return nil
 }
 
 // --- posts & replies ---
 
-func (m *Memory) ListPosts() []api.Post {
+func (m *Memory) ListPosts(context.Context) ([]api.Post, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	out := slices.Clone(m.posts)
 	slices.Reverse(out)
-	return out
+	return nonNil(out), nil
 }
 
-func (m *Memory) CreatePost(author string, in api.NewPost) api.Post {
+func (m *Memory) CreatePost(_ context.Context, author api.User, in api.NewPost) (api.Post, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	p := api.Post{
 		Id:        newID(),
-		Author:    author,
+		Author:    author.Nickname,
 		Content:   in.Content,
 		Images:    nonNil(in.Images),
 		CreatedAt: m.now().UTC(),
 	}
 	m.posts = append(m.posts, p)
-	return p
+	return p, nil
 }
 
-func (m *Memory) ListReplies(postID string) ([]api.Reply, error) {
+func (m *Memory) ListReplies(_ context.Context, postID string) ([]api.Reply, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if m.findPost(postID) < 0 {
@@ -142,20 +142,20 @@ func (m *Memory) ListReplies(postID string) ([]api.Reply, error) {
 	return slices.Clone(nonNil(m.replies[postID])), nil
 }
 
-func (m *Memory) CreateReply(postID, author string, in api.NewReply) (api.Reply, error) {
+func (m *Memory) CreateReply(_ context.Context, postID string, author api.User, in api.NewReply) (api.Reply, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	i := m.findPost(postID)
 	if i < 0 {
 		return api.Reply{}, api.ErrNotFound
 	}
-	if len(m.replies[postID]) >= MaxRepliesPerPost {
+	if len(m.replies[postID]) >= api.MaxRepliesPerPost {
 		return api.Reply{}, api.ErrThreadFull
 	}
 	r := api.Reply{
 		Id:        newID(),
 		PostId:    postID,
-		Author:    author,
+		Author:    author.Nickname,
 		Content:   in.Content,
 		Images:    nonNil(in.Images),
 		CreatedAt: m.now().UTC(),
