@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router'
 import { Cat } from 'lucide-react'
+import { UserMenu } from '../features/auth/UserMenu'
 
 const nav = [
   { to: '/guide', label: '养猫攻略' },
@@ -30,6 +31,7 @@ function RootLayout() {
               {n.label}
             </Link>
           ))}
+          <UserMenu />
         </nav>
       </header>
       <main className="mx-auto max-w-4xl px-4 py-8">

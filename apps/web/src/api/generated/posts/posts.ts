@@ -38,7 +38,8 @@ import type {
   NewReply,
   NotFoundResponse,
   Post,
-  Reply
+  Reply,
+  UnauthorizedResponse
 } from '../model';
 
 import { http } from '../../http';
@@ -198,10 +199,15 @@ export type createPostResponse400 = {
   status: 400
 }
 
+export type createPostResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
 export type createPostResponseSuccess = (createPostResponse201) & {
   headers: Headers;
 };
-export type createPostResponseError = (createPostResponse400) & {
+export type createPostResponseError = (createPostResponse400 | createPostResponse401) & {
   headers: Headers;
 };
 
@@ -232,7 +238,7 @@ export const createPost = async (newPost: NewPost, options?: Parameters<typeof h
 
 export const getCreatePostMutationKey = () => ['createPost'] as const;
 
-export const getCreatePostMutationOptions = <TError = BadRequestResponse,
+export const getCreatePostMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,CreatePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,CreatePostMutationVariables, TContext> => {
 
@@ -261,10 +267,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreatePostMutationResult = NonNullable<Awaited<ReturnType<typeof createPost>>>
     export type CreatePostMutationBody = NewPost
-    export type CreatePostMutationError = BadRequestResponse
+    export type CreatePostMutationError = BadRequestResponse | UnauthorizedResponse
     export type CreatePostMutationVariables = {data: NewPost}
 
-    export const useCreatePost = <TError = BadRequestResponse,
+    export const useCreatePost = <TError = BadRequestResponse | UnauthorizedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,CreatePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createPost>>,
@@ -396,6 +402,11 @@ export type createReplyResponse400 = {
   status: 400
 }
 
+export type createReplyResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
 export type createReplyResponse404 = {
   data: NotFoundResponse
   status: 404
@@ -409,7 +420,7 @@ export type createReplyResponse409 = {
 export type createReplyResponseSuccess = (createReplyResponse201) & {
   headers: Headers;
 };
-export type createReplyResponseError = (createReplyResponse400 | createReplyResponse404 | createReplyResponse409) & {
+export type createReplyResponseError = (createReplyResponse400 | createReplyResponse401 | createReplyResponse404 | createReplyResponse409) & {
   headers: Headers;
 };
 
@@ -441,7 +452,7 @@ export const createReply = async (postId: string,
 
 export const getCreateReplyMutationKey = () => ['createReply'] as const;
 
-export const getCreateReplyMutationOptions = <TError = BadRequestResponse | NotFoundResponse | Error,
+export const getCreateReplyMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse | NotFoundResponse | Error,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReply>>, TError,CreateReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createReply>>, TError,CreateReplyMutationVariables, TContext> => {
 
@@ -470,10 +481,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateReplyMutationResult = NonNullable<Awaited<ReturnType<typeof createReply>>>
     export type CreateReplyMutationBody = NewReply
-    export type CreateReplyMutationError = BadRequestResponse | NotFoundResponse | Error
+    export type CreateReplyMutationError = BadRequestResponse | UnauthorizedResponse | NotFoundResponse | Error
     export type CreateReplyMutationVariables = {postId: string;data: NewReply}
 
-    export const useCreateReply = <TError = BadRequestResponse | NotFoundResponse | Error,
+    export const useCreateReply = <TError = BadRequestResponse | UnauthorizedResponse | NotFoundResponse | Error,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReply>>, TError,CreateReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createReply>>,
