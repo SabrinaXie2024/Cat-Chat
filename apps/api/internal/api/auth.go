@@ -120,6 +120,51 @@ func (s *Server) Logout(ctx context.Context, _ LogoutRequestObject) (LogoutRespo
 	return Logout204Response{Headers: Logout204ResponseHeaders{SetCookie: &cookie}}, nil
 }
 
+func (s *Server) ChangePassword(ctx context.Context, req ChangePasswordRequestObject) (ChangePasswordResponseObject, error) {
+	user, ok := UserFrom(ctx)
+	if !ok {
+		return ChangePassword401JSONResponse{UnauthorizedJSONResponse{Message: msgSignIn}}, nil
+	}
+	if req.Body == nil {
+		return ChangePassword400JSONResponse{BadRequestJSONResponse{Message: "missing body"}}, nil
+	}
+	// Shares the login limiter: guessing the current password from a
+	// hijacked session is the same attack as guessing it at /login.
+	if s.Limiter.Blocked(user.Email) {
+		return ChangePassword429JSONResponse{Message: "too many failed attempts, try again in 15 minutes"}, nil
+	}
+	_, hash, err := s.Store.UserByEmail(ctx, user.Email)
+	if err != nil {
+		return nil, err
+	}
+	if ok, err := auth.VerifyPassword(req.Body.CurrentPassword, hash); err != nil || !ok {
+		s.Limiter.Fail(user.Email)
+		return ChangePassword403JSONResponse{Message: "current password is incorrect"}, nil
+	}
+	s.Limiter.Reset(user.Email)
+
+	np := req.Body.NewPassword
+	if n := utf8.RuneCountInString(np); n < passwordMinChars || n > passwordMaxChars {
+		return ChangePassword400JSONResponse{BadRequestJSONResponse{Message: "password must be 8–128 characters"}}, nil
+	}
+	if np == req.Body.CurrentPassword {
+		return ChangePassword400JSONResponse{BadRequestJSONResponse{Message: "new password must differ from the current one"}}, nil
+	}
+	newHash, err := auth.HashPassword(np)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Store.ChangePassword(ctx, user.Id, newHash); err != nil {
+		return nil, err
+	}
+	// All sessions (including this one) were revoked; keep this device signed in.
+	cookie, err := s.startSession(ctx, user.Id)
+	if err != nil {
+		return nil, err
+	}
+	return ChangePassword204Response{Headers: ChangePassword204ResponseHeaders{SetCookie: &cookie}}, nil
+}
+
 func (s *Server) GetMe(ctx context.Context, _ GetMeRequestObject) (GetMeResponseObject, error) {
 	u, ok := UserFrom(ctx)
 	if !ok {

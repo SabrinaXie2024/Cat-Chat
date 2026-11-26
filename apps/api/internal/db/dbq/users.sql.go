@@ -80,6 +80,32 @@ func (q *Queries) DeleteSession(ctx context.Context, tokenHash string) error {
 	return err
 }
 
+const deleteUserSessions = `-- name: DeleteUserSessions :exec
+DELETE FROM sessions WHERE user_id = $1
+`
+
+func (q *Queries) DeleteUserSessions(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserSessions, userID)
+	return err
+}
+
+const updatePasswordHash = `-- name: UpdatePasswordHash :execrows
+UPDATE users SET password_hash = $2 WHERE id = $1
+`
+
+type UpdatePasswordHashParams struct {
+	ID           uuid.UUID
+	PasswordHash string
+}
+
+func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updatePasswordHash, arg.ID, arg.PasswordHash)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const userByEmail = `-- name: UserByEmail :one
 SELECT id, email, nickname, created_at, password_hash
 FROM users

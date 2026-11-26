@@ -34,6 +34,9 @@ type Store interface {
 	CreateSession(ctx context.Context, tokenHash, userID string, expires time.Time) error
 	UserBySession(ctx context.Context, tokenHash string, now time.Time) (User, error)
 	DeleteSession(ctx context.Context, tokenHash string) error
+	// ChangePassword sets a new hash and deletes all of the user's sessions,
+	// atomically.
+	ChangePassword(ctx context.Context, userID, passwordHash string) error
 }
 
 // MaxRepliesPerPost is the product limit on interaction rounds per post.

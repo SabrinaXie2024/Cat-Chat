@@ -22,7 +22,9 @@ export function UserMenu() {
   }
   return (
     <div className="ml-auto flex items-center gap-3 text-sm">
-      <span className="text-stone-700">{user.nickname}</span>
+      <Link to="/settings" className="text-stone-700 hover:text-stone-900" title="账号设置">
+        {user.nickname}
+      </Link>
       <button
         type="button"
         onClick={() => signOut.mutate()}

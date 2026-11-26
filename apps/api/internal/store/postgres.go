@@ -85,6 +85,24 @@ func (p *Postgres) DeleteSession(ctx context.Context, tokenHash string) error {
 	return p.q.DeleteSession(ctx, tokenHash)
 }
 
+func (p *Postgres) ChangePassword(ctx context.Context, userID, hash string) error {
+	uid, err := parseID(userID)
+	if err != nil {
+		return err
+	}
+	return pgx.BeginFunc(ctx, p.pool, func(tx pgx.Tx) error {
+		q := p.q.WithTx(tx)
+		n, err := q.UpdatePasswordHash(ctx, dbq.UpdatePasswordHashParams{ID: uid, PasswordHash: hash})
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return api.ErrNotFound
+		}
+		return q.DeleteUserSessions(ctx, uid)
+	})
+}
+
 // DeleteExpiredSessions is called periodically from main.
 func (p *Postgres) DeleteExpiredSessions(ctx context.Context, now time.Time) (int64, error) {
 	return p.q.DeleteExpiredSessions(ctx, now)

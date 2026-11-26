@@ -109,6 +109,23 @@ func (m *Memory) DeleteSession(_ context.Context, tokenHash string) error {
 	return nil
 }
 
+func (m *Memory) ChangePassword(_ context.Context, userID, hash string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	row, ok := m.users[userID]
+	if !ok {
+		return api.ErrNotFound
+	}
+	row.hash = hash
+	m.users[userID] = row
+	for k, s := range m.sessions {
+		if s.userID == userID {
+			delete(m.sessions, k)
+		}
+	}
+	return nil
+}
+
 // --- posts & replies ---
 
 func (m *Memory) ListPosts(context.Context) ([]api.Post, error) {

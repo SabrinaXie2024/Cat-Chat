@@ -23,6 +23,7 @@ import type {
 } from 'msw';
 
 import type {
+  ChangePasswordRequest,
   LoginRequest,
   RegisterRequest,
   User
@@ -71,6 +72,16 @@ export const getLogoutMockHandler = (overrideResponse?: void | ((info: Parameter
   }, options)
 }
 
+export const getChangePasswordMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<PathParams, ChangePasswordRequest>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.post<PathParams, ChangePasswordRequest>('*/auth/password', async (info: Parameters<HttpResponseResolver<PathParams, ChangePasswordRequest>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
+
 export const getGetMeMockHandler = (overrideResponse?: User | ((info: Parameters<HttpResponseResolver>[0]) => Promise<User> | User), options?: RequestHandlerOptions) => {
   return http.get('*/auth/me', async (info: Parameters<HttpResponseResolver>[0]) => {
 
@@ -86,5 +97,6 @@ export const getAuthMock = () => [
   getRegisterMockHandler(),
   getLoginMockHandler(),
   getLogoutMockHandler(),
+  getChangePasswordMockHandler(),
   getGetMeMockHandler()
 ]

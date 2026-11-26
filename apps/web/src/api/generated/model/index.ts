@@ -14,6 +14,7 @@
  */
 
 export * from './badRequestResponse';
+export * from './changePasswordRequest';
 export * from './error';
 export * from './health';
 export * from './healthStatus';

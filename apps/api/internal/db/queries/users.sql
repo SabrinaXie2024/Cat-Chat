@@ -23,3 +23,9 @@ DELETE FROM sessions WHERE token_hash = $1;
 
 -- name: DeleteExpiredSessions :execrows
 DELETE FROM sessions WHERE expires_at <= @now::timestamptz;
+
+-- name: UpdatePasswordHash :execrows
+UPDATE users SET password_hash = $2 WHERE id = $1;
+
+-- name: DeleteUserSessions :exec
+DELETE FROM sessions WHERE user_id = $1;
