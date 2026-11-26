@@ -1,4 +1,4 @@
-import { enUS, zhCN } from 'date-fns/locale'
+import type { Locale } from 'date-fns'
 import {
   createContext,
   type ReactNode,
@@ -17,10 +17,11 @@ import {
   POST_MAX_CHARS,
   REPLY_MAX_CHARS,
 } from '../lib/limits'
-import { en, type MessageKey, zh } from './messages'
+import { isLang, type Lang, languageInfo, matchLang } from './languages'
+import type { MessageKey } from './messages'
 
-export type Lang = 'zh' | 'en'
-const dictionaries = { zh, en } as const
+export type { Lang } from './languages'
+
 const STORAGE_KEY = 'lang'
 
 /** Product limits, available to every message as {postMax} etc. */
@@ -37,25 +38,29 @@ const limitVars = {
 type Vars = Record<string, string | number>
 export type T = (key: MessageKey, vars?: Vars) => string
 
-type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: T; dateLocale: typeof zhCN }
+type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: T; dateLocale: Locale }
 const I18nContext = createContext<Ctx | null>(null)
 
-/** Saved choice → browser language (any zh-*) → English. */
+/** Saved choice → first supported browser language → English. */
 export function detectLang(): Lang {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved === 'zh' || saved === 'en') return saved
+    if (isLang(saved)) return saved
   } catch {
     // storage blocked (private mode etc.) — fall through
   }
   const prefs =
     typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language])
-  return prefs.some((l) => l?.toLowerCase().startsWith('zh')) ? 'zh' : 'en'
+  for (const tag of prefs) {
+    const lang = tag ? matchLang(tag) : undefined
+    if (lang) return lang
+  }
+  return 'en'
 }
 
 export function translate(lang: Lang, key: MessageKey, vars?: Vars): string {
   const all: Vars = { ...limitVars, ...vars }
-  return dictionaries[lang][key].replace(/\{(\w+)\}/g, (m, name: string) =>
+  return languageInfo(lang).messages[key].replace(/\{(\w+)\}/g, (m, name: string) =>
     name in all ? String(all[name]) : m,
   )
 }
@@ -79,8 +84,9 @@ export function I18nProvider({
   }, [])
 
   useEffect(() => {
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en'
-    document.title = dictionaries[lang].docTitle
+    const info = languageInfo(lang)
+    document.documentElement.lang = info.htmlLang
+    document.title = info.messages.docTitle
   }, [lang])
 
   const value = useMemo<Ctx>(
@@ -88,7 +94,7 @@ export function I18nProvider({
       lang,
       setLang,
       t: (key, vars) => translate(lang, key, vars),
-      dateLocale: lang === 'zh' ? zhCN : enUS,
+      dateLocale: languageInfo(lang).dateLocale,
     }),
     [lang, setLang],
   )

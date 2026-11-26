@@ -111,21 +111,28 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
 
 ## Languages (apps/web/src/i18n)
 
-- Chinese + English. `messages.ts`: `zh` is the source; `en` is typed
-  `Record<MessageKey, string>`, so a missing translation fails typecheck. A
-  test also checks both languages use the same `{placeholders}`.
+- 10 languages: 简体中文 (source), 繁體中文, English, 日本語, 한국어, Русский,
+  Français, Deutsch, Español, Português (BR). Registry: `languages.ts`
+  (native name, `<html lang>`, date-fns locale, dictionary).
+- `messages.ts` holds `zh` (source of truth) and `en`; the rest live in
+  `locales/*.ts`. Every dictionary is typed `Messages`, so a missing/extra
+  key fails typecheck; a test checks every language keeps zh's
+  `{placeholders}` and has no blank strings. **Adding a key = add it to all
+  10 files.** Non-zh/en translations were written by Claude — have native
+  speakers review before relying on them.
 - `useI18n()` → `{ lang, setLang, t, dateLocale }`. `t(key, vars)`; product
-  limits (`{postMax}`, `{passwordMin}` …) are always available as vars.
-- Language = saved choice (`localStorage.lang`) → browser (`zh-*` → zh) →
-  English. Switch button in the nav; updates `<html lang>` and the title.
+  limits (`{postMax}`, `{passwordMin}`, `{captionMax}` …) are always vars.
+- Language = saved choice (`localStorage.lang`) → first supported browser
+  language (`matchLang`: zh-Hant/TW/HK/MO → zh-TW, other zh → zh, else by
+  base tag) → English. Picker: `LanguageSwitch` dropdown (menuitemradio).
 - **Never hard-code UI text.** Zod schemas use message *keys* as messages
-  and forms translate with `useFieldError()`, so errors re-render when the
-  language changes. Server errors stay English in the API and are mapped to
+  and forms translate with `useFieldError()`, so shown errors follow a
+  language switch. Server errors stay English in the API and are mapped to
   keys in `serverErrors.ts` (unknown ones shown raw).
-- Markdown content has one file per language (`content/guide.md`,
-  `guide.en.md`).
-- Tests render in Chinese by default; pass `{ lang: 'en' }` to
-  `renderApp`/`renderWithQuery` for English.
+- Markdown content exists in zh and en only (`content/guide*.md`); Chinese
+  variants read zh, all other languages read en.
+- Tests render in 简体中文 by default; pass `{ lang }` to
+  `renderApp`/`renderWithQuery` for others.
 
 ## Conventions
 

@@ -1,12 +1,12 @@
-// UI strings. `zh` is the source of truth; `en` must have exactly the same
-// keys (enforced by the `Messages` type), so a missing translation fails the
-// typecheck. Placeholders use {name}; see `vars` in I18nProvider.
+// UI strings. `zh` is the source of truth; every other language (here and in
+// ./locales) is typed `Messages`, so a missing or extra key fails the
+// typecheck. Placeholders use {name}; a test checks every language keeps the
+// same placeholders as zh. Product limits are always available as vars.
 
 export const zh = {
   brand: '喵友圈',
   docTitle: '喵友圈 · MeowSphere',
-  'lang.switchTo': 'EN',
-  'lang.switchLabel': '切换到英文',
+  'lang.label': '语言',
 
   'nav.guide': '养猫攻略',
   'nav.gallery': '我的猫咪',
@@ -126,8 +126,7 @@ export type Messages = Record<MessageKey, string>
 export const en: Messages = {
   brand: 'MeowSphere',
   docTitle: 'MeowSphere',
-  'lang.switchTo': '中文',
-  'lang.switchLabel': 'Switch to Chinese',
+  'lang.label': 'Language',
 
   'nav.guide': 'Cat Care',
   'nav.gallery': 'My Cats',

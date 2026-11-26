@@ -4,14 +4,33 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEMO_USER, db } from '../mocks/handlers'
 import { renderApp } from '../test/render'
 import { detectLang, translate } from './I18nProvider'
-import { en, type MessageKey, zh } from './messages'
+import { LANGUAGES, matchLang } from './languages'
+import { type MessageKey, zh } from './messages'
 
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 describe('dictionaries', () => {
-  it('every key uses the same placeholders in both languages', () => {
+  it('offers 10 languages', () => {
+    expect(LANGUAGES.map((l) => l.code)).toEqual([
+      'zh',
+      'zh-TW',
+      'en',
+      'ja',
+      'ko',
+      'ru',
+      'fr',
+      'de',
+      'es',
+      'pt',
+    ])
+  })
+
+  it.each(
+    LANGUAGES.map((l) => [l.code, l.messages] as const),
+  )('%s: same placeholders as zh, no blank strings', (_code, messages) => {
     for (const key of Object.keys(zh) as MessageKey[]) {
-      expect(placeholders(en[key]), key).toEqual(placeholders(zh[key]))
+      expect(placeholders(messages[key]), key).toEqual(placeholders(zh[key]))
+      expect(messages[key].trim(), key).not.toBe('')
     }
   })
 
@@ -30,12 +49,25 @@ describe('detectLang', () => {
   const withLanguages = (languages: string[]) =>
     vi.stubGlobal('navigator', { ...navigator, languages, language: languages[0] })
 
-  it('follows the browser: any zh-* → Chinese, otherwise English', () => {
-    withLanguages(['zh-TW', 'en'])
-    expect(detectLang()).toBe('zh')
+  it('picks the first supported browser language, else English', () => {
     withLanguages(['fr-FR', 'en-US'])
+    expect(detectLang()).toBe('fr')
+    withLanguages(['it-IT', 'ja-JP'])
+    expect(detectLang()).toBe('ja') // Italian unsupported → next preference
+    withLanguages(['it-IT', 'nl'])
     expect(detectLang()).toBe('en')
   })
+
+  it.each([
+    ['zh-CN', 'zh'],
+    ['zh-Hans', 'zh'],
+    ['zh-TW', 'zh-TW'],
+    ['zh-Hant-HK', 'zh-TW'],
+    ['zh-HK', 'zh-TW'],
+    ['pt-PT', 'pt'],
+    ['ko-KR', 'ko'],
+    ['xx', undefined],
+  ])('matchLang(%s) = %s', (tag, want) => expect(matchLang(tag)).toBe(want))
 
   it('a saved choice wins over the browser', () => {
     withLanguages(['zh-CN'])
@@ -47,24 +79,71 @@ describe('detectLang', () => {
 describe('switching language', () => {
   afterEach(() => localStorage.clear())
 
-  it('toggles the whole UI, page title and <html lang>, and remembers the choice', async () => {
+  const pick = async (
+    user: ReturnType<typeof userEvent.setup>,
+    current: string,
+    target: string,
+  ) => {
+    const nav = screen.getByRole('navigation')
+    const button = within(nav).getByRole('button', { name: new RegExp(`: ${current}$`) })
+    await user.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    await user.click(within(screen.getByRole('menu')).getByRole('menuitemradio', { name: target }))
+  }
+
+  it('dropdown lists all languages in their own names and marks the current one', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+    const nav = await screen.findByRole('navigation')
+    await user.click(within(nav).getByRole('button', { name: '语言: 简体中文' }))
+    const items = within(screen.getByRole('menu', { name: '语言' })).getAllByRole('menuitemradio')
+    expect(items.map((i) => i.textContent)).toEqual(LANGUAGES.map((l) => l.nativeName))
+    expect(
+      items.filter((i) => i.getAttribute('aria-checked') === 'true').map((i) => i.textContent),
+    ).toEqual(['简体中文'])
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('switches the whole UI, page title and <html lang>, and remembers the choice', async () => {
     const user = userEvent.setup()
     renderApp('/community')
     const nav = await screen.findByRole('navigation')
     expect(within(nav).getByText('喵友圈')).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('zh-CN')
 
-    await user.click(within(nav).getByRole('button', { name: '切换到英文' }))
+    await pick(user, '简体中文', 'English')
     expect(within(nav).getByText('MeowSphere')).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: 'Cat Moments' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Cat Moments' })).toBeInTheDocument()
     expect(document.title).toBe('MeowSphere')
     expect(document.documentElement.lang).toBe('en')
     expect(localStorage.getItem('lang')).toBe('en')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
 
-    await user.click(within(nav).getByRole('button', { name: 'Switch to Chinese' }))
+    await pick(user, 'English', '日本語')
+    expect(screen.getByRole('heading', { name: 'ねこ日和' })).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('ja')
+
+    await pick(user, '日本語', '繁體中文')
+    expect(screen.getByRole('heading', { name: '貓咪日常' })).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('zh-TW')
+
+    await pick(user, '繁體中文', '简体中文')
     expect(within(nav).getByText('喵友圈')).toBeInTheDocument()
     expect(document.title).toBe('喵友圈 · MeowSphere')
+  })
+
+  it.each([
+    ['ko', '고양이 일상'],
+    ['ru', 'Кошачьи будни'],
+    ['fr', 'Moments de chats'],
+    ['de', 'Katzenmomente'],
+    ['es', 'Momentos gatunos'],
+    ['pt', 'Momentos felinos'],
+  ] as const)('renders in %s', async (lang, heading) => {
+    renderApp('/community', { lang })
+    expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument()
   })
 
   it('translates validation messages, already-shown errors included', async () => {
@@ -78,9 +157,11 @@ describe('switching language', () => {
     expect(await screen.findByText('Password must be at least 8 characters')).toBeInTheDocument()
     expect(screen.getByText("Passwords don't match")).toBeInTheDocument()
 
-    // Switch while the errors are on screen: they re-render in Chinese.
-    await user.click(screen.getByRole('button', { name: 'Switch to Chinese' }))
-    expect(await screen.findByText('密码至少 8 位')).toBeInTheDocument()
+    // Switch while the errors are on screen: they re-render in the new language.
+    await pick(user, 'English', 'Deutsch')
+    expect(
+      await screen.findByText('Das Passwort muss mindestens 8 Zeichen lang sein'),
+    ).toBeInTheDocument()
   })
 
   it('translates server errors', async () => {
