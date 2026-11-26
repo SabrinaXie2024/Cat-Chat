@@ -10,6 +10,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type GalleryItem struct {
+	ID        uuid.UUID
+	Kind      string
+	ImageID   *uuid.UUID
+	VideoID   *uuid.UUID
+	Caption   string
+	CreatedBy uuid.UUID
+	CreatedAt time.Time
+}
+
 type Image struct {
 	ID        uuid.UUID
 	OwnerID   uuid.UUID
@@ -50,4 +60,15 @@ type User struct {
 	Nickname     string
 	PasswordHash string
 	CreatedAt    time.Time
+}
+
+type Video struct {
+	ID            uuid.UUID
+	OwnerID       uuid.UUID
+	Container     string
+	PosterImageID uuid.UUID
+	Width         int32
+	Height        int32
+	Bytes         int64
+	CreatedAt     time.Time
 }

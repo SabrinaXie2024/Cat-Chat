@@ -18,6 +18,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for GalleryItemKind.
+const (
+	GalleryItemKindPhoto GalleryItemKind = "photo"
+	GalleryItemKindVideo GalleryItemKind = "video"
+)
+
+// Valid indicates whether the value is a known member of the GalleryItemKind enum.
+func (e GalleryItemKind) Valid() bool {
+	switch e {
+	case GalleryItemKindPhoto:
+		return true
+	case GalleryItemKindVideo:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthStatus.
 const (
 	Ok HealthStatus = "ok"
@@ -27,6 +45,24 @@ const (
 func (e HealthStatus) Valid() bool {
 	switch e {
 	case Ok:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NewGalleryItemKind.
+const (
+	NewGalleryItemKindPhoto NewGalleryItemKind = "photo"
+	NewGalleryItemKindVideo NewGalleryItemKind = "video"
+)
+
+// Valid indicates whether the value is a known member of the NewGalleryItemKind enum.
+func (e NewGalleryItemKind) Valid() bool {
+	switch e {
+	case NewGalleryItemKindPhoto:
+		return true
+	case NewGalleryItemKindVideo:
 		return true
 	default:
 		return false
@@ -43,6 +79,23 @@ type ChangePasswordRequest struct {
 type Error struct {
 	Message string `json:"message"`
 }
+
+// GalleryItem defines model for GalleryItem.
+type GalleryItem struct {
+	Caption   string          `json:"caption"`
+	CreatedAt time.Time       `json:"createdAt"`
+	Height    int             `json:"height"`
+	Id        string          `json:"id"`
+	Kind      GalleryItemKind `json:"kind"`
+
+	// PosterUrl Path to the processed image, e.g. /api/images/{id}
+	PosterUrl *ImageUrl `json:"posterUrl,omitempty"`
+	Url       string    `json:"url"`
+	Width     int       `json:"width"`
+}
+
+// GalleryItemKind defines model for GalleryItem.Kind.
+type GalleryItemKind string
 
 // Health defines model for Health.
 type Health struct {
@@ -76,6 +129,18 @@ type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+// NewGalleryItem defines model for NewGalleryItem.
+type NewGalleryItem struct {
+	Caption string             `json:"caption"`
+	Kind    NewGalleryItemKind `json:"kind"`
+
+	// MediaId An image id (photo) or video id (video) uploaded by an admin
+	MediaId string `json:"mediaId"`
+}
+
+// NewGalleryItemKind defines model for NewGalleryItem.Kind.
+type NewGalleryItemKind string
 
 // NewPost defines model for NewPost.
 type NewPost struct {
@@ -122,11 +187,30 @@ type User struct {
 	CreatedAt time.Time `json:"createdAt"`
 	Email     string    `json:"email"`
 	Id        string    `json:"id"`
-	Nickname  string    `json:"nickname"`
+
+	// IsAdmin Site owner; may manage the gallery. Set via ADMIN_EMAILS.
+	IsAdmin  bool   `json:"isAdmin"`
+	Nickname string `json:"nickname"`
+}
+
+// Video defines model for Video.
+type Video struct {
+	Height int    `json:"height"`
+	Id     string `json:"id"`
+
+	// PosterUrl Path to the processed image, e.g. /api/images/{id}
+	PosterUrl ImageUrl `json:"posterUrl"`
+
+	// Url /api/videos/{id}
+	Url   string `json:"url"`
+	Width int    `json:"width"`
 }
 
 // BadRequest defines model for BadRequest.
 type BadRequest = Error
+
+// Forbidden defines model for Forbidden.
+type Forbidden = Error
 
 // NotFound defines model for NotFound.
 type NotFound = Error
@@ -139,6 +223,11 @@ type UploadImageMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// UploadVideoMultipartBody defines body for UploadVideo for multipart/form-data ContentType.
+type UploadVideoMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -148,6 +237,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 // RegisterJSONRequestBody defines body for Register for application/json ContentType.
 type RegisterJSONRequestBody = RegisterRequest
 
+// CreateGalleryItemJSONRequestBody defines body for CreateGalleryItem for application/json ContentType.
+type CreateGalleryItemJSONRequestBody = NewGalleryItem
+
 // UploadImageMultipartRequestBody defines body for UploadImage for multipart/form-data ContentType.
 type UploadImageMultipartRequestBody UploadImageMultipartBody
 
@@ -156,6 +248,9 @@ type CreatePostJSONRequestBody = NewPost
 
 // CreateReplyJSONRequestBody defines body for CreateReply for application/json ContentType.
 type CreateReplyJSONRequestBody = NewReply
+
+// UploadVideoMultipartRequestBody defines body for UploadVideo for multipart/form-data ContentType.
+type UploadVideoMultipartRequestBody UploadVideoMultipartBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -174,6 +269,15 @@ type ServerInterface interface {
 
 	// (POST /auth/register)
 	Register(w http.ResponseWriter, r *http.Request)
+
+	// (GET /gallery)
+	ListGallery(w http.ResponseWriter, r *http.Request)
+
+	// (POST /gallery)
+	CreateGalleryItem(w http.ResponseWriter, r *http.Request)
+
+	// (DELETE /gallery/{itemId})
+	DeleteGalleryItem(w http.ResponseWriter, r *http.Request, itemId string)
 
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -195,6 +299,9 @@ type ServerInterface interface {
 
 	// (POST /posts/{postId}/replies)
 	CreateReply(w http.ResponseWriter, r *http.Request, postId string)
+
+	// (POST /videos)
+	UploadVideo(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -267,6 +374,60 @@ func (siw *ServerInterfaceWrapper) Register(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Register(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListGallery operation middleware
+func (siw *ServerInterfaceWrapper) ListGallery(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListGallery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateGalleryItem operation middleware
+func (siw *ServerInterfaceWrapper) CreateGalleryItem(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGalleryItem(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteGalleryItem operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGalleryItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", r.PathValue("itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGalleryItem(w, r, itemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -410,6 +571,20 @@ func (siw *ServerInterfaceWrapper) CreateReply(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// UploadVideo operation middleware
+func (siw *ServerInterfaceWrapper) UploadVideo(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadVideo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -538,6 +713,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/me", wrapper.GetMe)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/images", wrapper.UploadImage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/images/{imageId}", wrapper.GetImage)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/gallery", wrapper.ListGallery)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/gallery", wrapper.CreateGalleryItem)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/gallery/{itemId}", wrapper.DeleteGalleryItem)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/videos", wrapper.UploadVideo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/posts", wrapper.ListPosts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/posts", wrapper.CreatePost)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/posts/{postId}/replies", wrapper.ListReplies)
@@ -547,6 +726,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 }
 
 type BadRequestJSONResponse Error
+
+type ForbiddenJSONResponse Error
 
 type NotFoundJSONResponse Error
 
@@ -830,6 +1011,149 @@ func (response Register409JSONResponse) VisitRegisterResponse(w http.ResponseWri
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListGalleryRequestObject struct {
+}
+
+type ListGalleryResponseObject interface {
+	VisitListGalleryResponse(w http.ResponseWriter) error
+}
+
+type ListGallery200JSONResponse []GalleryItem
+
+func (response ListGallery200JSONResponse) VisitListGalleryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGalleryItemRequestObject struct {
+	Body *CreateGalleryItemJSONRequestBody
+}
+
+type CreateGalleryItemResponseObject interface {
+	VisitCreateGalleryItemResponse(w http.ResponseWriter) error
+}
+
+type CreateGalleryItem201JSONResponse GalleryItem
+
+func (response CreateGalleryItem201JSONResponse) VisitCreateGalleryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGalleryItem400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateGalleryItem400JSONResponse) VisitCreateGalleryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGalleryItem401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateGalleryItem401JSONResponse) VisitCreateGalleryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateGalleryItem403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateGalleryItem403JSONResponse) VisitCreateGalleryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.ForbiddenJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGalleryItemRequestObject struct {
+	ItemId string `json:"itemId"`
+}
+
+type DeleteGalleryItemResponseObject interface {
+	VisitDeleteGalleryItemResponse(w http.ResponseWriter) error
+}
+
+type DeleteGalleryItem204Response struct {
+}
+
+func (response DeleteGalleryItem204Response) VisitDeleteGalleryItemResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteGalleryItem401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteGalleryItem401JSONResponse) VisitDeleteGalleryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGalleryItem403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteGalleryItem403JSONResponse) VisitDeleteGalleryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.ForbiddenJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteGalleryItem404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteGalleryItem404JSONResponse) VisitDeleteGalleryItemResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -1147,6 +1471,84 @@ func (response CreateReply409JSONResponse) VisitCreateReplyResponse(w http.Respo
 	return err
 }
 
+type UploadVideoRequestObject struct {
+	Body *multipart.Reader
+}
+
+type UploadVideoResponseObject interface {
+	VisitUploadVideoResponse(w http.ResponseWriter) error
+}
+
+type UploadVideo201JSONResponse Video
+
+func (response UploadVideo201JSONResponse) VisitUploadVideoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadVideo400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UploadVideo400JSONResponse) VisitUploadVideoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadVideo401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UploadVideo401JSONResponse) VisitUploadVideoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadVideo403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UploadVideo403JSONResponse) VisitUploadVideoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.ForbiddenJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadVideo413JSONResponse Error
+
+func (response UploadVideo413JSONResponse) VisitUploadVideoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
@@ -1164,6 +1566,15 @@ type StrictServerInterface interface {
 
 	// (POST /auth/register)
 	Register(ctx context.Context, request RegisterRequestObject) (RegisterResponseObject, error)
+
+	// (GET /gallery)
+	ListGallery(ctx context.Context, request ListGalleryRequestObject) (ListGalleryResponseObject, error)
+
+	// (POST /gallery)
+	CreateGalleryItem(ctx context.Context, request CreateGalleryItemRequestObject) (CreateGalleryItemResponseObject, error)
+
+	// (DELETE /gallery/{itemId})
+	DeleteGalleryItem(ctx context.Context, request DeleteGalleryItemRequestObject) (DeleteGalleryItemResponseObject, error)
 
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
@@ -1185,6 +1596,9 @@ type StrictServerInterface interface {
 
 	// (POST /posts/{postId}/replies)
 	CreateReply(ctx context.Context, request CreateReplyRequestObject) (CreateReplyResponseObject, error)
+
+	// (POST /videos)
+	UploadVideo(ctx context.Context, request UploadVideoRequestObject) (UploadVideoResponseObject, error)
 }
 
 // StrictHandlerFunc and StrictMiddlewareFunc are type aliases rather than
@@ -1363,6 +1777,87 @@ func (sh *strictHandler) Register(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RegisterResponseObject); ok {
 		if err := validResponse.VisitRegisterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListGallery operation middleware
+func (sh *strictHandler) ListGallery(w http.ResponseWriter, r *http.Request) {
+	var request ListGalleryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ListGallery(ctx, request.(ListGalleryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListGallery")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListGalleryResponseObject); ok {
+		if err := validResponse.VisitListGalleryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateGalleryItem operation middleware
+func (sh *strictHandler) CreateGalleryItem(w http.ResponseWriter, r *http.Request) {
+	var request CreateGalleryItemRequestObject
+
+	var body CreateGalleryItemJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.CreateGalleryItem(ctx, request.(CreateGalleryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateGalleryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateGalleryItemResponseObject); ok {
+		if err := validResponse.VisitCreateGalleryItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteGalleryItem operation middleware
+func (sh *strictHandler) DeleteGalleryItem(w http.ResponseWriter, r *http.Request, itemId string) {
+	var request DeleteGalleryItemRequestObject
+
+	request.ItemId = itemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.DeleteGalleryItem(ctx, request.(DeleteGalleryItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteGalleryItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteGalleryItemResponseObject); ok {
+		if err := validResponse.VisitDeleteGalleryItemResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1558,6 +2053,37 @@ func (sh *strictHandler) CreateReply(w http.ResponseWriter, r *http.Request, pos
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateReplyResponseObject); ok {
 		if err := validResponse.VisitCreateReplyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadVideo operation middleware
+func (sh *strictHandler) UploadVideo(w http.ResponseWriter, r *http.Request) {
+	var request UploadVideoRequestObject
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.UploadVideo(ctx, request.(UploadVideoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadVideo")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadVideoResponseObject); ok {
+		if err := validResponse.VisitUploadVideoResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

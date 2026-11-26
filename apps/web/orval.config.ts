@@ -2,7 +2,11 @@ import { defineConfig } from 'orval'
 
 export default defineConfig({
   catChat: {
-    input: { target: '../../packages/api-spec/openapi.yaml' },
+    input: {
+      target: '../../packages/api-spec/openapi.yaml',
+      // getVideo is a Range-capable stream consumed by <video src>, not the client.
+      filters: { mode: 'exclude', tags: ['media-stream'] },
+    },
     output: {
       mode: 'tags-split',
       target: 'src/api/generated',

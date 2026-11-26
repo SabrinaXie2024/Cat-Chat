@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -33,7 +34,7 @@ func (s *Server) UploadImage(ctx context.Context, req UploadImageRequestObject) 
 	if req.Body == nil {
 		return UploadImage400JSONResponse{BadRequestJSONResponse{Message: "missing file"}}, nil
 	}
-	file, err := firstFilePart(req)
+	file, err := nextFilePart(req.Body)
 	if err != nil {
 		return UploadImage400JSONResponse{BadRequestJSONResponse{Message: "missing file"}}, nil
 	}
@@ -90,9 +91,10 @@ func (r imageResponse) VisitGetImageResponse(w http.ResponseWriter) error {
 	return GetImage200ImagejpegResponse{Body: r.rc, ContentLength: r.size}.VisitGetImageResponse(w)
 }
 
-func firstFilePart(req UploadImageRequestObject) (io.ReadCloser, error) {
+// nextFilePart returns the multipart field named "file".
+func nextFilePart(body *multipart.Reader) (io.ReadCloser, error) {
 	for {
-		part, err := req.Body.NextPart()
+		part, err := body.NextPart()
 		if err != nil {
 			return nil, err
 		}

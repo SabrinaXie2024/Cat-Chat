@@ -4,3 +4,6 @@ generate:
   std-http-server: true
   strict-server: true
   models: true
+output-options:
+  # Served by a hand-written handler (HTTP Range / seeking); see video.go.
+  exclude-operation-ids: [getVideo]

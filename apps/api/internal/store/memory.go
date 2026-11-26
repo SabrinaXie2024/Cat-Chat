@@ -32,6 +32,9 @@ type Memory struct {
 	byEmail  map[string]string  // email -> id
 	sessions map[string]session // token hash -> session
 	images   map[string]string  // image id -> owner id
+	imgDims  map[string][2]int
+	videos   map[string]api.VideoRecord
+	gallery  []api.GalleryEntry // newest last
 	now      func() time.Time
 }
 
@@ -44,6 +47,8 @@ func NewMemory() *Memory {
 		byEmail:  map[string]string{},
 		sessions: map[string]session{},
 		images:   map[string]string{},
+		imgDims:  map[string][2]int{},
+		videos:   map[string]api.VideoRecord{},
 		now:      time.Now,
 	}
 }
@@ -130,10 +135,73 @@ func (m *Memory) ChangePassword(_ context.Context, userID, hash string) error {
 
 // --- images ---
 
-func (m *Memory) CreateImage(_ context.Context, id, ownerID string, _, _, _ int) error {
+func (m *Memory) CreateImage(_ context.Context, id, ownerID string, w, h, _ int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.images[id] = ownerID
+	m.imgDims[id] = [2]int{w, h}
+	return nil
+}
+
+// --- videos & gallery ---
+
+func (m *Memory) CreateVideo(_ context.Context, v api.VideoRecord) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.videos[v.ID] = v
+	return nil
+}
+
+func (m *Memory) VideoContainer(_ context.Context, id string) (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	v, ok := m.videos[id]
+	if !ok {
+		return "", api.ErrNotFound
+	}
+	return v.Container, nil
+}
+
+func (m *Memory) CreateGalleryItem(_ context.Context, author api.User, kind, mediaID, caption string) (api.GalleryEntry, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	e := api.GalleryEntry{ID: newID(), Kind: kind, Caption: caption, CreatedAt: m.now().UTC()}
+	switch kind {
+	case "photo":
+		if m.images[mediaID] != author.Id {
+			return api.GalleryEntry{}, api.ErrInvalidMedia
+		}
+		d := m.imgDims[mediaID]
+		e.ImageID, e.Width, e.Height = mediaID, d[0], d[1]
+	case "video":
+		v, ok := m.videos[mediaID]
+		if !ok || v.OwnerID != author.Id {
+			return api.GalleryEntry{}, api.ErrInvalidMedia
+		}
+		e.VideoID, e.PosterImageID, e.Width, e.Height = mediaID, v.PosterImageID, v.Width, v.Height
+	default:
+		return api.GalleryEntry{}, api.ErrInvalidMedia
+	}
+	m.gallery = append(m.gallery, e)
+	return e, nil
+}
+
+func (m *Memory) ListGallery(context.Context) ([]api.GalleryEntry, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := slices.Clone(m.gallery)
+	slices.Reverse(out)
+	return nonNil(out), nil
+}
+
+func (m *Memory) DeleteGalleryItem(_ context.Context, id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	i := slices.IndexFunc(m.gallery, func(e api.GalleryEntry) bool { return e.ID == id })
+	if i < 0 {
+		return api.ErrNotFound
+	}
+	m.gallery = slices.Delete(m.gallery, i, i+1)
 	return nil
 }
 

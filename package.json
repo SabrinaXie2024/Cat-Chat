@@ -8,7 +8,7 @@
   "scripts": {
     "gen": "pnpm --filter @cat-chat/web gen && cd apps/api && go generate ./...",
     "dev:web": "pnpm --filter @cat-chat/web dev",
-    "dev:api": "cd apps/api && INSECURE_COOKIES=1 DATABASE_URL=${DATABASE_URL:-postgres:///catchat?host=/tmp} go run ./cmd/server",
+    "dev:api": "cd apps/api && set -a && { [ ! -f .env.local ] || . ./.env.local; } && set +a && INSECURE_COOKIES=1 DATABASE_URL=${DATABASE_URL:-postgres:///catchat?host=/tmp} go run ./cmd/server",
     "build": "pnpm --filter @cat-chat/web build && cd apps/api && go build ./...",
     "test": "pnpm --filter @cat-chat/web test && cd apps/api && TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres:///catchat_test?host=/tmp} go test ./...",
     "typecheck": "pnpm --filter @cat-chat/web typecheck",

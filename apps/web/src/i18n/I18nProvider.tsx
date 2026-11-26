@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import {
+  GALLERY_CAPTION_MAX_CHARS,
   MAX_REPLIES_PER_POST,
   NICKNAME_MAX_CHARS,
   PASSWORD_MAX_CHARS,
@@ -30,6 +31,7 @@ const limitVars = {
   nicknameMax: NICKNAME_MAX_CHARS,
   passwordMin: PASSWORD_MIN_CHARS,
   passwordMax: PASSWORD_MAX_CHARS,
+  captionMax: GALLERY_CAPTION_MAX_CHARS,
 }
 
 type Vars = Record<string, string | number>

@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +21,7 @@ import (
 	"github.com/cat-chat/api/internal/auth"
 	"github.com/cat-chat/api/internal/blob"
 	"github.com/cat-chat/api/internal/store"
+	"github.com/cat-chat/api/internal/videos"
 )
 
 // client is a browser-like test client: real HTTP server + cookie jar.
@@ -29,11 +33,16 @@ type client struct {
 
 func newClient(t *testing.T) *client {
 	t.Helper()
+	videoDir := t.TempDir()
 	srv := httptest.NewServer(newHandler(&api.Server{
-		Store:   store.NewMemory(),
-		Blobs:   blob.Local{Dir: t.TempDir()},
-		Limiter: auth.NewLoginLimiter(),
-		Now:     time.Now,
+		Store:        store.NewMemory(),
+		Blobs:        blob.Local{Dir: t.TempDir()},
+		VideoBlobs:   blob.Local{Dir: videoDir, Ext: ".video"},
+		Videos:       videos.Processor{},
+		VideoWorkDir: filepath.Join(videoDir, ".tmp"),
+		AdminEmails:  map[string]bool{"admin@cat.dev": true},
+		Limiter:      auth.NewLoginLimiter(),
+		Now:          time.Now,
 	}))
 	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
@@ -292,12 +301,17 @@ func pngBytes(t *testing.T, w, h int) []byte {
 // upload posts data as multipart field "file" and returns status + body.
 func (c *client) upload(data []byte, hdr ...string) (int, string, http.Header) {
 	c.t.Helper()
+	return c.uploadTo("/api/images", data, hdr...)
+}
+
+func (c *client) uploadTo(path string, data []byte, hdr ...string) (int, string, http.Header) {
+	c.t.Helper()
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	fw, _ := mw.CreateFormFile("file", "cat.png")
 	fw.Write(data)
 	mw.Close()
-	req, _ := http.NewRequest("POST", c.srv.URL+"/api/images", &body)
+	req, _ := http.NewRequest("POST", c.srv.URL+path, &body)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	for i := 0; i+1 < len(hdr); i += 2 {
 		req.Header.Set(hdr[i], hdr[i+1])
@@ -413,5 +427,122 @@ func TestPostImagesMustBeOwnUploads(t *testing.T) {
 	reply := c.mustStatus(201, "POST", "/api/posts/"+p.Id+"/replies", `{"content":"回复带图","images":["`+mine.Id+`"]}`)
 	if !strings.Contains(reply, mine.Url) {
 		t.Fatalf("reply should return image url: %s", reply)
+	}
+}
+
+func (c *client) signUpAs(email string) {
+	c.t.Helper()
+	c.mustStatus(201, "POST", "/api/auth/register", `{"email":"`+email+`","password":"password123","nickname":"n"}`)
+}
+
+func TestIsAdminFlag(t *testing.T) {
+	admin := newClient(t)
+	admin.signUpAs("Admin@Cat.dev") // case-insensitive
+	if me := admin.mustStatus(200, "GET", "/api/auth/me", ""); !strings.Contains(me, `"isAdmin":true`) {
+		t.Fatalf("admin me = %s", me)
+	}
+	user := newClient(t)
+	user.srv = admin.srv
+	user.signUpAs("someone@cat.dev")
+	if me := user.mustStatus(200, "GET", "/api/auth/me", ""); !strings.Contains(me, `"isAdmin":false`) {
+		t.Fatalf("user me = %s", me)
+	}
+}
+
+func TestGalleryPhotos(t *testing.T) {
+	admin := newClient(t)
+	admin.signUpAs("admin@cat.dev")
+	user := newClient(t)
+	user.srv = admin.srv
+	user.signUpAs("someone@cat.dev")
+	anon := newClient(t)
+	anon.srv = admin.srv
+
+	img := admin.mustUpload()
+	body := `{"kind":"photo","mediaId":"` + img.Id + `","caption":"  晒太阳  "}`
+	anon.mustStatus(401, "POST", "/api/gallery", body)
+	user.mustStatus(403, "POST", "/api/gallery", body)
+
+	created := admin.mustStatus(201, "POST", "/api/gallery", body)
+	var item api.GalleryItem
+	_ = json.Unmarshal([]byte(created), &item)
+	if item.Kind != "photo" || item.Url != img.Url || item.Caption != "晒太阳" || item.Width != img.Width {
+		t.Fatalf("item = %+v", item)
+	}
+
+	var list []api.GalleryItem
+	_ = json.Unmarshal([]byte(anon.mustStatus(200, "GET", "/api/gallery", "")), &list)
+	if len(list) != 1 || list[0].Id != item.Id {
+		t.Fatalf("public list = %+v", list)
+	}
+
+	// Validation: someone else's image, unknown kind, long caption.
+	theirs := user.mustUpload()
+	admin.mustStatus(400, "POST", "/api/gallery", `{"kind":"photo","mediaId":"`+theirs.Id+`","caption":""}`)
+	admin.mustStatus(400, "POST", "/api/gallery", `{"kind":"gif","mediaId":"`+img.Id+`","caption":""}`)
+	admin.mustStatus(400, "POST", "/api/gallery", `{"kind":"photo","mediaId":"`+img.Id+`","caption":"`+strings.Repeat("猫", 201)+`"}`)
+	admin.mustStatus(400, "POST", "/api/gallery", `{"kind":"video","mediaId":"`+img.Id+`","caption":""}`) // kind mismatch
+
+	user.mustStatus(403, "DELETE", "/api/gallery/"+item.Id, "")
+	admin.mustStatus(204, "DELETE", "/api/gallery/"+item.Id, "")
+	admin.mustStatus(404, "DELETE", "/api/gallery/"+item.Id, "")
+}
+
+func TestGalleryVideoUploadAndRange(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not installed")
+	}
+	src := filepath.Join(t.TempDir(), "in.mp4")
+	if b, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=320x240:rate=10",
+		"-t", "1", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-metadata", "location=+31.2304+121.4737/", src).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, b)
+	}
+	mp4, _ := os.ReadFile(src)
+
+	admin := newClient(t)
+	admin.signUpAs("admin@cat.dev")
+	user := newClient(t)
+	user.srv = admin.srv
+	user.signUpAs("someone@cat.dev")
+
+	if code, _, _ := user.uploadTo("/api/videos", mp4); code != 403 {
+		t.Fatalf("non-admin video upload: %d", code)
+	}
+	if code, body, _ := admin.uploadTo("/api/videos", []byte("<html>")); code != 400 {
+		t.Fatalf("bogus video: %d %s", code, body)
+	}
+	code, body, _ := admin.uploadTo("/api/videos", mp4)
+	if code != 201 {
+		t.Fatalf("video upload: %d %s", code, body)
+	}
+	var v api.Video
+	_ = json.Unmarshal([]byte(body), &v)
+	if v.Width != 320 || v.Height != 240 || !strings.HasPrefix(v.PosterUrl, "/api/images/") {
+		t.Fatalf("video = %+v", v)
+	}
+	if code, _, _ := admin.do("GET", v.PosterUrl, ""); code != 200 {
+		t.Fatalf("poster: %d", code)
+	}
+
+	item := admin.mustStatus(201, "POST", "/api/gallery", `{"kind":"video","mediaId":"`+v.Id+`","caption":"跑酷"}`)
+	if !strings.Contains(item, `"url":"`+v.Url+`"`) || !strings.Contains(item, `"posterUrl":"`+v.PosterUrl+`"`) {
+		t.Fatalf("gallery video item = %s", item)
+	}
+
+	// Range request for seeking, served publicly.
+	req, _ := http.NewRequest("GET", admin.srv.URL+v.Url, nil)
+	req.Header.Set("Range", "bytes=0-99")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	part, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	if res.StatusCode != 206 || len(part) != 100 || res.Header.Get("Content-Type") != "video/mp4" ||
+		res.Header.Get("Accept-Ranges") != "bytes" || res.Header.Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatalf("range: %d len=%d headers=%v", res.StatusCode, len(part), res.Header)
+	}
+	if code, _, _ := admin.do("GET", "/api/videos/01a2111c-2a68-7371-bce0-5b41e2f69f46", ""); code != 404 {
+		t.Fatalf("missing video: %d", code)
 	}
 }

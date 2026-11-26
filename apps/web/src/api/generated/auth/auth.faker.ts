@@ -22,9 +22,9 @@ import type {
 } from '../model';
 
 
-export const getRegisterResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
+export const getRegisterResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 
-export const getLoginResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
+export const getLoginResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 
-export const getGetMeResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
+export const getGetMeResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 

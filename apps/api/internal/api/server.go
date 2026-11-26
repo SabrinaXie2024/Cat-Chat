@@ -35,6 +35,14 @@ type Store interface {
 	// exists and belongs to the author.
 	CreateImage(ctx context.Context, id, ownerID string, width, height, size int) error
 
+	CreateVideo(ctx context.Context, v VideoRecord) error
+	VideoContainer(ctx context.Context, id string) (string, error)
+	// CreateGalleryItem returns ErrInvalidMedia unless mediaID is an image or
+	// video (per kind) uploaded by author.
+	CreateGalleryItem(ctx context.Context, author User, kind, mediaID, caption string) (GalleryEntry, error)
+	ListGallery(ctx context.Context) ([]GalleryEntry, error)
+	DeleteGalleryItem(ctx context.Context, id string) error
+
 	CreateUser(ctx context.Context, email, nickname, passwordHash string) (User, error)
 	UserByEmail(ctx context.Context, email string) (u User, passwordHash string, err error)
 	CreateSession(ctx context.Context, tokenHash, userID string, expires time.Time) error
@@ -45,13 +53,36 @@ type Store interface {
 	ChangePassword(ctx context.Context, userID, passwordHash string) error
 }
 
+// VideoRecord is a processed video's metadata.
+type VideoRecord struct {
+	ID, OwnerID, Container, PosterImageID string
+	Width, Height                         int
+	Size                                  int64
+}
+
+// GalleryEntry is a gallery row with media ids; the HTTP layer turns ids
+// into URLs.
+type GalleryEntry struct {
+	ID, Kind, Caption string
+	CreatedAt         time.Time
+	ImageID, VideoID  string // one is set, per Kind
+	PosterImageID     string // videos only
+	Width, Height     int
+}
+
 // MaxRepliesPerPost is the product limit on interaction rounds per post.
 const MaxRepliesPerPost = 10
 
 type Server struct {
-	Store   Store
-	Blobs   blob.Store
-	Limiter LoginLimiter
+	Store Store
+	Blobs blob.Store // processed images
+	// Gallery videos.
+	VideoBlobs   blob.Store
+	Videos       VideoProcessor
+	VideoWorkDir string // temp files; must be on the same filesystem as VideoBlobs
+	// AdminEmails (lowercase) may manage the gallery.
+	AdminEmails map[string]bool
+	Limiter     LoginLimiter
 	// SecureCookies sets the Secure flag; true everywhere except local http.
 	SecureCookies bool
 	Now           func() time.Time

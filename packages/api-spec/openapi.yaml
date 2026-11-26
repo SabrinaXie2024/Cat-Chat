@@ -173,6 +173,108 @@ paths:
             image/jpeg:
               schema: { type: string, format: binary }
         "404": { $ref: "#/components/responses/NotFound" }
+  /gallery:
+    get:
+      operationId: listGallery
+      tags: [gallery]
+      security: []
+      description: The site owner's own cat photos and videos, newest first.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GalleryItem" }
+    post:
+      operationId: createGalleryItem
+      tags: [gallery]
+      description: Admin only. Publishes an uploaded image or video.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewGalleryItem" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GalleryItem" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /gallery/{itemId}:
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      operationId: deleteGalleryItem
+      tags: [gallery]
+      description: Admin only.
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /videos:
+    post:
+      operationId: uploadVideo
+      tags: [gallery]
+      description: |
+        Admin only. MP4 or WebM, ≤ 200 MB. The server checks the real
+        container, remuxes with ffmpeg (no re-encode) dropping all metadata
+        (GPS location, device, titles), and extracts a poster frame.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Stored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Video" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413":
+          description: File larger than 200 MB
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /videos/{videoId}:
+    parameters:
+      - name: videoId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getVideo
+      # Own tag so the TS client generator can skip it (browsers load it
+      # directly via <video src>, never through the API client).
+      tags: [media-stream]
+      security: []
+      description: |
+        Streams the video with HTTP Range support (seeking). Implemented by
+        hand in apps/api (excluded from codegen) because the generated
+        strict server can't do Range requests.
+      responses:
+        "200":
+          description: Whole file
+          content:
+            video/mp4: { schema: { type: string, format: binary } }
+            video/webm: { schema: { type: string, format: binary } }
+        "206": { description: Partial content }
+        "404": { $ref: "#/components/responses/NotFound" }
   /posts:
     get:
       operationId: listPosts
@@ -257,6 +359,11 @@ components:
       description: Sets or clears the `cc_session` cookie
       schema: { type: string }
   responses:
+    Forbidden:
+      description: Signed in, but not allowed (admin only)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
     Unauthorized:
       description: Not signed in, or bad credentials
       content:
@@ -285,9 +392,12 @@ components:
         message: { type: string }
     User:
       type: object
-      required: [id, email, nickname, createdAt]
+      required: [id, email, nickname, isAdmin, createdAt]
       properties:
         id: { type: string }
+        isAdmin:
+          type: boolean
+          description: Site owner; may manage the gallery. Set via ADMIN_EMAILS.
         email: { type: string }
         nickname: { type: string, minLength: 1, maxLength: 20 }
         createdAt: { type: string, format: date-time }
@@ -310,6 +420,36 @@ components:
       properties:
         currentPassword: { type: string, maxLength: 128 }
         newPassword: { type: string, minLength: 8, maxLength: 128 }
+    Video:
+      type: object
+      required: [id, url, posterUrl, width, height]
+      properties:
+        id: { type: string }
+        url: { type: string, description: "/api/videos/{id}" }
+        posterUrl: { $ref: "#/components/schemas/ImageUrl" }
+        width: { type: integer }
+        height: { type: integer }
+    NewGalleryItem:
+      type: object
+      required: [kind, mediaId, caption]
+      properties:
+        kind: { type: string, enum: [photo, video] }
+        mediaId:
+          type: string
+          description: An image id (photo) or video id (video) uploaded by an admin
+        caption: { type: string, maxLength: 200 }
+    GalleryItem:
+      type: object
+      required: [id, kind, url, width, height, caption, createdAt]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [photo, video] }
+        url: { type: string }
+        posterUrl: { $ref: "#/components/schemas/ImageUrl" }
+        width: { type: integer }
+        height: { type: integer }
+        caption: { type: string, maxLength: 200 }
+        createdAt: { type: string, format: date-time }
     ImageId:
       type: string
       description: Id returned by uploadImage. Must belong to the author.

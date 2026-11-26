@@ -17,13 +17,18 @@ var ErrNotFound = errors.New("blob not found")
 
 type Store interface {
 	Put(ctx context.Context, key string, data []byte) error
+	// Import moves an existing local file into the store (large videos).
+	Import(ctx context.Context, key, srcPath string) error
 	// Open returns the blob and its size. Caller closes.
 	Open(ctx context.Context, key string) (io.ReadCloser, int64, error)
 }
 
 // Local stores blobs as files under Dir. Keys must be UUIDs, which rules out
-// path traversal by construction.
-type Local struct{ Dir string }
+// path traversal by construction. Ext defaults to ".jpg".
+type Local struct {
+	Dir string
+	Ext string
+}
 
 var _ Store = Local{}
 
@@ -33,7 +38,11 @@ func (l Local) path(key string) (string, error) {
 		return "", ErrNotFound
 	}
 	s := id.String()
-	return filepath.Join(l.Dir, s[:2], s+".jpg"), nil // shard to keep dirs small
+	ext := l.Ext
+	if ext == "" {
+		ext = ".jpg"
+	}
+	return filepath.Join(l.Dir, s[:2], s+ext), nil // shard to keep dirs small
 }
 
 func (l Local) Put(_ context.Context, key string, data []byte) error {
@@ -58,6 +67,17 @@ func (l Local) Put(_ context.Context, key string, data []byte) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), p)
+}
+
+func (l Local) Import(_ context.Context, key, srcPath string) error {
+	p, err := l.path(key)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return err
+	}
+	return os.Rename(srcPath, p) // same filesystem: callers stage files under Dir
 }
 
 func (l Local) Open(_ context.Context, key string) (io.ReadCloser, int64, error) {

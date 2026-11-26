@@ -84,7 +84,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images CASCADE`); err != nil {
+	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items CASCADE`); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -247,6 +247,54 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		}
 		if _, err := s.CreateReply(ctx, p.Id, u, api.NewReply{Content: "r", Images: []string{mine}}); err != nil {
 			t.Fatal(err)
+		}
+	})
+
+	t.Run("gallery", func(t *testing.T) {
+		s := newStore(t)
+		admin := seedUser(t, s, "a@b.co")
+		other := seedUser(t, s, "c@d.co")
+		img, poster, theirs := "01a2111c-2a68-7371-bce0-0000000000b1", "01a2111c-2a68-7371-bce0-0000000000b2", "01a2111c-2a68-7371-bce0-0000000000b3"
+		vid := "01a2111c-2a68-7371-bce0-0000000000c1"
+		_ = s.CreateImage(ctx, img, admin.Id, 800, 600, 1000)
+		_ = s.CreateImage(ctx, poster, admin.Id, 320, 240, 1000)
+		_ = s.CreateImage(ctx, theirs, other.Id, 10, 10, 1000)
+		if err := s.CreateVideo(ctx, api.VideoRecord{ID: vid, OwnerID: admin.Id, Container: "mp4", PosterImageID: poster, Width: 320, Height: 240, Size: 5000}); err != nil {
+			t.Fatal(err)
+		}
+		if c, err := s.VideoContainer(ctx, vid); err != nil || c != "mp4" {
+			t.Fatalf("container %q %v", c, err)
+		}
+		if _, err := s.VideoContainer(ctx, "nope"); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("missing video: %v", err)
+		}
+
+		photo, err := s.CreateGalleryItem(ctx, admin, "photo", img, "cap")
+		if err != nil || photo.ImageID != img || photo.Width != 800 || photo.Height != 600 {
+			t.Fatalf("photo %+v %v", photo, err)
+		}
+		video, err := s.CreateGalleryItem(ctx, admin, "video", vid, "")
+		if err != nil || video.VideoID != vid || video.PosterImageID != poster || video.Width != 320 {
+			t.Fatalf("video %+v %v", video, err)
+		}
+		for _, bad := range []struct{ kind, id string }{{"photo", theirs}, {"photo", vid}, {"video", img}, {"photo", "nope"}, {"gif", img}} {
+			if _, err := s.CreateGalleryItem(ctx, admin, bad.kind, bad.id, ""); !errors.Is(err, api.ErrInvalidMedia) {
+				t.Fatalf("%v: %v", bad, err)
+			}
+		}
+
+		list, _ := s.ListGallery(ctx)
+		if len(list) != 2 || list[0].ID != video.ID || list[1].ID != photo.ID || list[0].PosterImageID != poster || list[1].Width != 800 {
+			t.Fatalf("list %+v", list)
+		}
+		if err := s.DeleteGalleryItem(ctx, photo.ID); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.DeleteGalleryItem(ctx, photo.ID); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("double delete: %v", err)
+		}
+		if list, _ := s.ListGallery(ctx); len(list) != 1 {
+			t.Fatalf("after delete %+v", list)
 		}
 	})
 

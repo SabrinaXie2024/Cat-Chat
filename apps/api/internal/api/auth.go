@@ -38,6 +38,7 @@ func (s *Server) SessionMiddleware(next http.Handler) http.Handler {
 			// Kept so Logout can delete the session even if it already expired.
 			r = r.WithContext(context.WithValue(r.Context(), rawTokenKey{}, c.Value))
 			if u, err := s.Store.UserBySession(r.Context(), auth.HashToken(c.Value), s.Now()); err == nil {
+				u.IsAdmin = s.isAdmin(u.Email)
 				r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, u))
 			}
 		}
@@ -75,6 +76,7 @@ func (s *Server) Register(ctx context.Context, req RegisterRequestObject) (Regis
 	if err != nil {
 		return nil, err
 	}
+	u.IsAdmin = s.isAdmin(u.Email)
 	return Register201JSONResponse{Body: u, Headers: Register201ResponseHeaders{SetCookie: &cookie}}, nil
 }
 
@@ -107,6 +109,7 @@ func (s *Server) Login(ctx context.Context, req LoginRequestObject) (LoginRespon
 	if err != nil {
 		return nil, err
 	}
+	u.IsAdmin = s.isAdmin(u.Email)
 	return Login200JSONResponse{Body: u, Headers: Login200ResponseHeaders{SetCookie: &cookie}}, nil
 }
 

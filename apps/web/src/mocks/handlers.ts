@@ -1,7 +1,9 @@
 import { HttpResponse, http } from 'msw'
 import type {
   ChangePasswordRequest,
+  GalleryItem,
   LoginRequest,
+  NewGalleryItem,
   NewPost,
   NewReply,
   Post,
@@ -12,6 +14,7 @@ import type {
 import { getGetHealthMockHandler } from '../api/generated/system/system.msw'
 import {
   charCount,
+  GALLERY_CAPTION_MAX_CHARS,
   IMAGE_MAX_BYTES,
   IMAGE_TYPES,
   MAX_REPLIES_PER_POST,
@@ -19,6 +22,8 @@ import {
   POST_MAX_IMAGES,
   REPLY_MAX_CHARS,
   REPLY_MAX_IMAGES,
+  VIDEO_MAX_BYTES,
+  VIDEO_TYPES,
 } from '../lib/limits'
 
 // Single source of mock truth for dev (browser) and tests (node).
@@ -34,9 +39,11 @@ type Db = {
   sessionUserId: string | null
   /** Uploaded images by id. */
   images: Map<string, { ownerId: string; blob: Blob }>
+  videos: Map<string, { ownerId: string; blob: Blob; posterId: string }>
+  gallery: GalleryItem[] // newest first
 }
 
-/** Dev convenience account: demo@meowsphere.dev / password123 */
+/** Dev convenience account: demo@meowsphere.dev / password123 (admin). */
 export const DEMO_USER = {
   email: 'demo@meowsphere.dev',
   password: 'password123',
@@ -49,14 +56,18 @@ export const db: Db = {
   users: [],
   sessionUserId: null,
   images: new Map(),
+  videos: new Map(),
+  gallery: [],
 }
 
 export function resetDb(seed: Post[] = defaultSeed()) {
   db.posts = structuredClone(seed)
   db.replies = new Map()
-  db.users = [{ id: 'demo', createdAt: new Date(0).toISOString(), ...DEMO_USER }]
+  db.users = [{ id: 'demo', createdAt: new Date(0).toISOString(), isAdmin: true, ...DEMO_USER }]
   db.sessionUserId = null
   db.images = new Map()
+  db.videos = new Map()
+  db.gallery = []
 }
 
 const imageUrl = (imageId: string) => `/api/images/${imageId}`
@@ -107,6 +118,7 @@ export const handlers = [
       email,
       nickname,
       password: body.password,
+      isAdmin: false,
       createdAt: new Date().toISOString(),
     }
     db.users.push(user)
@@ -160,6 +172,77 @@ export const handlers = [
     const img = db.images.get(params.imageId)
     if (!img) return bad('image not found', 404)
     return new HttpResponse(img.blob, { headers: { 'Content-Type': img.blob.type } })
+  }),
+
+  http.get('*/api/gallery', () => HttpResponse.json(db.gallery)),
+
+  http.post<never, NewGalleryItem>('*/api/gallery', async ({ request }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    if (!user.isAdmin) return bad('admin only', 403)
+    const body = await request.json()
+    if (charCount(body.caption) > GALLERY_CAPTION_MAX_CHARS)
+      return bad('caption must be at most 200 characters')
+    const base = { id: id(), caption: body.caption.trim(), createdAt: new Date().toISOString() }
+    let item: GalleryItem
+    if (body.kind === 'photo' && db.images.get(body.mediaId)?.ownerId === user.id) {
+      item = { ...base, kind: 'photo', url: imageUrl(body.mediaId), width: 800, height: 600 }
+    } else if (body.kind === 'video' && db.videos.get(body.mediaId)?.ownerId === user.id) {
+      const v = db.videos.get(body.mediaId)
+      item = {
+        ...base,
+        kind: 'video',
+        url: `/api/videos/${body.mediaId}`,
+        posterUrl: imageUrl(v?.posterId ?? ''),
+        width: 640,
+        height: 360,
+      }
+    } else {
+      return bad('media must be your own upload')
+    }
+    db.gallery.unshift(item)
+    return HttpResponse.json(item, { status: 201 })
+  }),
+
+  http.delete<{ itemId: string }>('*/api/gallery/:itemId', ({ params }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    if (!user.isAdmin) return bad('admin only', 403)
+    const before = db.gallery.length
+    db.gallery = db.gallery.filter((g) => g.id !== params.itemId)
+    if (db.gallery.length === before) return bad('gallery item not found', 404)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.post('*/api/videos', async ({ request }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    if (!user.isAdmin) return bad('admin only', 403)
+    const file = (await request.formData()).get('file')
+    if (!(file instanceof Blob)) return bad('missing file')
+    if (file.size > VIDEO_MAX_BYTES) return bad('video must be at most 200 MB', 413)
+    if (!(VIDEO_TYPES as readonly string[]).includes(file.type))
+      return bad('only MP4 and WebM videos are supported')
+    const videoId = crypto.randomUUID()
+    const posterId = crypto.randomUUID()
+    db.images.set(posterId, { ownerId: user.id, blob: new Blob([], { type: 'image/jpeg' }) })
+    db.videos.set(videoId, { ownerId: user.id, blob: file, posterId })
+    return HttpResponse.json(
+      {
+        id: videoId,
+        url: `/api/videos/${videoId}`,
+        posterUrl: imageUrl(posterId),
+        width: 640,
+        height: 360,
+      },
+      { status: 201 },
+    )
+  }),
+
+  http.get<{ videoId: string }>('*/api/videos/:videoId', ({ params }) => {
+    const v = db.videos.get(params.videoId)
+    if (!v) return bad('video not found', 404)
+    return new HttpResponse(v.blob, { headers: { 'Content-Type': v.blob.type } })
   }),
 
   http.get('*/api/auth/me', () => {

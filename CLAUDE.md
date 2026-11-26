@@ -83,6 +83,32 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   state disables submit) and `ImageGrid` (read-only thumbnails). Tests mock
   `browser-image-compression` (no canvas in happy-dom).
 
+## 我的猫咪 gallery (admin)
+
+- Admins = `ADMIN_EMAILS` (comma list, case-insensitive). Locally it lives in
+  gitignored `apps/api/.env.local` (see `.env.example`), loaded by
+  `pnpm dev:api`. Never commit real emails. `User.isAdmin` is computed per
+  request, not stored.
+- Photos reuse the image pipeline (`POST /images`), then
+  `POST /gallery {kind:"photo", mediaId}`. Videos: `POST /videos` (≤ 200 MB,
+  MP4/WebM) → ffmpeg remux with `-c copy` (no re-encode) dropping global,
+  stream and chapter metadata, plus a poster frame run through the image
+  pipeline; then `POST /gallery {kind:"video", mediaId}`. Media must be the
+  admin's own upload (`ErrInvalidMedia`).
+- ffmpeg is a runtime dependency (`brew install ffmpeg`; `FFMPEG` overrides
+  the path). It's invoked with `-protocol_whitelist file` and an explicit
+  demuxer for the sniffed container — keep both when changing args.
+- `GET /api/videos/{id}` is hand-written (`Server.ServeVideo`,
+  `http.ServeContent`) for Range/seeking: excluded from Go codegen
+  (`oapi.yaml`) and from the TS client (tag `media-stream`, orval filter).
+- Video bytes: `blob.Local{Dir: VIDEO_DIR, Ext: ".video"}`; temp files in
+  `VIDEO_DIR/.tmp` so `Import` can rename on the same filesystem.
+- Frontend: `GalleryUploader` (admin only; video upload via XHR for
+  progress — fetch upload progress needs HTTP/2), `GalleryGrid` (videos use
+  `preload="none"` + poster; aspect ratio reserved from width/height).
+- MSW demo account is admin; tests sign in as a non-admin by pushing a user
+  with `isAdmin: false`.
+
 ## Languages (apps/web/src/i18n)
 
 - Chinese + English. `messages.ts`: `zh` is the source; `en` is typed
@@ -193,6 +219,5 @@ Guards in `pnpm-workspace.yaml`:
 - Post list returns the newest 100; no pagination yet.
 - Image/video upload endpoint + S3-compatible storage (R2/OSS; MinIO locally)
   and server-side resize/EXIF strip (`disintegration/imaging`).
-- Gallery page.
 - Orphaned uploads (picked but never posted) aren't cleaned up yet.
 - Production blob storage (S3-compatible) and per-user upload quotas.

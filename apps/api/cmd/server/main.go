@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -18,6 +20,7 @@ import (
 	"github.com/cat-chat/api/internal/blob"
 	"github.com/cat-chat/api/internal/db"
 	"github.com/cat-chat/api/internal/store"
+	"github.com/cat-chat/api/internal/videos"
 )
 
 func main() {
@@ -49,13 +52,22 @@ func run() error {
 	pg := store.NewPostgres(pool)
 	go purgeExpiredSessions(ctx, pg)
 
+	if _, err := exec.LookPath(envOr("FFMPEG", "ffmpeg")); err != nil {
+		slog.Warn("ffmpeg not found; video uploads will fail", "err", err)
+	}
+	videoDir := envOr("VIDEO_DIR", "data/videos")
+
 	addr := envOr("ADDR", ":8080")
 	srv := &http.Server{
 		Addr: addr,
 		Handler: newHandler(&api.Server{
-			Store:   pg,
-			Blobs:   blob.Local{Dir: envOr("IMAGE_DIR", "data/images")},
-			Limiter: auth.NewLoginLimiter(),
+			Store:        pg,
+			Blobs:        blob.Local{Dir: envOr("IMAGE_DIR", "data/images")},
+			VideoBlobs:   blob.Local{Dir: videoDir, Ext: ".video"},
+			Videos:       videos.Processor{FFmpeg: os.Getenv("FFMPEG")},
+			VideoWorkDir: filepath.Join(videoDir, ".tmp"),
+			AdminEmails:  parseAdmins(os.Getenv("ADMIN_EMAILS")),
+			Limiter:      auth.NewLoginLimiter(),
 			// Secure cookies need HTTPS; local dev over plain http sets
 			// INSECURE_COOKIES=1 (see root package.json dev:api).
 			SecureCookies: os.Getenv("INSECURE_COOKIES") != "1",
@@ -83,6 +95,7 @@ func run() error {
 func newHandler(s *api.Server) http.Handler {
 	mux := http.NewServeMux()
 	api.HandlerWithOptions(api.NewStrictHandler(s, nil), api.StdHTTPServerOptions{BaseURL: "/api", BaseRouter: mux})
+	mux.HandleFunc("GET /api/videos/{videoId}", s.ServeVideo) // Range support; excluded from codegen
 
 	var h http.Handler = mux
 	h = s.SessionMiddleware(h)
@@ -98,8 +111,13 @@ func newHandler(s *api.Server) http.Handler {
 func limitBodies(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		limit := int64(64 << 10)
-		if r.Method == http.MethodPost && r.URL.Path == "/api/images" {
-			limit = 6 << 20
+		if r.Method == http.MethodPost {
+			switch r.URL.Path {
+			case "/api/images":
+				limit = 6 << 20
+			case "/api/videos":
+				limit = 210 << 20
+			}
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, limit)
 		next.ServeHTTP(w, r)
@@ -111,7 +129,7 @@ func securityHeaders(next http.Handler) http.Handler {
 		h := w.Header()
 		// Never let a browser reinterpret a response as another type.
 		h.Set("X-Content-Type-Options", "nosniff")
-		if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/images/") {
+		if r.Method == http.MethodGet && (strings.HasPrefix(r.URL.Path, "/api/images/") || strings.HasPrefix(r.URL.Path, "/api/videos/")) {
 			// Image ids are immutable, so the bytes never change.
 			h.Set("Cache-Control", "public, max-age=31536000, immutable")
 			// Belt and braces: even if a non-image slipped through, it can't run.
@@ -136,6 +154,17 @@ func purgeExpiredSessions(ctx context.Context, pg *store.Postgres) {
 		case <-t.C:
 		}
 	}
+}
+
+// parseAdmins reads a comma-separated email list (case-insensitive).
+func parseAdmins(v string) map[string]bool {
+	out := map[string]bool{}
+	for _, e := range strings.Split(v, ",") {
+		if e = strings.ToLower(strings.TrimSpace(e)); e != "" {
+			out[e] = true
+		}
+	}
+	return out
 }
 
 func envOr(k, def string) string {

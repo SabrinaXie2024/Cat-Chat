@@ -16,6 +16,8 @@
 
 export interface User {
   id: string;
+  /** Site owner; may manage the gallery. Set via ADMIN_EMAILS. */
+  isAdmin: boolean;
   email: string;
   /**
      * @minLength 1
