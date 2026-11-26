@@ -218,3 +218,58 @@ func TestReplyThreadLimit(t *testing.T) {
 	c.mustStatus(409, "POST", path, `{"content":"r","images":[]}`)
 	c.mustStatus(404, "POST", "/api/posts/nope/replies", `{"content":"r","images":[]}`)
 }
+
+func TestChangePassword(t *testing.T) {
+	c := newClient(t)
+	c.signUp() // mimi@example.com / password123
+
+	// Second device signed in to the same account.
+	other := newClient(t)
+	other.srv = c.srv
+	other.mustStatus(200, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"password123"}`)
+
+	cases := []struct {
+		name, body string
+		want       int
+	}{
+		{"wrong current", `{"currentPassword":"nope-nope","newPassword":"newpassword1"}`, 403},
+		{"too short", `{"currentPassword":"password123","newPassword":"short"}`, 400},
+		{"same as current", `{"currentPassword":"password123","newPassword":"password123"}`, 400},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c.mustStatus(tc.want, "POST", "/api/auth/password", tc.body)
+		})
+	}
+
+	code, body, hdr := c.do("POST", "/api/auth/password", `{"currentPassword":"password123","newPassword":"newpassword1"}`)
+	if code != 204 {
+		t.Fatalf("change: %d %s", code, body)
+	}
+	if sc := hdr.Get("Set-Cookie"); !strings.Contains(sc, "cc_session=") || !strings.Contains(sc, "HttpOnly") {
+		t.Fatalf("expected rotated session cookie, got %q", sc)
+	}
+	c.mustStatus(200, "GET", "/api/auth/me", "")     // this device stays signed in
+	other.mustStatus(401, "GET", "/api/auth/me", "") // the other device is signed out
+
+	c.mustStatus(401, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"password123"}`)
+	c.mustStatus(200, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"newpassword1"}`)
+}
+
+func TestChangePasswordGuards(t *testing.T) {
+	c := newClient(t)
+	c.mustStatus(401, "POST", "/api/auth/password", `{"currentPassword":"a","newPassword":"newpassword1"}`)
+
+	c.signUp()
+	for range 5 {
+		c.mustStatus(403, "POST", "/api/auth/password", `{"currentPassword":"wrong-pass","newPassword":"newpassword1"}`)
+	}
+	// Locked even with the right current password, and /login shares the lock.
+	c.mustStatus(429, "POST", "/api/auth/password", `{"currentPassword":"password123","newPassword":"newpassword1"}`)
+	c.mustStatus(429, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"password123"}`)
+
+	code, _, _ := c.do("POST", "/api/auth/password", `{"currentPassword":"password123","newPassword":"newpassword1"}`, "Sec-Fetch-Site", "cross-site")
+	if code != http.StatusForbidden {
+		t.Fatalf("cross-site change: got %d want 403", code)
+	}
+}

@@ -144,6 +144,32 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		}
 	})
 
+	t.Run("change password revokes every session", func(t *testing.T) {
+		s := newStore(t)
+		u := seedUser(t, s, "a@b.co")
+		other := seedUser(t, s, "c@d.co")
+		_ = s.CreateSession(ctx, "u1", u.Id, now.Add(time.Hour))
+		_ = s.CreateSession(ctx, "u2", u.Id, now.Add(time.Hour))
+		_ = s.CreateSession(ctx, "o1", other.Id, now.Add(time.Hour))
+		if err := s.ChangePassword(ctx, u.Id, "new-hash"); err != nil {
+			t.Fatal(err)
+		}
+		if _, hash, _ := s.UserByEmail(ctx, "a@b.co"); hash != "new-hash" {
+			t.Fatalf("hash = %q", hash)
+		}
+		for _, tok := range []string{"u1", "u2"} {
+			if _, err := s.UserBySession(ctx, tok, now); !errors.Is(err, api.ErrNotFound) {
+				t.Fatalf("session %s survived: %v", tok, err)
+			}
+		}
+		if _, err := s.UserBySession(ctx, "o1", now); err != nil {
+			t.Fatalf("other user's session must survive: %v", err)
+		}
+		if err := s.ChangePassword(ctx, "01a2111c-2a68-7371-bce0-5b41e2f69f46", "h"); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("unknown user: %v", err)
+		}
+	})
+
 	t.Run("posts newest first, author from user", func(t *testing.T) {
 		s := newStore(t)
 		u := seedUser(t, s, "a@b.co")

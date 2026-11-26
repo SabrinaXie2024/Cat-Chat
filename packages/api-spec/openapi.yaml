@@ -83,6 +83,36 @@ paths:
           description: Signed out (idempotent)
           headers:
             Set-Cookie: { $ref: "#/components/headers/SessionCookie" }
+  /auth/password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      description: |
+        Requires the current password. On success every existing session for
+        the user is revoked (other devices are signed out) and a fresh session
+        cookie is issued to this client.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangePasswordRequest" }
+      responses:
+        "204":
+          description: Password changed; session rotated
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SessionCookie" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Current password is incorrect
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Too many failed attempts; retry later
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /auth/me:
     get:
       operationId: getMe
@@ -225,6 +255,12 @@ components:
       properties:
         email: { type: string, maxLength: 254, description: "Validated server-side (net/mail) so errors use the JSON Error shape" }
         password: { type: string, maxLength: 128 }
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, maxLength: 128 }
+        newPassword: { type: string, minLength: 8, maxLength: 128 }
     ImageUrl:
       type: string
       format: uri

@@ -33,6 +33,7 @@ import type {
 
 import type {
   BadRequestResponse,
+  ChangePasswordRequest,
   Error,
   LoginRequest,
   RegisterRequest,
@@ -342,6 +343,117 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getLogoutMutationOptions(options), queryClient);
+    }
+    export type changePasswordResponse204 = {
+  data: void
+  status: 204
+}
+
+export type changePasswordResponse400 = {
+  data: BadRequestResponse
+  status: 400
+}
+
+export type changePasswordResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type changePasswordResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type changePasswordResponse429 = {
+  data: Error
+  status: 429
+}
+
+export type changePasswordResponseSuccess = (changePasswordResponse204) & {
+  headers: Headers;
+};
+export type changePasswordResponseError = (changePasswordResponse400 | changePasswordResponse401 | changePasswordResponse403 | changePasswordResponse429) & {
+  headers: Headers;
+};
+
+export type changePasswordResponse = (changePasswordResponseSuccess | changePasswordResponseError)
+
+export const getChangePasswordUrl = () => {
+
+
+
+
+  return `/auth/password`
+}
+
+/**
+ * Requires the current password. On success every existing session for
+ * the user is revoked (other devices are signed out) and a fresh session
+ * cookie is issued to this client.
+ */
+export const changePassword = async (changePasswordRequest: ChangePasswordRequest, options?: Parameters<typeof http>[1]): Promise<changePasswordResponse> => {
+
+  return http<changePasswordResponse>(getChangePasswordUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(changePasswordRequest)
+  }
+);}
+
+
+
+
+
+export const getChangePasswordMutationKey = () => ['changePassword'] as const;
+
+export const getChangePasswordMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse | Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,ChangePasswordMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,ChangePasswordMutationVariables, TContext> => {
+
+const mutationKey = getChangePasswordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changePassword>>, ChangePasswordMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  changePassword(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changePassword>>>
+    export type ChangePasswordMutationBody = ChangePasswordRequest
+    export type ChangePasswordMutationError = BadRequestResponse | UnauthorizedResponse | Error
+    export type ChangePasswordMutationVariables = {data: ChangePasswordRequest}
+
+    /**
+ * Requires the current password. On success every existing session for
+ * the user is revoked (other devices are signed out) and a fresh session
+ * cookie is issued to this client.
+ */
+export const useChangePassword = <TError = BadRequestResponse | UnauthorizedResponse | Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,ChangePasswordMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof changePassword>>,
+        TError,
+        ChangePasswordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangePasswordMutationOptions(options), queryClient);
     }
     export type getMeResponse200 = {
   data: User

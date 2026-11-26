@@ -113,6 +113,15 @@ Guards in `pnpm-workspace.yaml`:
 - Sessions and users live in Postgres; the login limiter doesn't (see below).
 - `SessionMiddleware` puts the user in ctx; handlers call `UserFrom(ctx)` and
   return 401 themselves. Reads (`listPosts`, `listReplies`) are public.
+- Change password (`POST /auth/password`, page `/settings`): requires the
+  current password (403 if wrong; shares the login limiter), then
+  `Store.ChangePassword` swaps the hash and deletes *all* the user's sessions
+  in one tx, and the handler issues a fresh cookie so only this device stays
+  signed in.
+- Password forms: the login identifier (email) is `autocomplete="username"`
+  and sits directly above the password; the settings form carries a hidden
+  username input. Tests pin this — password managers misfile credentials
+  otherwise.
 - Frontend: `useCurrentUser()` (`null` = signed out), login/register pages
   take `?redirect=` filtered by `safeRedirect` (same-site paths only).
 - MSW dev account: `demo@catchat.dev` / `password123`. In tests, sign in with
@@ -120,7 +129,7 @@ Guards in `pnpm-workspace.yaml`:
 
 ## Not built yet
 
-- Email verification and password reset (need an email provider).
+- Email verification and forgot-password reset (need an email provider).
 - Login limiter is still in-memory (per process) — move to Postgres/Redis
   before running more than one API instance.
 - Post list returns the newest 100; no pagination yet.

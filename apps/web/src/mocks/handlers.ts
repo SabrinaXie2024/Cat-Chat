@@ -1,5 +1,6 @@
 import { HttpResponse, http } from 'msw'
 import type {
+  ChangePasswordRequest,
   LoginRequest,
   NewPost,
   NewReply,
@@ -103,6 +104,19 @@ export const handlers = [
 
   http.post('*/api/auth/logout', () => {
     db.sessionUserId = null
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.post<never, ChangePasswordRequest>('*/api/auth/password', async ({ request }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    const body = await request.json()
+    if (body.currentPassword !== user.password) return bad('current password is incorrect', 403)
+    if (body.newPassword.length < 8 || body.newPassword.length > 128)
+      return bad('password must be 8–128 characters')
+    if (body.newPassword === body.currentPassword)
+      return bad('new password must differ from the current one')
+    user.password = body.newPassword
     return new HttpResponse(null, { status: 204 })
   }),
 
