@@ -19,7 +19,7 @@ function RootLayout() {
       <header className="border-b border-stone-200 bg-white">
         <nav className="mx-auto flex max-w-4xl items-center gap-6 px-4 py-3">
           <Link to="/" className="flex items-center gap-2 font-semibold text-brand-700">
-            <Cat className="size-5" aria-hidden /> Cat Chat
+            <Cat className="size-5" aria-hidden /> 喵友圈
           </Link>
           {nav.map((n) => (
             <Link

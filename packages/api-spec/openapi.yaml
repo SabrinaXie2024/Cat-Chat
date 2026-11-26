@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: Cat Chat API
+  title: MeowSphere API
   version: 0.1.0
   description: |
-    Single source of truth for the Cat Chat HTTP API.
+    Single source of truth for the MeowSphere (喵友圈) HTTP API.
     Go server types (apps/api) and the TS client + MSW mocks (apps/web) are
     generated from this file — edit here, then run `pnpm gen`.
 

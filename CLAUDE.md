@@ -1,4 +1,8 @@
-# Cat Chat
+# MeowSphere（喵友圈）
+
+Product name: **MeowSphere** (English) / **喵友圈** (Chinese). Code-level
+identifiers still say `cat-chat`/`catchat` (npm scopes, Go module, databases,
+repo) on purpose — renaming them is churn with no user-visible effect.
 
 Cat community site: care guide, owner's cat gallery, and a user post/reply
 community. Product requirements: [Requirement.md](Requirement.md).
@@ -159,7 +163,7 @@ Guards in `pnpm-workspace.yaml`:
   new account/security page under `/settings/` to inherit this.
 - Nav: signed-in users get an accessible dropdown (`UserMenu.tsx`: 设置,
   退出登录; Escape/outside-click close). Add new account actions there.
-- MSW dev account: `demo@catchat.dev` / `password123`. In tests, sign in with
+- MSW dev account: `demo@meowsphere.dev` / `password123`. In tests, sign in with
   `db.sessionUserId = 'demo'`.
 
 ## Not built yet

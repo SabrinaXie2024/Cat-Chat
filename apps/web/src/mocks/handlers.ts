@@ -36,9 +36,9 @@ type Db = {
   images: Map<string, { ownerId: string; blob: Blob }>
 }
 
-/** Dev convenience account: demo@catchat.dev / password123 */
+/** Dev convenience account: demo@meowsphere.dev / password123 */
 export const DEMO_USER = {
-  email: 'demo@catchat.dev',
+  email: 'demo@meowsphere.dev',
   password: 'password123',
   nickname: '演示用户',
 }
