@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router'
 import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
+import { Toaster } from 'sonner'
 import { routeTree } from '../routeTree.gen'
 
 const newQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -18,6 +19,7 @@ export function renderApp(path = '/') {
   const result = render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+      <Toaster />
     </QueryClientProvider>,
   )
   return { ...result, router }

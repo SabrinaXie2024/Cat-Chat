@@ -71,6 +71,12 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
 - HTTP goes through `apps/web/src/api/http.ts` (ky). Non-2xx throws; use
   `errorMessage(err)` for user-facing text.
 - User content is rendered as text, never `dangerouslySetInnerHTML`.
+- Replies render inline under each post card (`Replies.tsx`, fetched only
+  while expanded). After a reply or a 409, both the thread and the post list
+  are invalidated so `replyCount` stays in sync.
+- `useListReplies` etc. return orval's `{ data, status }` union that includes
+  error bodies; since `http` throws on non-2xx, narrow with
+  `select: (res) => res.data as T`.
 - Biome formats/lints TS (single quotes, no semicolons); gofmt for Go.
   lefthook runs both on pre-commit, tests + GHSA check on pre-push.
 
@@ -141,4 +147,4 @@ Guards in `pnpm-workspace.yaml`:
 - Post list returns the newest 100; no pagination yet.
 - Image/video upload endpoint + S3-compatible storage (R2/OSS; MinIO locally)
   and server-side resize/EXIF strip (`disintegration/imaging`).
-- Gallery page and reply UI (reply API + mocks exist).
+- Gallery page.
