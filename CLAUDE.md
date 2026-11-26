@@ -56,6 +56,29 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   the same tx as the insert), so concurrent replies can't exceed 10.
 - Expired sessions are purged hourly by `main`.
 
+## Image uploads
+
+- Flow: browser validates type/size (`lib/images.ts`), compresses to ≤ 1920px,
+  `POST /api/images` (multipart `file`, signed in) → `{id, url}`. Posts and
+  replies send image **ids**; the server returns **urls** (`/api/images/{id}`).
+  Ids must be the author's own uploads (`ErrInvalidImages` → 400), so posts
+  can't embed external/tracking images.
+- Server processing (`internal/images`): sniff real type (never trust the
+  client), reject > 5 MB and > 50 MP / 12000px before decoding
+  (decompression bombs), apply EXIF orientation, resize ≤ 1920px, flatten
+  alpha onto white, re-encode JPEG q85 — re-encoding strips all metadata.
+- Storage: `blob.Store` interface; `blob.Local` writes
+  `apps/api/data/images/<2-char shard>/<uuid>.jpg` (gitignored, `IMAGE_DIR`
+  overrides). Swap in an S3-compatible implementation for production. Blob is
+  written before the `images` row, so failures leave orphan files, never
+  dangling rows.
+- Serving: `GET /api/images/{id}` is public with `Cache-Control: immutable`,
+  `nosniff` and a sandbox CSP (set in `main.go` middleware).
+- Body limits: 64 KB for JSON, 6 MB for `POST /api/images` (`limitBodies`).
+- Frontend: `ImagePicker` (pick → compress → upload, previews, remove, busy
+  state disables submit) and `ImageGrid` (read-only thumbnails). Tests mock
+  `browser-image-compression` (no canvas in happy-dom).
+
 ## Conventions
 
 - **Content limits live in three places and must agree:** the spec,
@@ -63,8 +86,7 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   chars / 5 images; reply ≤ 100 chars / 3 images; ≤ 10 replies per post.
   Limits count characters (runes / code points), not bytes, so CJK text gets
   the full allowance.
-- Images: JPEG/PNG/WebP, ≤ 5 MB original, compressed client-side to ≤ 1920px /
-  ~1 MB. The server must re-process and strip EXIF (GPS) when uploads land.
+- Images: see "Image uploads" below.
 - MSW (`apps/web/src/mocks/handlers.ts`) is the only mock layer, shared by dev
   and Vitest. It's stateful and mirrors server validation; don't add ad-hoc
   `fetch` mocks in tests — override with `server.use(...)` instead.
@@ -72,7 +94,8 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   `errorMessage(err)` for user-facing text.
 - User content is rendered as text, never `dangerouslySetInnerHTML`.
 - Replies render inline under each post card (`Replies.tsx`, fetched only
-  while expanded). After a reply or a 409, both the thread and the post list
+  while expanded): reply box on top, newest reply first (API stays oldest
+  first; the UI reverses). After a reply or a 409, both the thread and the post list
   are invalidated so `replyCount` stays in sync.
 - `useListReplies` etc. return orval's `{ data, status }` union that includes
   error bodies; since `http` throws on non-2xx, narrow with
@@ -148,3 +171,5 @@ Guards in `pnpm-workspace.yaml`:
 - Image/video upload endpoint + S3-compatible storage (R2/OSS; MinIO locally)
   and server-side resize/EXIF strip (`disintegration/imaging`).
 - Gallery page.
+- Orphaned uploads (picked but never posted) aren't cleaned up yet.
+- Production blob storage (S3-compatible) and per-user upload quotas.

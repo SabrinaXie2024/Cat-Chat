@@ -7,8 +7,9 @@
  * generated from this file — edit here, then run `pnpm gen`.
  *
  * Upload limits (decided from comparable sites; enforced client + server):
- * images are JPEG/PNG/WebP, ≤ 5 MB each before client compression, and are
- * resized server-side to ≤ 1920px on the long edge with EXIF stripped.
+ * images are JPEG/PNG/WebP, ≤ 5 MB each, compressed in the browser, then
+ * re-processed server-side (≤ 1920px long edge, JPEG, metadata stripped).
+ * Posts/replies reference uploaded images by id, never by external URL.
  *
  * OpenAPI spec version: 0.1.0
  */
@@ -22,11 +23,11 @@ import type {
 } from '../model';
 
 
-export const getListPostsResponseMock = (): Post[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), content: faker.string.alpha({length: {min: 10, max: 500}}), images: Array.from({ length: faker.number.int({min: 1, max: 5}) }, (_, i) => i + 1).map(() => (faker.internet.url())), replyCount: faker.number.int({min: 0, max: 10}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})))
+export const getListPostsResponseMock = (): Post[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), content: faker.string.alpha({length: {min: 10, max: 500}}), images: Array.from({ length: faker.number.int({min: 1, max: 5}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), replyCount: faker.number.int({min: 0, max: 10}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})))
 
-export const getCreatePostResponseMock = (overrideResponse: Partial<Extract<Post, object>> = {}): Post => ({id: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), content: faker.string.alpha({length: {min: 10, max: 500}}), images: Array.from({ length: faker.number.int({min: 1, max: 5}) }, (_, i) => i + 1).map(() => (faker.internet.url())), replyCount: faker.number.int({min: 0, max: 10}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
+export const getCreatePostResponseMock = (overrideResponse: Partial<Extract<Post, object>> = {}): Post => ({id: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), content: faker.string.alpha({length: {min: 10, max: 500}}), images: Array.from({ length: faker.number.int({min: 1, max: 5}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), replyCount: faker.number.int({min: 0, max: 10}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 
-export const getListRepliesResponseMock = (): Reply[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), postId: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), content: faker.string.alpha({length: {min: 10, max: 100}}), images: Array.from({ length: faker.number.int({min: 1, max: 3}) }, (_, i) => i + 1).map(() => (faker.internet.url())), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})))
+export const getListRepliesResponseMock = (): Reply[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), postId: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), content: faker.string.alpha({length: {min: 10, max: 100}}), images: Array.from({ length: faker.number.int({min: 1, max: 3}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})))
 
-export const getCreateReplyResponseMock = (overrideResponse: Partial<Extract<Reply, object>> = {}): Reply => ({id: faker.string.alpha({length: {min: 10, max: 20}}), postId: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), content: faker.string.alpha({length: {min: 10, max: 100}}), images: Array.from({ length: faker.number.int({min: 1, max: 3}) }, (_, i) => i + 1).map(() => (faker.internet.url())), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
+export const getCreateReplyResponseMock = (overrideResponse: Partial<Extract<Reply, object>> = {}): Reply => ({id: faker.string.alpha({length: {min: 10, max: 20}}), postId: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), content: faker.string.alpha({length: {min: 10, max: 100}}), images: Array.from({ length: faker.number.int({min: 1, max: 3}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 

@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -12,40 +13,31 @@ import {
   useListReplies,
 } from '../../api/generated/posts/posts'
 import { errorMessage } from '../../api/http'
-import { charCount, MAX_REPLIES_PER_POST, REPLY_MAX_CHARS } from '../../lib/limits'
+import {
+  charCount,
+  MAX_REPLIES_PER_POST,
+  REPLY_MAX_CHARS,
+  REPLY_MAX_IMAGES,
+} from '../../lib/limits'
 import { useCurrentUser } from '../auth/useCurrentUser'
+import { ImageGrid } from '../images/ImageGrid'
+import { ImagePicker } from '../images/ImagePicker'
 import { TimeAgo } from './TimeAgo'
 
 /** Reply thread shown under a post card. Mounted only while expanded. */
 export function Replies({ post }: { post: Post }) {
   // `http` throws on non-2xx, so resolved data is always the 200 body.
+  // API returns oldest first (stable for clients); show newest first.
   const { data: replies, error } = useListReplies(post.id, {
-    query: { select: (res) => res.data as Reply[] },
+    query: { select: (res) => [...(res.data as Reply[])].reverse() },
   })
   const { data: user } = useCurrentUser()
   const full = post.replyCount >= MAX_REPLIES_PER_POST
 
   return (
     <div className="mt-3 space-y-3 border-t border-stone-100 pt-3">
-      {error ? (
-        <p className="text-sm text-red-600">{errorMessage(error)}</p>
-      ) : !replies ? (
-        <p className="text-sm text-stone-500">加载回复中…</p>
-      ) : replies.length === 0 ? (
-        <p className="text-sm text-stone-500">还没有回复</p>
-      ) : (
-        <ol className="space-y-2" aria-label="回复列表">
-          {replies.map((r) => (
-            <li key={r.id} className="rounded-lg bg-stone-50 px-3 py-2 text-sm">
-              <div className="mb-0.5 text-xs text-stone-500">
-                {r.author} · <TimeAgo iso={r.createdAt} />
-              </div>
-              <p className="whitespace-pre-wrap break-words">{r.content}</p>
-            </li>
-          ))}
-        </ol>
-      )}
-
+      {/* Composer first, then newest replies: the latest conversation is
+          what people came to see. */}
       {full ? (
         <p className="text-sm text-stone-500">
           这条帖子已经有 {MAX_REPLIES_PER_POST} 条回复，不能再回复了
@@ -64,6 +56,25 @@ export function Replies({ post }: { post: Post }) {
           后参与回复
         </p>
       ) : null}
+      {error ? (
+        <p className="text-sm text-red-600">{errorMessage(error)}</p>
+      ) : !replies ? (
+        <p className="text-sm text-stone-500">加载回复中…</p>
+      ) : replies.length === 0 ? (
+        <p className="text-sm text-stone-500">还没有回复</p>
+      ) : (
+        <ol className="space-y-2" aria-label="回复列表">
+          {replies.map((r) => (
+            <li key={r.id} className="rounded-lg bg-stone-50 px-3 py-2 text-sm">
+              <div className="mb-0.5 text-xs text-stone-500">
+                {r.author} · <TimeAgo iso={r.createdAt} />
+              </div>
+              <p className="whitespace-pre-wrap break-words">{r.content}</p>
+              <ImageGrid urls={r.images} compact />
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }
@@ -79,9 +90,15 @@ type Values = z.infer<typeof schema>
 function ReplyForm({ postId }: { postId: string }) {
   const qc = useQueryClient()
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { content: '' } })
+  const [imageIds, setImageIds] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [resetSignal, setResetSignal] = useState(0)
   const reply = useCreateReply({
     mutation: {
-      onSuccess: () => form.reset(),
+      onSuccess: () => {
+        form.reset()
+        setResetSignal((n) => n + 1)
+      },
       // A 409 refetch flips the thread to "full" and unmounts this form, so
       // an inline error would vanish with it — toast instead.
       onError: (err) => {
@@ -102,7 +119,7 @@ function ReplyForm({ postId }: { postId: string }) {
   return (
     <form
       onSubmit={form.handleSubmit((v) =>
-        reply.mutate({ postId, data: { content: v.content, images: [] } }),
+        reply.mutate({ postId, data: { content: v.content, images: imageIds } }),
       )}
       className="space-y-1"
       noValidate
@@ -120,7 +137,8 @@ function ReplyForm({ postId }: { postId: string }) {
         />
         <button
           type="submit"
-          disabled={reply.isPending}
+          disabled={reply.isPending || uploading}
+          title={uploading ? '图片上传中…' : undefined}
           className="shrink-0 rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
         >
           回复
@@ -135,6 +153,13 @@ function ReplyForm({ postId }: { postId: string }) {
           {count}/{REPLY_MAX_CHARS}
         </span>
       </div>
+      <ImagePicker
+        max={REPLY_MAX_IMAGES}
+        onChange={setImageIds}
+        onBusyChange={setUploading}
+        resetSignal={resetSignal}
+        compact
+      />
     </form>
   )
 }

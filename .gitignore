@@ -9,3 +9,4 @@ coverage/
 apps/api/bin/
 apps/web/src/routeTree.gen.ts
 *.tsbuildinfo
+apps/api/data/

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/cat-chat/api/internal/api"
 	"github.com/cat-chat/api/internal/auth"
+	"github.com/cat-chat/api/internal/blob"
 	"github.com/cat-chat/api/internal/db"
 	"github.com/cat-chat/api/internal/store"
 )
@@ -52,6 +54,7 @@ func run() error {
 		Addr: addr,
 		Handler: newHandler(&api.Server{
 			Store:   pg,
+			Blobs:   blob.Local{Dir: envOr("IMAGE_DIR", "data/images")},
 			Limiter: auth.NewLoginLimiter(),
 			// Secure cookies need HTTPS; local dev over plain http sets
 			// INSECURE_COOKIES=1 (see root package.json dev:api).
@@ -86,8 +89,36 @@ func newHandler(s *api.Server) http.Handler {
 	// CSRF: reject cross-origin browser POST/PUT/DELETE (Sec-Fetch-Site /
 	// Origin check). SameSite=Lax cookies are the second layer.
 	h = http.NewCrossOriginProtection().Handler(h)
-	// Cap JSON bodies; image bytes go to object storage, not through here.
-	return http.MaxBytesHandler(h, 64<<10)
+	h = limitBodies(h)
+	return securityHeaders(h)
+}
+
+// limitBodies caps request bodies: 64 KB for JSON, a little over the 5 MB
+// image limit for uploads (multipart overhead).
+func limitBodies(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limit := int64(64 << 10)
+		if r.Method == http.MethodPost && r.URL.Path == "/api/images" {
+			limit = 6 << 20
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, limit)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		// Never let a browser reinterpret a response as another type.
+		h.Set("X-Content-Type-Options", "nosniff")
+		if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/images/") {
+			// Image ids are immutable, so the bytes never change.
+			h.Set("Cache-Control", "public, max-age=31536000, immutable")
+			// Belt and braces: even if a non-image slipped through, it can't run.
+			h.Set("Content-Security-Policy", "default-src 'none'; sandbox")
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func purgeExpiredSessions(ctx context.Context, pg *store.Postgres) {

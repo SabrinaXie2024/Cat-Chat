@@ -8,4 +8,6 @@ var (
 	ErrNotFound   = errors.New("not found")
 	ErrThreadFull = errors.New("thread is full")
 	ErrEmailTaken = errors.New("email already registered")
+	// ErrInvalidImages: a referenced image doesn't exist or isn't the author's.
+	ErrInvalidImages = errors.New("invalid image reference")
 )

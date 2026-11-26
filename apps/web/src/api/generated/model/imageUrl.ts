@@ -7,10 +7,14 @@
  * generated from this file — edit here, then run `pnpm gen`.
  *
  * Upload limits (decided from comparable sites; enforced client + server):
- * images are JPEG/PNG/WebP, ≤ 5 MB each before client compression, and are
- * resized server-side to ≤ 1920px on the long edge with EXIF stripped.
+ * images are JPEG/PNG/WebP, ≤ 5 MB each, compressed in the browser, then
+ * re-processed server-side (≤ 1920px long edge, JPEG, metadata stripped).
+ * Posts/replies reference uploaded images by id, never by external URL.
  *
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Path to the processed image, e.g. /api/images/{id}
+ */
 export type ImageUrl = string;

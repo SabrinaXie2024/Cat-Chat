@@ -84,7 +84,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies CASCADE`); err != nil {
+	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images CASCADE`); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -177,11 +177,13 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 			t.Fatalf("empty list must be [] not nil: %#v %v", ps, err)
 		}
 		first, _ := s.CreatePost(ctx, u, api.NewPost{Content: "first"})
-		second, err := s.CreatePost(ctx, u, api.NewPost{Content: "second", Images: []string{"https://x/1.jpg"}})
+		img := "01a2111c-2a68-7371-bce0-0000000000aa"
+		_ = s.CreateImage(ctx, img, u.Id, 10, 10, 100)
+		second, err := s.CreatePost(ctx, u, api.NewPost{Content: "second", Images: []string{img}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if second.Author != "咪咪" || second.Images[0] != "https://x/1.jpg" || first.Images == nil {
+		if second.Author != "咪咪" || second.Images[0] != img || first.Images == nil {
 			t.Fatalf("bad post %+v / %+v", second, first)
 		}
 		ps, _ := s.ListPosts(ctx)
@@ -214,6 +216,37 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		ps, _ := s.ListPosts(ctx)
 		if ps[0].ReplyCount != 2 {
 			t.Fatalf("reply count %d", ps[0].ReplyCount)
+		}
+	})
+
+	t.Run("posts and replies may only use the author's images", func(t *testing.T) {
+		s := newStore(t)
+		u := seedUser(t, s, "a@b.co")
+		other := seedUser(t, s, "c@d.co")
+		mine, theirs := "01a2111c-2a68-7371-bce0-000000000001", "01a2111c-2a68-7371-bce0-000000000002"
+		if err := s.CreateImage(ctx, mine, u.Id, 100, 100, 1000); err != nil {
+			t.Fatal(err)
+		}
+		_ = s.CreateImage(ctx, theirs, other.Id, 100, 100, 1000)
+
+		p, err := s.CreatePost(ctx, u, api.NewPost{Content: "p", Images: []string{mine}})
+		if err != nil || len(p.Images) != 1 || p.Images[0] != mine {
+			t.Fatalf("own image: %+v %v", p, err)
+		}
+		for _, bad := range [][]string{{theirs}, {mine, theirs}, {"01a2111c-2a68-7371-bce0-000000000003"}} {
+			if _, err := s.CreatePost(ctx, u, api.NewPost{Content: "p", Images: bad}); !errors.Is(err, api.ErrInvalidImages) {
+				t.Fatalf("post %v: %v", bad, err)
+			}
+			if _, err := s.CreateReply(ctx, p.Id, u, api.NewReply{Content: "r", Images: bad}); !errors.Is(err, api.ErrInvalidImages) {
+				t.Fatalf("reply %v: %v", bad, err)
+			}
+		}
+		// A rejected reply must not consume a reply slot.
+		if ps, _ := s.ListPosts(ctx); ps[0].ReplyCount != 0 {
+			t.Fatalf("reply count = %d after rejected replies", ps[0].ReplyCount)
+		}
+		if _, err := s.CreateReply(ctx, p.Id, u, api.NewReply{Content: "r", Images: []string{mine}}); err != nil {
+			t.Fatal(err)
 		}
 	})
 

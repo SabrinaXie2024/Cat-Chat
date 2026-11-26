@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"image"
+	"image/png"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -12,6 +16,7 @@ import (
 
 	"github.com/cat-chat/api/internal/api"
 	"github.com/cat-chat/api/internal/auth"
+	"github.com/cat-chat/api/internal/blob"
 	"github.com/cat-chat/api/internal/store"
 )
 
@@ -26,6 +31,7 @@ func newClient(t *testing.T) *client {
 	t.Helper()
 	srv := httptest.NewServer(newHandler(&api.Server{
 		Store:   store.NewMemory(),
+		Blobs:   blob.Local{Dir: t.TempDir()},
 		Limiter: auth.NewLoginLimiter(),
 		Now:     time.Now,
 	}))
@@ -187,8 +193,8 @@ func TestPostLimits(t *testing.T) {
 		{"empty", `{"content":"  ","images":[]}`, 400},
 		{"500 chinese chars ok", `{"content":"` + strings.Repeat("猫", 500) + `","images":[]}`, 201},
 		{"501 chars", `{"content":"` + strings.Repeat("猫", 501) + `","images":[]}`, 400},
-		{"6 images", `{"content":"x","images":["https://a/1","https://a/2","https://a/3","https://a/4","https://a/5","https://a/6"]}`, 400},
-		{"bad image url", `{"content":"x","images":["javascript:alert(1)"]}`, 400},
+		{"6 images", `{"content":"x","images":["01a2111c-2a68-7371-bce0-5b41e2f69f41","01a2111c-2a68-7371-bce0-5b41e2f69f42","01a2111c-2a68-7371-bce0-5b41e2f69f43","01a2111c-2a68-7371-bce0-5b41e2f69f44","01a2111c-2a68-7371-bce0-5b41e2f69f45","01a2111c-2a68-7371-bce0-5b41e2f69f46"]}`, 400},
+		{"url instead of image id", `{"content":"x","images":["javascript:alert(1)"]}`, 400},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -271,5 +277,141 @@ func TestChangePasswordGuards(t *testing.T) {
 	code, _, _ := c.do("POST", "/api/auth/password", `{"currentPassword":"password123","newPassword":"newpassword1"}`, "Sec-Fetch-Site", "cross-site")
 	if code != http.StatusForbidden {
 		t.Fatalf("cross-site change: got %d want 403", code)
+	}
+}
+
+func pngBytes(t *testing.T, w, h int) []byte {
+	t.Helper()
+	var b bytes.Buffer
+	if err := png.Encode(&b, image.NewRGBA(image.Rect(0, 0, w, h))); err != nil {
+		t.Fatal(err)
+	}
+	return b.Bytes()
+}
+
+// upload posts data as multipart field "file" and returns status + body.
+func (c *client) upload(data []byte, hdr ...string) (int, string, http.Header) {
+	c.t.Helper()
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	fw, _ := mw.CreateFormFile("file", "cat.png")
+	fw.Write(data)
+	mw.Close()
+	req, _ := http.NewRequest("POST", c.srv.URL+"/api/images", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	for i := 0; i+1 < len(hdr); i += 2 {
+		req.Header.Set(hdr[i], hdr[i+1])
+	}
+	res, err := c.hc.Do(req)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	defer res.Body.Close()
+	b, _ := io.ReadAll(res.Body)
+	return res.StatusCode, string(b), res.Header
+}
+
+func (c *client) mustUpload() api.Image {
+	c.t.Helper()
+	code, body, _ := c.upload(pngBytes(c.t, 3000, 1500))
+	if code != 201 {
+		c.t.Fatalf("upload: %d %s", code, body)
+	}
+	var img api.Image
+	_ = json.Unmarshal([]byte(body), &img)
+	return img
+}
+
+func TestImageUploadAndServe(t *testing.T) {
+	c := newClient(t)
+	if code, _, _ := c.upload(pngBytes(t, 10, 10)); code != 401 {
+		t.Fatalf("signed-out upload: %d", code)
+	}
+	c.signUp()
+	img := c.mustUpload()
+	if img.Width != 1920 || img.Height != 960 || img.Url != "/api/images/"+img.Id {
+		t.Fatalf("bad image %+v", img)
+	}
+
+	res, err := http.Get(c.srv.URL + img.Url) // public, no cookie
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	b, _ := io.ReadAll(res.Body)
+	if res.StatusCode != 200 || res.Header.Get("Content-Type") != "image/jpeg" || !bytes.HasPrefix(b, []byte{0xFF, 0xD8}) {
+		t.Fatalf("GET image: %d %q", res.StatusCode, res.Header.Get("Content-Type"))
+	}
+	for k, want := range map[string]string{
+		"X-Content-Type-Options": "nosniff",
+		"Cache-Control":          "public, max-age=31536000, immutable",
+	} {
+		if got := res.Header.Get(k); got != want {
+			t.Errorf("%s = %q, want %q", k, got, want)
+		}
+	}
+	if !strings.Contains(res.Header.Get("Content-Security-Policy"), "sandbox") {
+		t.Error("image responses should carry a sandbox CSP")
+	}
+
+	for _, path := range []string{"/api/images/00000000-0000-0000-0000-000000000000", "/api/images/..%2f..%2fetc%2fpasswd", "/api/images/nope"} {
+		if code, _, _ := c.do("GET", path, ""); code != 404 {
+			t.Errorf("GET %s: %d, want 404", path, code)
+		}
+	}
+}
+
+func TestImageUploadRejects(t *testing.T) {
+	c := newClient(t)
+	c.signUp()
+	if code, body, _ := c.upload([]byte("GIF89a\x01\x00\x01\x00\x00\x00\x00;")); code != 400 || !strings.Contains(body, "JPEG, PNG and WebP") {
+		t.Fatalf("gif: %d %s", code, body)
+	}
+	if code, _, _ := c.upload(append(pngBytes(t, 10, 10), make([]byte, 5<<20)...)); code != 413 {
+		t.Fatalf("over 5MB: %d", code)
+	}
+	if code, _, _ := c.upload(pngBytes(t, 10, 10), "Sec-Fetch-Site", "cross-site"); code != 403 {
+		t.Fatalf("cross-site upload: %d", code)
+	}
+}
+
+func TestPostImagesMustBeOwnUploads(t *testing.T) {
+	c := newClient(t)
+	c.signUp()
+	mine := c.mustUpload()
+
+	body := c.mustStatus(201, "POST", "/api/posts", `{"content":"带图","images":["`+mine.Id+`"]}`)
+	var p api.Post
+	_ = json.Unmarshal([]byte(body), &p)
+	if len(p.Images) != 1 || p.Images[0] != mine.Url {
+		t.Fatalf("post images = %v, want [%s]", p.Images, mine.Url)
+	}
+	var listed []api.Post
+	_ = json.Unmarshal([]byte(c.mustStatus(200, "GET", "/api/posts", "")), &listed)
+	if listed[0].Images[0] != mine.Url {
+		t.Fatalf("list returns %v", listed[0].Images)
+	}
+
+	// Someone else's upload.
+	other := newClient(t)
+	other.srv = c.srv
+	other.mustStatus(201, "POST", "/api/auth/register", `{"email":"o@x.co","password":"password123","nickname":"o"}`)
+	theirs := other.mustUpload()
+
+	for name, imgs := range map[string]string{
+		"other user's image": `["` + theirs.Id + `"]`,
+		"nonexistent id":     `["01a2111c-2a68-7371-bce0-5b41e2f69f46"]`,
+		"duplicate":          `["` + mine.Id + `","` + mine.Id + `"]`,
+		"external url":       `["https://evil.example/pixel.gif"]`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			c.mustStatus(400, "POST", "/api/posts", `{"content":"x","images":`+imgs+`}`)
+			c.mustStatus(400, "POST", "/api/posts/"+p.Id+"/replies", `{"content":"x","images":`+imgs+`}`)
+		})
+	}
+
+	reply := c.mustStatus(201, "POST", "/api/posts/"+p.Id+"/replies", `{"content":"回复带图","images":["`+mine.Id+`"]}`)
+	if !strings.Contains(reply, mine.Url) {
+		t.Fatalf("reply should return image url: %s", reply)
 	}
 }

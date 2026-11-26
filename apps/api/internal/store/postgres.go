@@ -125,19 +125,66 @@ func (p *Postgres) ListPosts(ctx context.Context) ([]api.Post, error) {
 	return out, nil
 }
 
+func (p *Postgres) CreateImage(ctx context.Context, id, ownerID string, width, height, size int) error {
+	iid, err := uuid.Parse(id)
+	if err != nil {
+		return err
+	}
+	uid, err := parseID(ownerID)
+	if err != nil {
+		return err
+	}
+	return p.q.CreateImage(ctx, dbq.CreateImageParams{
+		ID: iid, OwnerID: uid, Width: int32(width), Height: int32(height), Bytes: int32(size),
+	})
+}
+
+// checkImages verifies every id exists and belongs to owner. Ids are
+// assumed distinct (the API layer rejects duplicates).
+func checkImages(ctx context.Context, q *dbq.Queries, owner uuid.UUID, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	uids := make([]uuid.UUID, len(ids))
+	for i, s := range ids {
+		u, err := uuid.Parse(s)
+		if err != nil {
+			return api.ErrInvalidImages
+		}
+		uids[i] = u
+	}
+	n, err := q.CountOwnedImages(ctx, dbq.CountOwnedImagesParams{OwnerID: owner, Ids: uids})
+	if err != nil {
+		return err
+	}
+	if int(n) != len(ids) {
+		return api.ErrInvalidImages
+	}
+	return nil
+}
+
 func (p *Postgres) CreatePost(ctx context.Context, author api.User, in api.NewPost) (api.Post, error) {
 	uid, err := parseID(author.Id)
 	if err != nil {
 		return api.Post{}, err
 	}
-	r, err := p.q.CreatePost(ctx, dbq.CreatePostParams{AuthorID: uid, Content: in.Content, Images: nonNil(in.Images)})
-	if err != nil {
-		return api.Post{}, err
-	}
-	return api.Post{
-		Id: r.ID.String(), Author: author.Nickname, Content: r.Content, Images: nonNil(r.Images),
-		ReplyCount: int(r.ReplyCount), CreatedAt: r.CreatedAt.UTC(),
-	}, nil
+	var out api.Post
+	err = pgx.BeginFunc(ctx, p.pool, func(tx pgx.Tx) error {
+		q := p.q.WithTx(tx)
+		if err := checkImages(ctx, q, uid, in.Images); err != nil {
+			return err
+		}
+		r, err := q.CreatePost(ctx, dbq.CreatePostParams{AuthorID: uid, Content: in.Content, Images: nonNil(in.Images)})
+		if err != nil {
+			return err
+		}
+		out = api.Post{
+			Id: r.ID.String(), Author: author.Nickname, Content: r.Content, Images: nonNil(r.Images),
+			ReplyCount: int(r.ReplyCount), CreatedAt: r.CreatedAt.UTC(),
+		}
+		return nil
+	})
+	return out, err
 }
 
 func (p *Postgres) ListReplies(ctx context.Context, postID string) ([]api.Reply, error) {
@@ -180,6 +227,9 @@ func (p *Postgres) CreateReply(ctx context.Context, postID string, author api.Us
 	var out api.Reply
 	err = pgx.BeginFunc(ctx, p.pool, func(tx pgx.Tx) error {
 		q := p.q.WithTx(tx)
+		if err := checkImages(ctx, q, uid, in.Images); err != nil {
+			return err
+		}
 		claimed, err := q.ClaimReplySlot(ctx, dbq.ClaimReplySlotParams{ID: pid, MaxReplies: api.MaxRepliesPerPost})
 		if err != nil {
 			return err

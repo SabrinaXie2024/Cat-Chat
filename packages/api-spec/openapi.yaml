@@ -8,8 +8,9 @@ info:
     generated from this file — edit here, then run `pnpm gen`.
 
     Upload limits (decided from comparable sites; enforced client + server):
-    images are JPEG/PNG/WebP, ≤ 5 MB each before client compression, and are
-    resized server-side to ≤ 1920px on the long edge with EXIF stripped.
+    images are JPEG/PNG/WebP, ≤ 5 MB each, compressed in the browser, then
+    re-processed server-side (≤ 1920px long edge, JPEG, metadata stripped).
+    Posts/replies reference uploaded images by id, never by external URL.
 servers:
   - url: /api
 security:
@@ -124,6 +125,54 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /images:
+    post:
+      operationId: uploadImage
+      tags: [images]
+      description: |
+        Upload one image (JPEG/PNG/WebP, ≤ 5 MB). The server sniffs the real
+        type, rejects oversized dimensions, applies EXIF orientation, resizes
+        to ≤ 1920px on the long edge and re-encodes as JPEG — which strips all
+        metadata (GPS etc). Returns an id to reference from posts/replies.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Stored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Image" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413":
+          description: File larger than 5 MB
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /images/{imageId}:
+    parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getImage
+      tags: [images]
+      security: []
+      responses:
+        "200":
+          description: The processed image (immutable; cache forever)
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "404": { $ref: "#/components/responses/NotFound" }
   /posts:
     get:
       operationId: listPosts
@@ -261,9 +310,20 @@ components:
       properties:
         currentPassword: { type: string, maxLength: 128 }
         newPassword: { type: string, minLength: 8, maxLength: 128 }
+    ImageId:
+      type: string
+      description: Id returned by uploadImage. Must belong to the author.
     ImageUrl:
       type: string
-      format: uri
+      description: Path to the processed image, e.g. /api/images/{id}
+    Image:
+      type: object
+      required: [id, url, width, height]
+      properties:
+        id: { $ref: "#/components/schemas/ImageId" }
+        url: { $ref: "#/components/schemas/ImageUrl" }
+        width: { type: integer }
+        height: { type: integer }
     NewPost:
       type: object
       required: [content, images]
@@ -272,7 +332,7 @@ components:
         images:
           type: array
           maxItems: 5
-          items: { $ref: "#/components/schemas/ImageUrl" }
+          items: { $ref: "#/components/schemas/ImageId" }
     Post:
       type: object
       required: [id, author, content, images, replyCount, createdAt]
@@ -294,7 +354,7 @@ components:
         images:
           type: array
           maxItems: 3
-          items: { $ref: "#/components/schemas/ImageUrl" }
+          items: { $ref: "#/components/schemas/ImageId" }
     Reply:
       type: object
       required: [id, postId, author, content, images, createdAt]

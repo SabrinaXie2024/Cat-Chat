@@ -4,6 +4,7 @@ import type { Post } from '../../api/generated/model'
 import { useListPosts } from '../../api/generated/posts/posts'
 import { errorMessage } from '../../api/http'
 import { MAX_REPLIES_PER_POST } from '../../lib/limits'
+import { ImageGrid } from '../images/ImageGrid'
 import { Replies } from './Replies'
 import { TimeAgo } from './TimeAgo'
 
@@ -35,6 +36,7 @@ function PostCard({ post }: { post: Post }) {
       </div>
       {/* Rendered as text, never HTML — React escapes it (XSS-safe). */}
       <p className="whitespace-pre-wrap break-words">{post.content}</p>
+      <ImageGrid urls={post.images} />
       <button
         type="button"
         aria-expanded={open}

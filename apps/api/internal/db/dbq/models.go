@@ -10,6 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
+type Image struct {
+	ID        uuid.UUID
+	OwnerID   uuid.UUID
+	Width     int32
+	Height    int32
+	Bytes     int32
+	CreatedAt time.Time
+}
+
 type Post struct {
 	ID         uuid.UUID
 	AuthorID   uuid.UUID

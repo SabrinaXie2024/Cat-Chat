@@ -9,10 +9,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for HealthStatus.
@@ -49,7 +52,22 @@ type Health struct {
 // HealthStatus defines model for Health.Status.
 type HealthStatus string
 
-// ImageUrl defines model for ImageUrl.
+// Image defines model for Image.
+type Image struct {
+	Height int `json:"height"`
+
+	// Id Id returned by uploadImage. Must belong to the author.
+	Id ImageId `json:"id"`
+
+	// Url Path to the processed image, e.g. /api/images/{id}
+	Url   ImageUrl `json:"url"`
+	Width int      `json:"width"`
+}
+
+// ImageId Id returned by uploadImage. Must belong to the author.
+type ImageId = string
+
+// ImageUrl Path to the processed image, e.g. /api/images/{id}
 type ImageUrl = string
 
 // LoginRequest defines model for LoginRequest.
@@ -61,14 +79,14 @@ type LoginRequest struct {
 
 // NewPost defines model for NewPost.
 type NewPost struct {
-	Content string     `json:"content"`
-	Images  []ImageUrl `json:"images"`
+	Content string    `json:"content"`
+	Images  []ImageId `json:"images"`
 }
 
 // NewReply defines model for NewReply.
 type NewReply struct {
-	Content string     `json:"content"`
-	Images  []ImageUrl `json:"images"`
+	Content string    `json:"content"`
+	Images  []ImageId `json:"images"`
 }
 
 // Post defines model for Post.
@@ -116,6 +134,11 @@ type NotFound = Error
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
 
+// UploadImageMultipartBody defines body for UploadImage for multipart/form-data ContentType.
+type UploadImageMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -124,6 +147,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
 // RegisterJSONRequestBody defines body for Register for application/json ContentType.
 type RegisterJSONRequestBody = RegisterRequest
+
+// UploadImageMultipartRequestBody defines body for UploadImage for multipart/form-data ContentType.
+type UploadImageMultipartRequestBody UploadImageMultipartBody
 
 // CreatePostJSONRequestBody defines body for CreatePost for application/json ContentType.
 type CreatePostJSONRequestBody = NewPost
@@ -151,6 +177,12 @@ type ServerInterface interface {
 
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+
+	// (POST /images)
+	UploadImage(w http.ResponseWriter, r *http.Request)
+
+	// (GET /images/{imageId})
+	GetImage(w http.ResponseWriter, r *http.Request, imageId string)
 
 	// (GET /posts)
 	ListPosts(w http.ResponseWriter, r *http.Request)
@@ -249,6 +281,46 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadImage operation middleware
+func (siw *ServerInterfaceWrapper) UploadImage(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadImage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImage operation middleware
+func (siw *ServerInterfaceWrapper) GetImage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "imageId" -------------
+	var imageId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "imageId", r.PathValue("imageId"), &imageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "imageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImage(w, r, imageId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -464,6 +536,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/password", wrapper.ChangePassword)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/me", wrapper.GetMe)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/images", wrapper.UploadImage)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/images/{imageId}", wrapper.GetImage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/posts", wrapper.ListPosts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/posts", wrapper.CreatePost)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/posts/{postId}/replies", wrapper.ListReplies)
@@ -781,6 +855,112 @@ func (response GetHealth200JSONResponse) VisitGetHealthResponse(w http.ResponseW
 	return err
 }
 
+type UploadImageRequestObject struct {
+	Body *multipart.Reader
+}
+
+type UploadImageResponseObject interface {
+	VisitUploadImageResponse(w http.ResponseWriter) error
+}
+
+type UploadImage201JSONResponse Image
+
+func (response UploadImage201JSONResponse) VisitUploadImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UploadImage400JSONResponse) VisitUploadImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UploadImage401JSONResponse) VisitUploadImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImage413JSONResponse Error
+
+func (response UploadImage413JSONResponse) VisitUploadImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetImageRequestObject struct {
+	ImageId string `json:"imageId"`
+}
+
+type GetImageResponseObject interface {
+	VisitGetImageResponse(w http.ResponseWriter) error
+}
+
+type GetImage200ImagejpegResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetImage200ImagejpegResponse) VisitGetImageResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetImage404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetImage404JSONResponse) VisitGetImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListPostsRequestObject struct {
 }
 
@@ -987,6 +1167,12 @@ type StrictServerInterface interface {
 
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+
+	// (POST /images)
+	UploadImage(ctx context.Context, request UploadImageRequestObject) (UploadImageResponseObject, error)
+
+	// (GET /images/{imageId})
+	GetImage(ctx context.Context, request GetImageRequestObject) (GetImageResponseObject, error)
 
 	// (GET /posts)
 	ListPosts(ctx context.Context, request ListPostsRequestObject) (ListPostsResponseObject, error)
@@ -1201,6 +1387,63 @@ func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetHealthResponseObject); ok {
 		if err := validResponse.VisitGetHealthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadImage operation middleware
+func (sh *strictHandler) UploadImage(w http.ResponseWriter, r *http.Request) {
+	var request UploadImageRequestObject
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.UploadImage(ctx, request.(UploadImageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadImage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadImageResponseObject); ok {
+		if err := validResponse.VisitUploadImageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetImage operation middleware
+func (sh *strictHandler) GetImage(w http.ResponseWriter, r *http.Request, imageId string) {
+	var request GetImageRequestObject
+
+	request.ImageId = imageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.GetImage(ctx, request.(GetImageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetImage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetImageResponseObject); ok {
+		if err := validResponse.VisitGetImageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

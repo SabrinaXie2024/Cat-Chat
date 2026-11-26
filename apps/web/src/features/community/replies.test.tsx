@@ -37,7 +37,7 @@ function seedReplies(n: number) {
 }
 
 describe('replies (signed out)', () => {
-  it('lets anyone read replies, but asks to sign in to reply', async () => {
+  it('lets anyone read replies (newest first), but asks to sign in to reply', async () => {
     seedReplies(2)
     const user = userEvent.setup()
     renderApp('/community')
@@ -47,7 +47,7 @@ describe('replies (signed out)', () => {
       within(list)
         .getAllByRole('listitem')
         .map((li) => li.textContent),
-    ).toEqual([expect.stringContaining('第 1 条回复'), expect.stringContaining('第 2 条回复')])
+    ).toEqual([expect.stringContaining('第 2 条回复'), expect.stringContaining('第 1 条回复')])
     expect(within(card).getByText(/后参与回复/)).toBeInTheDocument()
     expect(within(card).queryByLabelText('写下你的回复')).not.toBeInTheDocument()
   })
@@ -115,5 +115,28 @@ describe('replies (signed in)', () => {
     expect(await screen.findByText('回复已满，刚刚被别人抢先了')).toBeInTheDocument()
     expect(await within(card).findByText(/已经有 10 条回复/)).toBeInTheDocument()
     expect(db.replies.get(SEED_POST)).toHaveLength(10)
+  })
+})
+
+describe('reply layout', () => {
+  beforeEach(() => {
+    db.sessionUserId = 'demo'
+  })
+
+  it('puts the reply box above the list, and the newest reply on top', async () => {
+    seedReplies(2)
+    const user = userEvent.setup()
+    renderApp('/community')
+    const card = await openReplies(user)
+    const box = await within(card).findByLabelText('写下你的回复')
+    const list = within(card).getByRole('list', { name: '回复列表' })
+    // DOCUMENT_POSITION_FOLLOWING: list comes after the box.
+    expect(box.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await user.type(box, '刚刚发的')
+    await user.click(within(card).getByRole('button', { name: '回复' }))
+    await waitFor(() =>
+      expect(within(list).getAllByRole('listitem')[0]).toHaveTextContent('刚刚发的'),
+    )
   })
 })

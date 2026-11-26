@@ -12,6 +12,8 @@ import type {
 import { getGetHealthMockHandler } from '../api/generated/system/system.msw'
 import {
   charCount,
+  IMAGE_MAX_BYTES,
+  IMAGE_TYPES,
   MAX_REPLIES_PER_POST,
   POST_MAX_CHARS,
   POST_MAX_IMAGES,
@@ -30,6 +32,8 @@ type Db = {
   users: MockUser[]
   /** Signed-in user id. Stands in for the httpOnly session cookie. */
   sessionUserId: string | null
+  /** Uploaded images by id. */
+  images: Map<string, { ownerId: string; blob: Blob }>
 }
 
 /** Dev convenience account: demo@catchat.dev / password123 */
@@ -39,13 +43,29 @@ export const DEMO_USER = {
   nickname: '演示用户',
 }
 
-export const db: Db = { posts: [], replies: new Map(), users: [], sessionUserId: null }
+export const db: Db = {
+  posts: [],
+  replies: new Map(),
+  users: [],
+  sessionUserId: null,
+  images: new Map(),
+}
 
 export function resetDb(seed: Post[] = defaultSeed()) {
   db.posts = structuredClone(seed)
   db.replies = new Map()
   db.users = [{ id: 'demo', createdAt: new Date(0).toISOString(), ...DEMO_USER }]
   db.sessionUserId = null
+  db.images = new Map()
+}
+
+const imageUrl = (imageId: string) => `/api/images/${imageId}`
+
+/** Mirrors the server: every id must be an upload owned by `ownerId`. */
+function resolveImages(ids: string[], ownerId: string): string[] | null {
+  if (new Set(ids).size !== ids.length) return null
+  if (!ids.every((i) => db.images.get(i)?.ownerId === ownerId)) return null
+  return ids.map(imageUrl)
 }
 
 const currentUser = () => db.users.find((u) => u.id === db.sessionUserId)
@@ -120,6 +140,28 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
+  http.post('*/api/images', async ({ request }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    const file = (await request.formData()).get('file')
+    if (!(file instanceof Blob)) return bad('missing file')
+    if (file.size > IMAGE_MAX_BYTES) return bad('image must be at most 5 MB', 413)
+    if (!(IMAGE_TYPES as readonly string[]).includes(file.type))
+      return bad('only JPEG, PNG and WebP images are supported')
+    const imageId = crypto.randomUUID()
+    db.images.set(imageId, { ownerId: user.id, blob: file })
+    return HttpResponse.json(
+      { id: imageId, url: imageUrl(imageId), width: 800, height: 600 },
+      { status: 201 },
+    )
+  }),
+
+  http.get<{ imageId: string }>('*/api/images/:imageId', ({ params }) => {
+    const img = db.images.get(params.imageId)
+    if (!img) return bad('image not found', 404)
+    return new HttpResponse(img.blob, { headers: { 'Content-Type': img.blob.type } })
+  }),
+
   http.get('*/api/auth/me', () => {
     const user = currentUser()
     return user ? HttpResponse.json(publicUser(user)) : bad('please sign in', 401)
@@ -136,11 +178,13 @@ export const handlers = [
     if (n > POST_MAX_CHARS) return bad(`content must be at most ${POST_MAX_CHARS} characters`)
     if (body.images.length > POST_MAX_IMAGES)
       return bad(`at most ${POST_MAX_IMAGES} images allowed`)
+    const images = resolveImages(body.images, user.id)
+    if (!images) return bad('images must be your own uploads')
     const post: Post = {
       id: id(),
       author: user.nickname,
       content: body.content,
-      images: body.images,
+      images,
       replyCount: 0,
       createdAt: new Date().toISOString(),
     }
@@ -166,6 +210,8 @@ export const handlers = [
       if (n > REPLY_MAX_CHARS) return bad(`content must be at most ${REPLY_MAX_CHARS} characters`)
       if (body.images.length > REPLY_MAX_IMAGES)
         return bad(`at most ${REPLY_MAX_IMAGES} images allowed`)
+      const images = resolveImages(body.images, user.id)
+      if (!images) return bad('images must be your own uploads')
       const list = db.replies.get(post.id) ?? []
       if (list.length >= MAX_REPLIES_PER_POST) {
         return bad('this post already has the maximum number of replies', 409)
@@ -175,7 +221,7 @@ export const handlers = [
         postId: post.id,
         author: user.nickname,
         content: body.content,
-        images: body.images,
+        images,
         createdAt: new Date().toISOString(),
       }
       db.replies.set(post.id, [...list, reply])

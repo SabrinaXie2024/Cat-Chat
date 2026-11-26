@@ -31,6 +31,7 @@ type Memory struct {
 	users    map[string]userRow // by id
 	byEmail  map[string]string  // email -> id
 	sessions map[string]session // token hash -> session
+	images   map[string]string  // image id -> owner id
 	now      func() time.Time
 }
 
@@ -42,6 +43,7 @@ func NewMemory() *Memory {
 		users:    map[string]userRow{},
 		byEmail:  map[string]string{},
 		sessions: map[string]session{},
+		images:   map[string]string{},
 		now:      time.Now,
 	}
 }
@@ -126,6 +128,24 @@ func (m *Memory) ChangePassword(_ context.Context, userID, hash string) error {
 	return nil
 }
 
+// --- images ---
+
+func (m *Memory) CreateImage(_ context.Context, id, ownerID string, _, _, _ int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.images[id] = ownerID
+	return nil
+}
+
+func (m *Memory) checkImages(owner string, ids []string) error {
+	for _, id := range ids {
+		if m.images[id] != owner {
+			return api.ErrInvalidImages
+		}
+	}
+	return nil
+}
+
 // --- posts & replies ---
 
 func (m *Memory) ListPosts(context.Context) ([]api.Post, error) {
@@ -139,6 +159,9 @@ func (m *Memory) ListPosts(context.Context) ([]api.Post, error) {
 func (m *Memory) CreatePost(_ context.Context, author api.User, in api.NewPost) (api.Post, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.checkImages(author.Id, in.Images); err != nil {
+		return api.Post{}, err
+	}
 	p := api.Post{
 		Id:        newID(),
 		Author:    author.Nickname,
@@ -165,6 +188,9 @@ func (m *Memory) CreateReply(_ context.Context, postID string, author api.User, 
 	i := m.findPost(postID)
 	if i < 0 {
 		return api.Reply{}, api.ErrNotFound
+	}
+	if err := m.checkImages(author.Id, in.Images); err != nil {
+		return api.Reply{}, err
 	}
 	if len(m.replies[postID]) >= api.MaxRepliesPerPost {
 		return api.Reply{}, api.ErrThreadFull
