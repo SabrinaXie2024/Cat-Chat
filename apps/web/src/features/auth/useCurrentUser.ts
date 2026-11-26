@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from '@tanstack/react-router'
 import { HTTPError } from 'ky'
 import { getGetMeQueryKey, getMe, useLogout } from '../../api/generated/auth/auth'
 import type { User } from '../../api/generated/model'
@@ -23,14 +24,39 @@ export function useCurrentUser() {
 
 export function useSignOut() {
   const qc = useQueryClient()
+  const router = useRouter()
   return useLogout({
-    mutation: { onSettled: () => qc.setQueryData(meQueryKey, null) },
+    mutation: {
+      onSettled: async () => {
+        // Leave account pages *before* clearing the user, otherwise the page's
+        // signed-out guard would bounce to /login and the next sign-in could
+        // land straight back on account settings.
+        if (isAccountPath(router.state.location.pathname)) {
+          await router.navigate({ to: '/', replace: true })
+        }
+        qc.setQueryData(meQueryKey, null)
+      },
+    },
   })
 }
 
-/** Only same-site relative paths, so `?redirect=` can't send users off-site. */
+/**
+ * Account pages (settings and anything under it). These are never a
+ * post-login destination: signing in always starts from a neutral page, so
+ * whoever signs in next on a shared device isn't dropped into account
+ * controls.
+ */
+export function isAccountPath(path: string): boolean {
+  const pathname = path.split(/[?#]/)[0] ?? ''
+  return pathname === '/settings' || pathname.startsWith('/settings/')
+}
+
+/**
+ * `?redirect=` target after login/register: same-site relative paths only
+ * (no open redirect), and never an account page.
+ */
 export function safeRedirect(value: unknown): string | undefined {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
-    ? value
-    : undefined
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//'))
+    return undefined
+  return isAccountPath(value) ? undefined : value
 }

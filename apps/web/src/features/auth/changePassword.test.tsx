@@ -13,10 +13,10 @@ async function fill(current: string, next: string, confirm = next) {
 }
 
 describe('change password', () => {
-  it('sends signed-out visitors to login and back', async () => {
+  it('sends signed-out visitors to login without a redirect back to settings', async () => {
     const { router } = renderApp('/settings')
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
-    expect(router.state.location.search).toEqual({ redirect: '/settings' })
+    expect(router.state.location.search).toEqual({})
   })
 
   describe('signed in', () => {
@@ -24,11 +24,10 @@ describe('change password', () => {
       db.sessionUserId = 'demo'
     })
 
-    it('is reachable from the nickname in the nav', async () => {
-      const { router } = renderApp('/')
-      await userEvent.setup().click(await screen.findByRole('link', { name: DEMO_USER.nickname }))
-      await waitFor(() => expect(router.state.location.pathname).toBe('/settings'))
-      expect(screen.getByText(DEMO_USER.email)).toBeInTheDocument()
+    it('shows account info', async () => {
+      renderApp('/settings')
+      expect(await screen.findByText(DEMO_USER.email)).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: '修改密码' })).toBeInTheDocument()
     })
 
     it('changes the password and clears the form', async () => {

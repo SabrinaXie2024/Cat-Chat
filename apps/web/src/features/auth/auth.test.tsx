@@ -1,6 +1,6 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { DEMO_USER, db } from '../../mocks/handlers'
 import { renderApp } from '../../test/render'
 import { safeRedirect } from './useCurrentUser'
@@ -65,13 +65,88 @@ describe('auth', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('这个邮箱已经注册过了')
   })
 
-  it('signs out', async () => {
+  it('ignores ?redirect= pointing at account settings', async () => {
+    const user = userEvent.setup()
+    const { router } = renderApp('/login?redirect=/settings')
+    await user.type(await screen.findByLabelText('邮箱'), DEMO_USER.email)
+    await user.type(screen.getByLabelText('密码'), DEMO_USER.password)
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/community'))
+  })
+})
+
+describe('account menu', () => {
+  beforeEach(() => {
     db.sessionUserId = 'demo'
+  })
+
+  const openMenu = async (user: ReturnType<typeof userEvent.setup>) => {
+    const button = await screen.findByRole('button', { name: DEMO_USER.nickname })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    await user.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    return button
+  }
+
+  it('opens a dropdown with settings and sign-out', async () => {
     const user = userEvent.setup()
     renderApp('/')
-    await user.click(await screen.findByRole('button', { name: '退出' }))
-    expect(await screen.findByRole('link', { name: '登录' })).toBeInTheDocument()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    await openMenu(user)
+    const items = within(screen.getByRole('menu')).getAllByRole('menuitem')
+    expect(items.map((i) => i.textContent)).toEqual(['设置', '退出登录'])
+  })
+
+  it('closes on Escape (focus back on the button) and on outside click', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+    const button = await openMenu(user)
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(button).toHaveFocus()
+
+    await user.click(button)
+    await user.click(screen.getByRole('heading', { level: 1 }))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('"设置" opens the settings page and closes the menu', async () => {
+    const user = userEvent.setup()
+    const { router } = renderApp('/')
+    await openMenu(user)
+    await user.click(screen.getByRole('menuitem', { name: '设置' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/settings'))
+    expect(await screen.findByRole('heading', { name: '账号设置' })).toBeInTheDocument()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('signing out on a normal page stays there and remembers it for the next login', async () => {
+    const user = userEvent.setup()
+    const { router } = renderApp('/guide')
+    await openMenu(user)
+    await user.click(screen.getByRole('menuitem', { name: '退出登录' }))
+    const login = await screen.findByRole('link', { name: '登录' })
+    expect(router.state.location.pathname).toBe('/guide')
+    expect(login).toHaveAttribute('href', '/login?redirect=%2Fguide')
     expect(nav()).not.toHaveTextContent(DEMO_USER.nickname)
+  })
+
+  it('signing out on settings goes home, and the next login does not return to settings', async () => {
+    const user = userEvent.setup()
+    const { router } = renderApp('/settings')
+    await openMenu(user)
+    await user.click(screen.getByRole('menuitem', { name: '退出登录' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    const login = await screen.findByRole('link', { name: '登录' })
+    expect(login.getAttribute('href')).not.toContain('settings')
+
+    await user.click(login)
+    await user.type(await screen.findByLabelText('邮箱'), DEMO_USER.email)
+    await user.type(screen.getByLabelText('密码'), DEMO_USER.password)
+    await user.click(screen.getByRole('button', { name: '登录' }))
+    await screen.findByRole('button', { name: DEMO_USER.nickname })
+    expect(router.state.location.pathname).toBe('/')
   })
 })
 
@@ -98,6 +173,11 @@ describe('password manager hints', () => {
 describe('safeRedirect', () => {
   it.each([
     ['/community', '/community'],
+    ['/guide?x=1', '/guide?x=1'],
+    ['/settings', undefined],
+    ['/settings?tab=password', undefined],
+    ['/settings/security', undefined],
+    ['/settings-help', '/settings-help'],
     ['//evil.com', undefined],
     ['https://evil.com', undefined],
     [123, undefined],

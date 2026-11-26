@@ -124,6 +124,12 @@ Guards in `pnpm-workspace.yaml`:
   otherwise.
 - Frontend: `useCurrentUser()` (`null` = signed out), login/register pages
   take `?redirect=` filtered by `safeRedirect` (same-site paths only).
+- Account pages (`/settings` and below, `isAccountPath`) are never a
+  post-login destination: `safeRedirect` drops them, and `useSignOut`
+  navigates home before clearing the user when signing out from one. Put any
+  new account/security page under `/settings/` to inherit this.
+- Nav: signed-in users get an accessible dropdown (`UserMenu.tsx`: 设置,
+  退出登录; Escape/outside-click close). Add new account actions there.
 - MSW dev account: `demo@catchat.dev` / `password123`. In tests, sign in with
   `db.sessionUserId = 'demo'`.
 
