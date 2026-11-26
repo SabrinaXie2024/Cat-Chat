@@ -3,27 +3,35 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { useChangePassword } from '../../api/generated/auth/auth'
-import { errorMessage } from '../../api/http'
+import { useFieldError, useI18n } from '../../i18n/I18nProvider'
+import { useServerError } from '../../i18n/serverErrors'
+import { PASSWORD_MAX_CHARS, PASSWORD_MIN_CHARS } from '../../lib/limits'
 import { Field, inputClass, submitClass } from './AuthCard'
 
-// Must match apps/api/internal/api/auth.go.
+// Must match apps/api/internal/api/auth.go. Messages are i18n keys.
 const schema = z
   .object({
-    currentPassword: z.string().min(1, '请输入当前密码'),
-    newPassword: z.string().min(8, '新密码至少 8 位').max(128, '新密码最多 128 位'),
+    currentPassword: z.string().min(1, 'err.currentPasswordRequired'),
+    newPassword: z
+      .string()
+      .min(PASSWORD_MIN_CHARS, 'err.newPasswordTooShort')
+      .max(PASSWORD_MAX_CHARS, 'err.newPasswordTooLong'),
     confirm: z.string(),
   })
   .refine((v) => v.newPassword === v.confirm, {
     path: ['confirm'],
-    message: '两次输入的新密码不一致',
+    message: 'err.newPasswordMismatch',
   })
   .refine((v) => v.newPassword !== v.currentPassword, {
     path: ['newPassword'],
-    message: '新密码不能和当前密码相同',
+    message: 'err.newPasswordSame',
   })
 type Values = z.infer<typeof schema>
 
 export function ChangePasswordForm({ email }: { email: string }) {
+  const { t } = useI18n()
+  const fieldError = useFieldError()
+  const serverError = useServerError()
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { currentPassword: '', newPassword: '', confirm: '' },
@@ -32,7 +40,7 @@ export function ChangePasswordForm({ email }: { email: string }) {
     mutation: {
       onSuccess: () => {
         form.reset()
-        toast.success('密码已修改，其他设备上的登录已失效')
+        toast.success(t('settings.changed'))
       },
     },
   })
@@ -49,7 +57,11 @@ export function ChangePasswordForm({ email }: { email: string }) {
       {/* Lets password managers attach the new password to the right
           account instead of guessing. */}
       <input type="text" name="username" autoComplete="username" value={email} readOnly hidden />
-      <Field id="currentPassword" label="当前密码" error={errors.currentPassword?.message}>
+      <Field
+        id="currentPassword"
+        label={t('settings.currentPassword')}
+        error={fieldError(errors.currentPassword?.message)}
+      >
         <input
           id="currentPassword"
           type="password"
@@ -58,7 +70,11 @@ export function ChangePasswordForm({ email }: { email: string }) {
           {...form.register('currentPassword')}
         />
       </Field>
-      <Field id="newPassword" label="新密码（至少 8 位）" error={errors.newPassword?.message}>
+      <Field
+        id="newPassword"
+        label={t('settings.newPassword')}
+        error={fieldError(errors.newPassword?.message)}
+      >
         <input
           id="newPassword"
           type="password"
@@ -67,7 +83,11 @@ export function ChangePasswordForm({ email }: { email: string }) {
           {...form.register('newPassword')}
         />
       </Field>
-      <Field id="confirm" label="确认新密码" error={errors.confirm?.message}>
+      <Field
+        id="confirm"
+        label={t('settings.confirmNew')}
+        error={fieldError(errors.confirm?.message)}
+      >
         <input
           id="confirm"
           type="password"
@@ -78,20 +98,12 @@ export function ChangePasswordForm({ email }: { email: string }) {
       </Field>
       {change.error && (
         <p role="alert" className="text-sm text-red-600">
-          {changeErrorText(change.error)}
+          {serverError(change.error)}
         </p>
       )}
       <button type="submit" disabled={change.isPending} className={submitClass}>
-        修改密码
+        {t('settings.changePassword')}
       </button>
     </form>
   )
-}
-
-function changeErrorText(err: unknown) {
-  const msg = errorMessage(err)
-  if (msg.startsWith('current password')) return '当前密码不正确'
-  if (msg.startsWith('too many')) return '失败次数太多，请 15 分钟后再试'
-  if (msg.startsWith('new password must differ')) return '新密码不能和当前密码相同'
-  return msg
 }

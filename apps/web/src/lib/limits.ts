@@ -5,6 +5,10 @@ export const POST_MAX_IMAGES = 5
 export const REPLY_MAX_CHARS = 100
 export const REPLY_MAX_IMAGES = 3
 export const MAX_REPLIES_PER_POST = 10
+// Account rules — must match apps/api/internal/api/auth.go.
+export const NICKNAME_MAX_CHARS = 20
+export const PASSWORD_MIN_CHARS = 8
+export const PASSWORD_MAX_CHARS = 128
 
 // Image uploads: comparable sites (小红书/Instagram/Reddit) accept large
 // originals but store ~1080–2048px. We cap the original at 5 MB and compress

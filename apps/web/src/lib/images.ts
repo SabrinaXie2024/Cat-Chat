@@ -1,14 +1,15 @@
 import imageCompression from 'browser-image-compression'
+import type { MessageKey } from '../i18n/messages'
 import { IMAGE_MAX_BYTES, IMAGE_MAX_EDGE_PX, IMAGE_TARGET_MB, IMAGE_TYPES } from './limits'
 
-export type ImageCheck = { ok: true } | { ok: false; reason: string }
+export type ImageCheck = { ok: true } | { ok: false; reason: MessageKey }
 
 export function checkImage(file: File): ImageCheck {
   if (!(IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return { ok: false, reason: '只支持 JPG、PNG、WebP 格式' }
+    return { ok: false, reason: 'err.imageType' }
   }
   if (file.size > IMAGE_MAX_BYTES) {
-    return { ok: false, reason: '单张图片不能超过 5MB' }
+    return { ok: false, reason: 'err.imageSize' }
   }
   return { ok: true }
 }

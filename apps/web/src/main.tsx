@@ -3,6 +3,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Toaster } from 'sonner'
+import { I18nProvider } from './i18n/I18nProvider'
 import { routeTree } from './routeTree.gen'
 import './index.css'
 
@@ -29,10 +30,12 @@ enableMocks().then(() => {
   if (!root) throw new Error('#root missing')
   createRoot(root).render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster richColors position="top-center" />
-      </QueryClientProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+          <Toaster richColors position="top-center" />
+        </QueryClientProvider>
+      </I18nProvider>
     </StrictMode>,
   )
 })

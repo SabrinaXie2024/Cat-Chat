@@ -4,26 +4,38 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useRegister } from '../../api/generated/auth/auth'
 import type { User } from '../../api/generated/model'
-import { errorMessage } from '../../api/http'
-import { charCount } from '../../lib/limits'
+import { useFieldError, useI18n } from '../../i18n/I18nProvider'
+import { useServerError } from '../../i18n/serverErrors'
+import {
+  charCount,
+  NICKNAME_MAX_CHARS,
+  PASSWORD_MAX_CHARS,
+  PASSWORD_MIN_CHARS,
+} from '../../lib/limits'
 import { Field, inputClass, submitClass } from './AuthCard'
 import { meQueryKey } from './useCurrentUser'
 
-// Must match apps/api/internal/api/auth.go.
+// Must match apps/api/internal/api/auth.go. Messages are i18n keys.
 const schema = z
   .object({
-    email: z.email('请输入有效的邮箱'),
+    email: z.email('err.emailInvalid'),
     nickname: z
       .string()
-      .refine((s) => charCount(s) >= 1, '请输入昵称')
-      .refine((s) => charCount(s) <= 20, '昵称最多 20 个字'),
-    password: z.string().min(8, '密码至少 8 位').max(128, '密码最多 128 位'),
+      .refine((s) => charCount(s) >= 1, 'err.nicknameRequired')
+      .refine((s) => charCount(s) <= NICKNAME_MAX_CHARS, 'err.nicknameTooLong'),
+    password: z
+      .string()
+      .min(PASSWORD_MIN_CHARS, 'err.passwordTooShort')
+      .max(PASSWORD_MAX_CHARS, 'err.passwordTooLong'),
     confirm: z.string(),
   })
-  .refine((v) => v.password === v.confirm, { path: ['confirm'], message: '两次输入的密码不一致' })
+  .refine((v) => v.password === v.confirm, { path: ['confirm'], message: 'err.passwordMismatch' })
 type Values = z.infer<typeof schema>
 
 export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useI18n()
+  const fieldError = useFieldError()
+  const serverError = useServerError()
   const qc = useQueryClient()
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -51,7 +63,7 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           password as the username when hints are missing. The email is the
           login identifier, so it must be `autocomplete="username"` and sit
           directly above the password. */}
-      <Field id="nickname" label="昵称" error={errors.nickname?.message}>
+      <Field id="nickname" label={t('auth.nickname')} error={fieldError(errors.nickname?.message)}>
         <input
           id="nickname"
           autoComplete="nickname"
@@ -59,7 +71,7 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           {...form.register('nickname')}
         />
       </Field>
-      <Field id="email" label="邮箱" error={errors.email?.message}>
+      <Field id="email" label={t('auth.email')} error={fieldError(errors.email?.message)}>
         <input
           id="email"
           type="email"
@@ -68,7 +80,11 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           {...form.register('email')}
         />
       </Field>
-      <Field id="password" label="密码（至少 8 位）" error={errors.password?.message}>
+      <Field
+        id="password"
+        label={t('auth.passwordNew')}
+        error={fieldError(errors.password?.message)}
+      >
         <input
           id="password"
           type="password"
@@ -77,7 +93,7 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           {...form.register('password')}
         />
       </Field>
-      <Field id="confirm" label="确认密码" error={errors.confirm?.message}>
+      <Field id="confirm" label={t('auth.confirm')} error={fieldError(errors.confirm?.message)}>
         <input
           id="confirm"
           type="password"
@@ -88,13 +104,11 @@ export function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
       </Field>
       {register.error && (
         <p role="alert" className="text-sm text-red-600">
-          {errorMessage(register.error).includes('already registered')
-            ? '这个邮箱已经注册过了'
-            : errorMessage(register.error)}
+          {serverError(register.error)}
         </p>
       )}
       <button type="submit" disabled={register.isPending} className={submitClass}>
-        注册
+        {t('auth.register')}
       </button>
     </form>
   )

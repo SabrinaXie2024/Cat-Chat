@@ -83,6 +83,24 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   state disables submit) and `ImageGrid` (read-only thumbnails). Tests mock
   `browser-image-compression` (no canvas in happy-dom).
 
+## Languages (apps/web/src/i18n)
+
+- Chinese + English. `messages.ts`: `zh` is the source; `en` is typed
+  `Record<MessageKey, string>`, so a missing translation fails typecheck. A
+  test also checks both languages use the same `{placeholders}`.
+- `useI18n()` → `{ lang, setLang, t, dateLocale }`. `t(key, vars)`; product
+  limits (`{postMax}`, `{passwordMin}` …) are always available as vars.
+- Language = saved choice (`localStorage.lang`) → browser (`zh-*` → zh) →
+  English. Switch button in the nav; updates `<html lang>` and the title.
+- **Never hard-code UI text.** Zod schemas use message *keys* as messages
+  and forms translate with `useFieldError()`, so errors re-render when the
+  language changes. Server errors stay English in the API and are mapped to
+  keys in `serverErrors.ts` (unknown ones shown raw).
+- Markdown content has one file per language (`content/guide.md`,
+  `guide.en.md`).
+- Tests render in Chinese by default; pass `{ lang: 'en' }` to
+  `renderApp`/`renderWithQuery` for English.
+
 ## Conventions
 
 - **Content limits live in three places and must agree:** the spec,
@@ -168,7 +186,8 @@ Guards in `pnpm-workspace.yaml`:
 
 ## Not built yet
 
-- Email verification and forgot-password reset (need an email provider).
+- Email verification and forgot-password reset (need an email provider;
+  deferred by the user on 2026-11-26).
 - Login limiter is still in-memory (per process) — move to Postgres/Redis
   before running more than one API instance.
 - Post list returns the newest 100; no pagination yet.

@@ -13,6 +13,8 @@ import {
   useListReplies,
 } from '../../api/generated/posts/posts'
 import { errorMessage } from '../../api/http'
+import { useFieldError, useI18n } from '../../i18n/I18nProvider'
+import { serverErrorKey, useServerError } from '../../i18n/serverErrors'
 import {
   charCount,
   MAX_REPLIES_PER_POST,
@@ -31,6 +33,7 @@ export function Replies({ post }: { post: Post }) {
   const { data: replies, error } = useListReplies(post.id, {
     query: { select: (res) => [...(res.data as Reply[])].reverse() },
   })
+  const { t } = useI18n()
   const { data: user } = useCurrentUser()
   const full = post.replyCount >= MAX_REPLIES_PER_POST
 
@@ -39,9 +42,7 @@ export function Replies({ post }: { post: Post }) {
       {/* Composer first, then newest replies: the latest conversation is
           what people came to see. */}
       {full ? (
-        <p className="text-sm text-stone-500">
-          这条帖子已经有 {MAX_REPLIES_PER_POST} 条回复，不能再回复了
-        </p>
+        <p className="text-sm text-stone-500">{t('replies.full')}</p>
       ) : user ? (
         <ReplyForm postId={post.id} />
       ) : user === null ? (
@@ -51,19 +52,19 @@ export function Replies({ post }: { post: Post }) {
             search={{ redirect: '/community' }}
             className="text-brand-700 hover:underline"
           >
-            登录
+            {t('auth.login')}
           </Link>
-          后参与回复
+          {t('replies.signInAfter')}
         </p>
       ) : null}
       {error ? (
         <p className="text-sm text-red-600">{errorMessage(error)}</p>
       ) : !replies ? (
-        <p className="text-sm text-stone-500">加载回复中…</p>
+        <p className="text-sm text-stone-500">{t('replies.loading')}</p>
       ) : replies.length === 0 ? (
-        <p className="text-sm text-stone-500">还没有回复</p>
+        <p className="text-sm text-stone-500">{t('replies.empty')}</p>
       ) : (
-        <ol className="space-y-2" aria-label="回复列表">
+        <ol className="space-y-2" aria-label={t('replies.list')}>
           {replies.map((r) => (
             <li key={r.id} className="rounded-lg bg-stone-50 px-3 py-2 text-sm">
               <div className="mb-0.5 text-xs text-stone-500">
@@ -82,12 +83,15 @@ export function Replies({ post }: { post: Post }) {
 const schema = z.object({
   content: z
     .string()
-    .refine((s) => charCount(s) > 0, '写点什么吧')
-    .refine((s) => charCount(s) <= REPLY_MAX_CHARS, `最多 ${REPLY_MAX_CHARS} 字`),
+    .refine((s) => charCount(s) > 0, 'err.contentRequired')
+    .refine((s) => charCount(s) <= REPLY_MAX_CHARS, 'err.replyTooLong'),
 })
 type Values = z.infer<typeof schema>
 
 function ReplyForm({ postId }: { postId: string }) {
+  const { t } = useI18n()
+  const translateField = useFieldError()
+  const serverError = useServerError()
   const qc = useQueryClient()
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { content: '' } })
   const [imageIds, setImageIds] = useState<string[]>([])
@@ -102,7 +106,7 @@ function ReplyForm({ postId }: { postId: string }) {
       // A 409 refetch flips the thread to "full" and unmounts this form, so
       // an inline error would vanish with it — toast instead.
       onError: (err) => {
-        if (isThreadFull(err)) toast.error('回复已满，刚刚被别人抢先了')
+        if (isThreadFull(err)) toast.error(t('replies.threadFull'))
       },
       // Refresh both on success and on 409 (someone else took the last slot).
       onSettled: () =>
@@ -114,7 +118,7 @@ function ReplyForm({ postId }: { postId: string }) {
   })
   const count = charCount(form.watch('content'))
   const inputId = `reply-${postId}`
-  const fieldError = form.formState.errors.content?.message
+  const fieldError = translateField(form.formState.errors.content?.message)
 
   return (
     <form
@@ -125,12 +129,12 @@ function ReplyForm({ postId }: { postId: string }) {
       noValidate
     >
       <label htmlFor={inputId} className="sr-only">
-        写下你的回复
+        {t('replies.label')}
       </label>
       <div className="flex gap-2">
         <input
           id={inputId}
-          placeholder="写下你的回复…"
+          placeholder={t('replies.placeholder')}
           autoComplete="off"
           className="min-w-0 flex-1 rounded-lg border border-stone-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
           {...form.register('content')}
@@ -138,16 +142,16 @@ function ReplyForm({ postId }: { postId: string }) {
         <button
           type="submit"
           disabled={reply.isPending || uploading}
-          title={uploading ? '图片上传中…' : undefined}
+          title={uploading ? t('images.uploadingTitle') : undefined}
           className="shrink-0 rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
         >
-          回复
+          {t('replies.submit')}
         </button>
       </div>
       <div className="flex justify-between text-xs">
         <span role="alert" className="text-red-600">
           {fieldError ??
-            (reply.error && !isThreadFull(reply.error) ? replyErrorText(reply.error) : '')}
+            (reply.error && !isThreadFull(reply.error) ? serverError(reply.error) : '')}
         </span>
         <span className={count > REPLY_MAX_CHARS ? 'text-red-600' : 'text-stone-400'}>
           {count}/{REPLY_MAX_CHARS}
@@ -164,10 +168,4 @@ function ReplyForm({ postId }: { postId: string }) {
   )
 }
 
-const isThreadFull = (err: unknown) => errorMessage(err).includes('maximum number of replies')
-
-function replyErrorText(err: unknown) {
-  const msg = errorMessage(err)
-  if (msg.startsWith('please sign in')) return '登录已过期，请重新登录'
-  return msg
-}
+const isThreadFull = (err: unknown) => serverErrorKey(err) === 'replies.threadFull'

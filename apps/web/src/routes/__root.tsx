@@ -2,11 +2,13 @@ import type { QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router'
 import { Cat } from 'lucide-react'
 import { UserMenu } from '../features/auth/UserMenu'
+import { useI18n } from '../i18n/I18nProvider'
+import { LanguageSwitch } from '../i18n/LanguageSwitch'
 
 const nav = [
-  { to: '/guide', label: '养猫攻略' },
-  { to: '/gallery', label: '我的猫咪' },
-  { to: '/community', label: '猫咪日常' },
+  { to: '/guide', label: 'nav.guide' },
+  { to: '/gallery', label: 'nav.gallery' },
+  { to: '/community', label: 'nav.community' },
 ] as const
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -14,12 +16,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 })
 
 function RootLayout() {
+  const { t } = useI18n()
   return (
     <div className="min-h-dvh bg-brand-50 text-stone-800">
       <header className="border-b border-stone-200 bg-white">
-        <nav className="mx-auto flex max-w-4xl items-center gap-6 px-4 py-3">
+        <nav className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <Link to="/" className="flex items-center gap-2 font-semibold text-brand-700">
-            <Cat className="size-5" aria-hidden /> 喵友圈
+            <Cat className="size-5" aria-hidden /> {t('brand')}
           </Link>
           {nav.map((n) => (
             <Link
@@ -28,10 +31,13 @@ function RootLayout() {
               className="text-sm text-stone-600 hover:text-stone-900"
               activeProps={{ className: 'text-sm font-medium text-brand-700' }}
             >
-              {n.label}
+              {t(n.label)}
             </Link>
           ))}
-          <UserMenu />
+          <div className="ml-auto flex items-center gap-2">
+            <LanguageSwitch />
+            <UserMenu />
+          </div>
         </nav>
       </header>
       <main className="mx-auto max-w-4xl px-4 py-8">

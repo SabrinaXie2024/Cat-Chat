@@ -5,19 +5,23 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { getListPostsQueryKey, useCreatePost } from '../../api/generated/posts/posts'
-import { errorMessage } from '../../api/http'
+import { useFieldError, useI18n } from '../../i18n/I18nProvider'
+import { useServerError } from '../../i18n/serverErrors'
 import { charCount, POST_MAX_CHARS, POST_MAX_IMAGES } from '../../lib/limits'
 import { ImagePicker } from '../images/ImagePicker'
 
 const schema = z.object({
   content: z
     .string()
-    .refine((s) => charCount(s) > 0, '写点什么吧')
-    .refine((s) => charCount(s) <= POST_MAX_CHARS, `最多 ${POST_MAX_CHARS} 字`),
+    .refine((s) => charCount(s) > 0, 'err.contentRequired')
+    .refine((s) => charCount(s) <= POST_MAX_CHARS, 'err.postTooLong'),
 })
 type Values = z.infer<typeof schema>
 
 export function NewPostForm() {
+  const { t } = useI18n()
+  const fieldError = useFieldError()
+  const serverError = useServerError()
   const qc = useQueryClient()
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { content: '' } })
   const [imageIds, setImageIds] = useState<string[]>([])
@@ -28,10 +32,10 @@ export function NewPostForm() {
       onSuccess: () => {
         form.reset()
         setResetSignal((n) => n + 1)
-        toast.success('发布成功')
+        toast.success(t('post.published'))
         return qc.invalidateQueries({ queryKey: getListPostsQueryKey() })
       },
-      onError: (err) => toast.error(errorMessage(err)),
+      onError: (err) => toast.error(serverError(err)),
     },
   })
   const count = charCount(form.watch('content'))
@@ -44,12 +48,12 @@ export function NewPostForm() {
       className="space-y-2 rounded-xl bg-white p-4 shadow-sm"
     >
       <label htmlFor="content" className="sr-only">
-        分享你的猫咪日常
+        {t('post.label')}
       </label>
       <textarea
         id="content"
         rows={3}
-        placeholder="分享你的猫咪日常…"
+        placeholder={t('post.placeholder')}
         className="w-full resize-none rounded-lg border border-stone-200 p-3 focus:border-brand-500 focus:outline-none"
         {...form.register('content')}
       />
@@ -64,17 +68,17 @@ export function NewPostForm() {
           {count}/{POST_MAX_CHARS}
           {form.formState.errors.content && (
             <span role="alert" className="ml-2 text-red-600">
-              {form.formState.errors.content.message}
+              {fieldError(form.formState.errors.content.message)}
             </span>
           )}
         </span>
         <button
           type="submit"
           disabled={create.isPending || uploading}
-          title={uploading ? '图片上传中…' : undefined}
+          title={uploading ? t('images.uploadingTitle') : undefined}
           className="rounded-lg bg-brand-500 px-4 py-1.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
         >
-          发布
+          {t('post.submit')}
         </button>
       </div>
     </form>

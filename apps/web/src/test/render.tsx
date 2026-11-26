@@ -3,24 +3,32 @@ import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/rea
 import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { Toaster } from 'sonner'
+import { I18nProvider, type Lang } from '../i18n/I18nProvider'
 import { routeTree } from '../routeTree.gen'
 
 const newQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
-export function renderWithQuery(ui: ReactElement) {
-  return render(<QueryClientProvider client={newQueryClient()}>{ui}</QueryClientProvider>)
+// Tests default to Chinese (the source language) unless they pass `lang`.
+export function renderWithQuery(ui: ReactElement, { lang = 'zh' }: { lang?: Lang } = {}) {
+  return render(
+    <I18nProvider initialLang={lang}>
+      <QueryClientProvider client={newQueryClient()}>{ui}</QueryClientProvider>
+    </I18nProvider>,
+  )
 }
 
 /** Renders the whole app (real routes, MSW API) starting at `path`. */
-export function renderApp(path = '/') {
+export function renderApp(path = '/', { lang = 'zh' }: { lang?: Lang } = {}) {
   const queryClient = newQueryClient()
   const history = createMemoryHistory({ initialEntries: [path] })
   const router = createRouter({ routeTree, history, context: { queryClient } })
   const result = render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster />
-    </QueryClientProvider>,
+    <I18nProvider initialLang={lang}>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <Toaster />
+      </QueryClientProvider>
+    </I18nProvider>,
   )
   return { ...result, router }
 }

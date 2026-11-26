@@ -1,9 +1,11 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronDown, LogOut, Settings } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
+import { useI18n } from '../../i18n/I18nProvider'
 import { safeRedirect, useCurrentUser, useSignOut } from './useCurrentUser'
 
 export function UserMenu() {
+  const { t } = useI18n()
   const { data: user } = useCurrentUser()
   const { pathname } = useLocation()
 
@@ -13,12 +15,12 @@ export function UserMenu() {
     const redirect =
       pathname === '/login' || pathname === '/register' ? undefined : safeRedirect(pathname)
     return (
-      <div className="ml-auto flex gap-3 text-sm">
+      <div className="flex gap-3 text-sm">
         <Link to="/login" search={{ redirect }} className="text-stone-600 hover:text-stone-900">
-          登录
+          {t('auth.login')}
         </Link>
         <Link to="/register" search={{ redirect }} className="font-medium text-brand-700">
-          注册
+          {t('auth.register')}
         </Link>
       </div>
     )
@@ -34,6 +36,7 @@ function AccountDropdown({ nickname }: { nickname: string }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuId = useId()
+  const { t } = useI18n()
   const signOut = useSignOut()
   const { pathname } = useLocation()
 
@@ -62,7 +65,7 @@ function AccountDropdown({ nickname }: { nickname: string }) {
   }, [open])
 
   return (
-    <div ref={rootRef} className="relative ml-auto">
+    <div ref={rootRef} className="relative">
       <button
         ref={buttonRef}
         type="button"
@@ -82,12 +85,12 @@ function AccountDropdown({ nickname }: { nickname: string }) {
         <div
           id={menuId}
           role="menu"
-          aria-label="账号菜单"
+          aria-label={t('menu.label')}
           className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-lg border border-stone-200 bg-white py-1 shadow-lg"
         >
           <Link to="/settings" role="menuitem" className={itemClass}>
             <Settings className="size-4" aria-hidden />
-            设置
+            {t('menu.settings')}
           </Link>
           <button
             type="button"
@@ -99,7 +102,7 @@ function AccountDropdown({ nickname }: { nickname: string }) {
             className={itemClass}
           >
             <LogOut className="size-4" aria-hidden />
-            退出登录
+            {t('menu.signOut')}
           </button>
         </div>
       )}

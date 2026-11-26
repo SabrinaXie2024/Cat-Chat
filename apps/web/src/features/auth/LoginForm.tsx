@@ -4,17 +4,22 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useLogin } from '../../api/generated/auth/auth'
 import type { User } from '../../api/generated/model'
-import { errorMessage } from '../../api/http'
+import { useFieldError, useI18n } from '../../i18n/I18nProvider'
+import { useServerError } from '../../i18n/serverErrors'
 import { Field, inputClass, submitClass } from './AuthCard'
 import { meQueryKey } from './useCurrentUser'
 
+// Messages are i18n keys, translated at render.
 const schema = z.object({
-  email: z.email('请输入有效的邮箱'),
-  password: z.string().min(1, '请输入密码'),
+  email: z.email('err.emailInvalid'),
+  password: z.string().min(1, 'err.passwordRequired'),
 })
 type Values = z.infer<typeof schema>
 
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useI18n()
+  const fieldError = useFieldError()
+  const serverError = useServerError()
   const qc = useQueryClient()
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -36,7 +41,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       className="space-y-4"
       noValidate
     >
-      <Field id="email" label="邮箱" error={errors.email?.message}>
+      <Field id="email" label={t('auth.email')} error={fieldError(errors.email?.message)}>
         <input
           id="email"
           type="email"
@@ -45,7 +50,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           {...form.register('email')}
         />
       </Field>
-      <Field id="password" label="密码" error={errors.password?.message}>
+      <Field id="password" label={t('auth.password')} error={fieldError(errors.password?.message)}>
         <input
           id="password"
           type="password"
@@ -56,19 +61,12 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       </Field>
       {login.error && (
         <p role="alert" className="text-sm text-red-600">
-          {loginErrorText(login.error)}
+          {serverError(login.error)}
         </p>
       )}
       <button type="submit" disabled={login.isPending} className={submitClass}>
-        登录
+        {t('auth.login')}
       </button>
     </form>
   )
-}
-
-function loginErrorText(err: unknown) {
-  const msg = errorMessage(err)
-  if (msg.startsWith('incorrect')) return '邮箱或密码错误'
-  if (msg.startsWith('too many')) return '失败次数太多，请 15 分钟后再试'
-  return msg
 }
