@@ -94,6 +94,63 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+  /auth/password-reset/start:
+    post:
+      operationId: startPasswordReset
+      tags: [auth]
+      security: []
+      description: |
+        Forgot password, step 1. Always answers 202 for a well-formed email,
+        whether or not it's registered (no account enumeration); only
+        registered emails actually receive a 6-digit code (valid 5 minutes).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordResetStartRequest" }
+      responses:
+        "202":
+          description: If the email is registered, a code was sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VerificationSent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429":
+          description: Sent too recently / too often
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RateLimited" }
+  /auth/password-reset/complete:
+    post:
+      operationId: completePasswordReset
+      tags: [auth]
+      security: []
+      description: |
+        Step 2. Right code + valid new password → password replaced, every
+        existing session revoked, and this client signed in.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordResetCompleteRequest" }
+      responses:
+        "200":
+          description: Password reset and signed in
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SessionCookie" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400":
+          description: Wrong code (attemptsLeft) or invalid new password
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CodeRejected" }
+        "410":
+          description: No valid code (expired, voided, or never sent)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /auth/login:
     post:
       operationId: login
@@ -469,12 +526,26 @@ components:
       properties:
         email: { type: string, maxLength: 254 }
         code: { type: string, pattern: "^[0-9]{6}$" }
+    PasswordResetStartRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, maxLength: 254 }
+    PasswordResetCompleteRequest:
+      type: object
+      required: [email, code, newPassword]
+      properties:
+        email: { type: string, maxLength: 254 }
+        code: { type: string, pattern: "^[0-9]{6}$" }
+        newPassword: { type: string, minLength: 8, maxLength: 128 }
     CodeRejected:
       type: object
       required: [message, attemptsLeft]
       properties:
         message: { type: string }
-        attemptsLeft: { type: integer }
+        attemptsLeft:
+          type: integer
+          description: Tries left for the current code (-1 when the code wasn't the problem)
     LoginRequest:
       type: object
       required: [email, password]

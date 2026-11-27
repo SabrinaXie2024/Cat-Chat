@@ -32,6 +32,8 @@ export * from './newGalleryItemKind';
 export * from './newPost';
 export * from './newReply';
 export * from './notFoundResponse';
+export * from './passwordResetCompleteRequest';
+export * from './passwordResetStartRequest';
 export * from './post';
 export * from './rateLimited';
 export * from './registerRequest';

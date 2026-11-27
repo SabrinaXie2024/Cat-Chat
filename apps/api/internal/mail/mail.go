@@ -109,3 +109,20 @@ It expires in %d minutes. If you didn't request this, you can ignore this email.
 </div>`, code, mins, mins)
 	return Message{To: to, Subject: fmt.Sprintf("喵友圈验证码 / MeowSphere code: %s", code), Text: text, HTML: html}
 }
+
+// PasswordResetEmail builds the bilingual (中文 / English) reset-code email.
+func PasswordResetEmail(to, code string, ttl time.Duration) Message {
+	mins := int(ttl.Minutes())
+	text := fmt.Sprintf(`你正在重置喵友圈账号的密码，验证码是：%s
+%d 分钟内有效。如果不是你本人操作，请忽略这封邮件，你的密码不会改变。
+
+You asked to reset your MeowSphere password. Your code is: %s
+It expires in %d minutes. If this wasn't you, ignore this email; your password won't change.`, code, mins, code, mins)
+	html := fmt.Sprintf(`<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;color:#292524">
+<p>重置<b>喵友圈</b>密码的验证码 / Your <b>MeowSphere</b> password reset code:</p>
+<p style="font-size:32px;font-weight:bold;letter-spacing:8px;margin:16px 0">%s</p>
+<p>%d 分钟内有效 / Expires in %d minutes.</p>
+<p style="color:#78716c;font-size:13px">如果不是你本人操作，请忽略这封邮件，你的密码不会改变。<br>If this wasn't you, ignore this email; your password won't change.</p>
+</div>`, code, mins, mins)
+	return Message{To: to, Subject: fmt.Sprintf("重置密码验证码 / Password reset code: %s", code), Text: text, HTML: html}
+}

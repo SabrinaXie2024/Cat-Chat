@@ -84,7 +84,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations CASCADE`); err != nil {
+	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations, password_resets CASCADE`); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -294,6 +294,34 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		}
 		if _, err := s.CompleteRegistration(ctx, "nobody@b.co"); !errors.Is(err, api.ErrNotFound) {
 			t.Fatalf("none: %v", err)
+		}
+	})
+
+	t.Run("password resets", func(t *testing.T) {
+		s := newStore(t)
+		if _, err := s.PasswordReset(ctx, "r@b.co"); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("missing: %v", err)
+		}
+		at := now.Truncate(time.Second)
+		r := api.ResetCode{Email: "r@b.co", CodeHash: "c1", ExpiresAt: at.Add(5 * time.Minute), LastSentAt: at, WindowStart: at, SendCount: 1}
+		if err := s.SavePasswordReset(ctx, r); err != nil {
+			t.Fatal(err)
+		}
+		if n, _ := s.RecordWrongResetCode(ctx, "r@b.co"); n != 1 {
+			t.Fatalf("attempts %d", n)
+		}
+		r.CodeHash, r.SendCount = "c2", 2
+		_ = s.SavePasswordReset(ctx, r)
+		got, err := s.PasswordReset(ctx, "r@b.co")
+		if err != nil || got.CodeHash != "c2" || got.Attempts != 0 || got.SendCount != 2 || !got.ExpiresAt.Equal(r.ExpiresAt) {
+			t.Fatalf("got %+v %v", got, err)
+		}
+		if _, err := s.RecordWrongResetCode(ctx, "none@b.co"); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("missing attempts: %v", err)
+		}
+		_ = s.DeletePasswordReset(ctx, "r@b.co")
+		if _, err := s.PasswordReset(ctx, "r@b.co"); !errors.Is(err, api.ErrNotFound) {
+			t.Fatal("should be deleted")
 		}
 	})
 

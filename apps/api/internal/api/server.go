@@ -53,6 +53,12 @@ type Store interface {
 	RecordWrongCode(ctx context.Context, email string) (attempts int, err error)
 	DeletePendingRegistration(ctx context.Context, email string) error
 	CompleteRegistration(ctx context.Context, email string) (User, error)
+
+	// Forgot-password codes (rows exist for unregistered emails too).
+	PasswordReset(ctx context.Context, email string) (ResetCode, error)
+	SavePasswordReset(ctx context.Context, r ResetCode) error
+	RecordWrongResetCode(ctx context.Context, email string) (attempts int, err error)
+	DeletePasswordReset(ctx context.Context, email string) error
 	UserByEmail(ctx context.Context, email string) (u User, passwordHash string, err error)
 	CreateSession(ctx context.Context, tokenHash, userID string, expires time.Time) error
 	UserBySession(ctx context.Context, tokenHash string, now time.Time) (User, error)
@@ -68,6 +74,13 @@ type PendingRegistration struct {
 	Attempts                                int
 	ExpiresAt, LastSentAt, WindowStart      time.Time
 	SendCount                               int
+}
+
+// ResetCode is an outstanding forgot-password code.
+type ResetCode struct {
+	Email, CodeHash                    string
+	Attempts, SendCount                int
+	ExpiresAt, LastSentAt, WindowStart time.Time
 }
 
 // VideoRecord is a processed video's metadata.

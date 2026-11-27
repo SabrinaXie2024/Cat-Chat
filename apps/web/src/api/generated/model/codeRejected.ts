@@ -16,5 +16,6 @@
 
 export interface CodeRejected {
   message: string;
+  /** Tries left for the current code (-1 when the code wasn't the problem) */
   attemptsLeft: number;
 }

@@ -26,6 +26,8 @@ import type {
 import type {
   ChangePasswordRequest,
   LoginRequest,
+  PasswordResetCompleteRequest,
+  PasswordResetStartRequest,
   RegisterRequest,
   User,
   VerificationSent,
@@ -33,13 +35,15 @@ import type {
 } from '../model';
 
 import {
+  getCompletePasswordResetResponseMock,
   getGetMeResponseMock,
   getLoginResponseMock,
+  getStartPasswordResetResponseMock,
   getStartRegistrationResponseMock,
   getVerifyRegistrationResponseMock
 } from './auth.faker';
 
-export { getStartRegistrationResponseMock, getVerifyRegistrationResponseMock, getLoginResponseMock, getGetMeResponseMock } from './auth.faker';
+export { getStartRegistrationResponseMock, getVerifyRegistrationResponseMock, getStartPasswordResetResponseMock, getCompletePasswordResetResponseMock, getLoginResponseMock, getGetMeResponseMock } from './auth.faker';
 
 
 export const getStartRegistrationMockHandler = (overrideResponse?: VerificationSent | ((info: Parameters<HttpResponseResolver<PathParams, RegisterRequest>>[0]) => Promise<VerificationSent> | VerificationSent), options?: RequestHandlerOptions) => {
@@ -62,6 +66,30 @@ export const getVerifyRegistrationMockHandler = (overrideResponse?: User | ((inf
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getVerifyRegistrationResponseMock(),
       { status: 201
+      })
+  }, options)
+}
+
+export const getStartPasswordResetMockHandler = (overrideResponse?: VerificationSent | ((info: Parameters<HttpResponseResolver<PathParams, PasswordResetStartRequest>>[0]) => Promise<VerificationSent> | VerificationSent), options?: RequestHandlerOptions) => {
+  return http.post<PathParams, PasswordResetStartRequest>('*/auth/password-reset/start', async (info: Parameters<HttpResponseResolver<PathParams, PasswordResetStartRequest>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getStartPasswordResetResponseMock(),
+      { status: 202
+      })
+  }, options)
+}
+
+export const getCompletePasswordResetMockHandler = (overrideResponse?: User | ((info: Parameters<HttpResponseResolver<PathParams, PasswordResetCompleteRequest>>[0]) => Promise<User> | User), options?: RequestHandlerOptions) => {
+  return http.post<PathParams, PasswordResetCompleteRequest>('*/auth/password-reset/complete', async (info: Parameters<HttpResponseResolver<PathParams, PasswordResetCompleteRequest>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getCompletePasswordResetResponseMock(),
+      { status: 200
       })
   }, options)
 }
@@ -112,6 +140,8 @@ export const getGetMeMockHandler = (overrideResponse?: User | ((info: Parameters
 export const getAuthMock = () => [
   getStartRegistrationMockHandler(),
   getVerifyRegistrationMockHandler(),
+  getStartPasswordResetMockHandler(),
+  getCompletePasswordResetMockHandler(),
   getLoginMockHandler(),
   getLogoutMockHandler(),
   getChangePasswordMockHandler(),

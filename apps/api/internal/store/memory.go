@@ -36,6 +36,7 @@ type Memory struct {
 	videos   map[string]api.VideoRecord
 	gallery  []api.GalleryEntry // newest last
 	pending  map[string]api.PendingRegistration
+	resets   map[string]api.ResetCode
 	now      func() time.Time
 }
 
@@ -51,6 +52,7 @@ func NewMemory() *Memory {
 		imgDims:  map[string][2]int{},
 		videos:   map[string]api.VideoRecord{},
 		pending:  map[string]api.PendingRegistration{},
+		resets:   map[string]api.ResetCode{},
 		now:      time.Now,
 	}
 }
@@ -187,6 +189,45 @@ func (m *Memory) CompleteRegistration(ctx context.Context, email string) (api.Us
 	}
 	_ = m.DeletePendingRegistration(ctx, email)
 	return u, nil
+}
+
+// --- password resets ---
+
+func (m *Memory) PasswordReset(_ context.Context, email string) (api.ResetCode, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	r, ok := m.resets[email]
+	if !ok {
+		return api.ResetCode{}, api.ErrNotFound
+	}
+	return r, nil
+}
+
+func (m *Memory) SavePasswordReset(_ context.Context, r api.ResetCode) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	r.Attempts = 0
+	m.resets[r.Email] = r
+	return nil
+}
+
+func (m *Memory) RecordWrongResetCode(_ context.Context, email string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	r, ok := m.resets[email]
+	if !ok {
+		return 0, api.ErrNotFound
+	}
+	r.Attempts++
+	m.resets[email] = r
+	return r.Attempts, nil
+}
+
+func (m *Memory) DeletePasswordReset(_ context.Context, email string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.resets, email)
+	return nil
 }
 
 // --- images ---

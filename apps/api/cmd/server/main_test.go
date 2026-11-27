@@ -732,3 +732,103 @@ func TestEmailTakenDuringVerification(t *testing.T) {
 	b.mustRegister("race@cat.dev", "b")
 	a.mustStatus(410, "POST", "/api/auth/register/verify", `{"email":"race@cat.dev","code":"`+code+`"}`)
 }
+
+func TestPasswordResetFlow(t *testing.T) {
+	c := newClient(t)
+	c.signUp() // mimi@example.com / password123
+	other := newClient(t)
+	other.srv = c.srv
+	other.mustStatus(200, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"password123"}`)
+
+	anon := newClient(t)
+	anon.srv = c.srv
+	sentBefore := c.mailbox().sent
+	anon.mustStatus(202, "POST", "/api/auth/password-reset/start", `{"email":" MIMI@example.com "}`)
+	if c.mailbox().sent != sentBefore+1 {
+		t.Fatal("registered email should get a code")
+	}
+	code := c.mailbox().codes["mimi@example.com"]
+	wrong := "000000"
+	if code == wrong {
+		wrong = "111111"
+	}
+
+	// A bad new password doesn't burn a try.
+	b := anon.mustStatus(400, "POST", "/api/auth/password-reset/complete", `{"email":"mimi@example.com","code":"`+code+`","newPassword":"short"}`)
+	if !strings.Contains(b, `"attemptsLeft":-1`) {
+		t.Fatalf("short password: %s", b)
+	}
+	b = anon.mustStatus(400, "POST", "/api/auth/password-reset/complete", `{"email":"mimi@example.com","code":"`+wrong+`","newPassword":"newpassword1"}`)
+	if !strings.Contains(b, `"attemptsLeft":4`) {
+		t.Fatalf("wrong code: %s", b)
+	}
+	// Old password still works until the reset completes.
+	newClientOn(t, c).mustStatus(200, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"password123"}`)
+
+	me := anon.mustStatus(200, "POST", "/api/auth/password-reset/complete", `{"email":"mimi@example.com","code":"`+code+`","newPassword":"newpassword1"}`)
+	if !strings.Contains(me, `"email":"mimi@example.com"`) {
+		t.Fatalf("complete = %s", me)
+	}
+	anon.mustStatus(200, "GET", "/api/auth/me", "")  // signed in by the reset
+	c.mustStatus(401, "GET", "/api/auth/me", "")     // every old session revoked
+	other.mustStatus(401, "GET", "/api/auth/me", "") //
+	newClientOn(t, c).mustStatus(401, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"password123"}`)
+	newClientOn(t, c).mustStatus(200, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"newpassword1"}`)
+	// Single use.
+	anon.mustStatus(410, "POST", "/api/auth/password-reset/complete", `{"email":"mimi@example.com","code":"`+code+`","newPassword":"another-pass"}`)
+}
+
+// newClientOn returns a fresh cookie jar talking to c's server.
+func newClientOn(t *testing.T, c *client) *client {
+	n := newClient(t)
+	n.srv = c.srv
+	return n
+}
+
+func TestPasswordResetDoesNotRevealAccounts(t *testing.T) {
+	c := newClient(t)
+	c.signUp()
+	sent := c.mailbox().sent
+
+	real := c.mustStatus(202, "POST", "/api/auth/password-reset/start", `{"email":"mimi@example.com"}`)
+	ghost := c.mustStatus(202, "POST", "/api/auth/password-reset/start", `{"email":"ghost@example.com"}`)
+	if real != ghost {
+		t.Fatalf("responses differ: %s vs %s", real, ghost)
+	}
+	if c.mailbox().sent != sent+1 {
+		t.Fatalf("only the registered address should be emailed; sent %d", c.mailbox().sent-sent)
+	}
+	// Same cooldown behaviour for both.
+	r1, _, _ := c.do("POST", "/api/auth/password-reset/start", `{"email":"mimi@example.com"}`)
+	r2, _, _ := c.do("POST", "/api/auth/password-reset/start", `{"email":"ghost@example.com"}`)
+	if r1 != 429 || r2 != 429 {
+		t.Fatalf("cooldown: %d %d", r1, r2)
+	}
+	// No code can ever succeed for an unregistered email.
+	for _, code := range []string{"000000", "123456", "999999"} {
+		code, _, _ := c.do("POST", "/api/auth/password-reset/complete", `{"email":"ghost@example.com","code":"`+code+`","newPassword":"newpassword1"}`)
+		if code == 200 {
+			t.Fatal("reset succeeded for an unregistered email")
+		}
+	}
+}
+
+func TestPasswordResetExpiresAndUnlocksLogin(t *testing.T) {
+	c := newClient(t)
+	c.signUp()
+	for range 5 {
+		c.mustStatus(401, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"wrong-password"}`)
+	}
+	c.mustStatus(429, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"password123"}`)
+
+	c.mustStatus(202, "POST", "/api/auth/password-reset/start", `{"email":"mimi@example.com"}`)
+	code := c.mailbox().codes["mimi@example.com"]
+	c.clock().Advance(5*time.Minute + time.Second)
+	c.mustStatus(410, "POST", "/api/auth/password-reset/complete", `{"email":"mimi@example.com","code":"`+code+`","newPassword":"newpassword1"}`)
+
+	c.mustStatus(202, "POST", "/api/auth/password-reset/start", `{"email":"mimi@example.com"}`)
+	code = c.mailbox().codes["mimi@example.com"]
+	c.mustStatus(200, "POST", "/api/auth/password-reset/complete", `{"email":"mimi@example.com","code":"`+code+`","newPassword":"newpassword1"}`)
+	// The owner proved access, so the login lockout is lifted.
+	newClientOn(t, c).mustStatus(200, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"newpassword1"}`)
+}

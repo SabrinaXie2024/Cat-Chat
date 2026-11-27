@@ -1,6 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { HTTPError } from 'ky'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -16,6 +15,7 @@ import {
   PASSWORD_MIN_CHARS,
 } from '../../lib/limits'
 import { Field, inputClass, submitClass } from './AuthCard'
+import { digits6, errorField, mmss, useNow } from './codeHelpers'
 import { meQueryKey } from './useCurrentUser'
 
 // Must match apps/api/internal/api. Messages are i18n keys.
@@ -34,13 +34,6 @@ const detailsSchema = z
   })
   .refine((v) => v.password === v.confirm, { path: ['confirm'], message: 'err.passwordMismatch' })
 type Details = z.infer<typeof detailsSchema>
-
-/** Error body fields beyond `message` (429 retryAfterSeconds, 400 attemptsLeft). */
-function errorField(err: unknown, field: 'retryAfterSeconds' | 'attemptsLeft'): number | undefined {
-  if (!(err instanceof HTTPError)) return undefined
-  const v = (err.data as Record<string, unknown> | undefined)?.[field]
-  return typeof v === 'number' ? v : undefined
-}
 
 type Pending = { request: RegisterRequest; expiresAt: number; resendAt: number }
 
@@ -185,21 +178,6 @@ function DetailsStep({
   )
 }
 
-/** Ticks once a second so countdowns re-render. */
-function useNow() {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [])
-  return now
-}
-
-const mmss = (ms: number) => {
-  const s = Math.max(0, Math.ceil(ms / 1000))
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-}
-
 function CodeStep({
   pending,
   onResend,
@@ -278,7 +256,7 @@ function CodeStep({
           value={code}
           onChange={(e) => {
             setFormatError(false)
-            setCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+            setCode(digits6(e.target.value))
           }}
           className={`${inputClass} text-center text-2xl tracking-[0.5em]`}
         />

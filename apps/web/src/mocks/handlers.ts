@@ -6,6 +6,8 @@ import type {
   NewGalleryItem,
   NewPost,
   NewReply,
+  PasswordResetCompleteRequest,
+  PasswordResetStartRequest,
   Post,
   RegisterRequest,
   Reply,
@@ -42,6 +44,8 @@ type Db = {
   images: Map<string, { ownerId: string; blob: Blob }>
   videos: Map<string, { ownerId: string; blob: Blob; posterId: string }>
   gallery: GalleryItem[] // newest first
+  /** Forgot-password codes, by email (also for unknown emails, like the server). */
+  resets: Map<string, { code: string; attempts: number; sentAt: number; expiresAt: number }>
   /** Sign-ups awaiting their code, by email. */
   pending: Map<
     string,
@@ -72,6 +76,7 @@ export const db: Db = {
   videos: new Map(),
   gallery: [],
   pending: new Map(),
+  resets: new Map(),
 }
 
 export function resetDb(seed: Post[] = defaultSeed()) {
@@ -83,6 +88,7 @@ export function resetDb(seed: Post[] = defaultSeed()) {
   db.videos = new Map()
   db.gallery = []
   db.pending = new Map()
+  db.resets = new Map()
 }
 
 const imageUrl = (imageId: string) => `/api/images/${imageId}`
@@ -183,6 +189,67 @@ export const handlers = [
     db.sessionUserId = user.id
     return HttpResponse.json(publicUser(user), { status: 201 })
   }),
+
+  // Forgot password, mirroring the server: same 202 for unknown emails; a
+  // code is only "sent" (stored in db.resets + logged) for real accounts.
+  http.post<never, PasswordResetStartRequest>(
+    '*/api/auth/password-reset/start',
+    async ({ request }) => {
+      const email = (await request.json()).email.trim().toLowerCase()
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad('invalid email address')
+      const now = Date.now()
+      const prev = db.resets.get(email)
+      if (prev && now - prev.sentAt < 60_000) {
+        return HttpResponse.json(
+          {
+            message: 'please wait before requesting another code',
+            retryAfterSeconds: Math.ceil((prev.sentAt + 60_000 - now) / 1000),
+          },
+          { status: 429 },
+        )
+      }
+      const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')
+      db.resets.set(email, { code, attempts: 0, sentAt: now, expiresAt: now + 300_000 })
+      if (
+        db.users.some((u) => u.email === email) &&
+        typeof window !== 'undefined' &&
+        !import.meta.env.VITEST
+      ) {
+        console.info(`[mock mail] password reset code for ${email}: ${code}`)
+      }
+      return HttpResponse.json({ expiresInSeconds: 300, resendAfterSeconds: 60 }, { status: 202 })
+    },
+  ),
+
+  http.post<never, PasswordResetCompleteRequest>(
+    '*/api/auth/password-reset/complete',
+    async ({ request }) => {
+      const body = await request.json()
+      const email = body.email.trim().toLowerCase()
+      if (body.newPassword.length < 8 || body.newPassword.length > 128) {
+        return HttpResponse.json(
+          { message: 'password must be 8–128 characters', attemptsLeft: -1 },
+          { status: 400 },
+        )
+      }
+      const r = db.resets.get(email)
+      if (!r || Date.now() >= r.expiresAt || r.attempts >= 5)
+        return bad('code expired, request a new one', 410)
+      if (body.code !== r.code) {
+        r.attempts++
+        return HttpResponse.json(
+          { message: 'incorrect verification code', attemptsLeft: Math.max(5 - r.attempts, 0) },
+          { status: 400 },
+        )
+      }
+      const user = db.users.find((u) => u.email === email)
+      db.resets.delete(email)
+      if (!user) return bad('code expired, request a new one', 410)
+      user.password = body.newPassword
+      db.sessionUserId = user.id
+      return HttpResponse.json(publicUser(user))
+    },
+  ),
 
   http.post<never, LoginRequest>('*/api/auth/login', async ({ request }) => {
     const body = await request.json()

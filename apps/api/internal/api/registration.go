@@ -62,6 +62,33 @@ func codeHash(email, code string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// sendGate applies the per-email code-sending rules: 60 s cooldown and at
+// most MaxSendsPerEmail sends per SendWindow. Shared by sign-up and
+// password reset.
+type sendGate struct {
+	exists                bool
+	lastSent, windowStart time.Time
+	count                 int
+}
+
+// check returns the new send count/window on success, or ok=false and when
+// sending will be allowed again.
+func (g sendGate) check(now time.Time) (count int, windowStart, retryAt time.Time, ok bool) {
+	if !g.exists {
+		return 1, now, time.Time{}, true
+	}
+	if until := g.lastSent.Add(ResendCooldown); now.Before(until) {
+		return 0, time.Time{}, until, false
+	}
+	if now.Before(g.windowStart.Add(SendWindow)) {
+		if g.count >= MaxSendsPerEmail {
+			return 0, time.Time{}, g.windowStart.Add(SendWindow), false
+		}
+		return g.count + 1, g.windowStart, time.Time{}, true
+	}
+	return 1, now, time.Time{}, true
+}
+
 func secondsUntil(t, now time.Time) int {
 	s := int(t.Sub(now).Seconds() + 0.999)
 	return max(s, 1)
@@ -98,21 +125,15 @@ func (s *Server) StartRegistration(ctx context.Context, req StartRegistrationReq
 			RetryAfterSeconds: secondsUntil(until, now),
 		}, nil
 	}
-	sendCount, windowStart := 1, now
-	prev, err := s.Store.PendingRegistration(ctx, email)
-	switch {
-	case err == nil:
-		if until := prev.LastSentAt.Add(ResendCooldown); now.Before(until) {
-			return limited(until)
-		}
-		if now.Before(prev.WindowStart.Add(SendWindow)) {
-			if prev.SendCount >= MaxSendsPerEmail {
-				return limited(prev.WindowStart.Add(SendWindow))
-			}
-			sendCount, windowStart = prev.SendCount+1, prev.WindowStart
-		}
-	case !errors.Is(err, ErrNotFound):
+	var gate sendGate
+	if prev, err := s.Store.PendingRegistration(ctx, email); err == nil {
+		gate = sendGate{exists: true, lastSent: prev.LastSentAt, windowStart: prev.WindowStart, count: prev.SendCount}
+	} else if !errors.Is(err, ErrNotFound) {
 		return nil, err
+	}
+	sendCount, windowStart, until, ok := gate.check(now)
+	if !ok {
+		return limited(until)
 	}
 	ip := clientIP(ctx)
 	if s.SendLimiter.Blocked(ip) {

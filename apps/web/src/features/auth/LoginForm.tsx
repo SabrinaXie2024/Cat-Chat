@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useLogin } from '../../api/generated/auth/auth'
@@ -59,6 +60,11 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           {...form.register('password')}
         />
       </Field>
+      <p className="-mt-2 text-right text-sm">
+        <Link to="/forgot-password" className="text-brand-700 hover:underline">
+          {t('auth.forgot')}
+        </Link>
+      </p>
       {login.error && (
         <p role="alert" className="text-sm text-red-600">
           {serverError(login.error)}

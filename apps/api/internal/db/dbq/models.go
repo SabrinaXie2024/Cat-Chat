@@ -29,6 +29,16 @@ type Image struct {
 	CreatedAt time.Time
 }
 
+type PasswordReset struct {
+	Email       string
+	CodeHash    string
+	Attempts    int32
+	ExpiresAt   time.Time
+	LastSentAt  time.Time
+	SendCount   int32
+	WindowStart time.Time
+}
+
 type PendingRegistration struct {
 	Email        string
 	Nickname     string

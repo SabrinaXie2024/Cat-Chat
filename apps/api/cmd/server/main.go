@@ -172,6 +172,11 @@ func purgeExpired(ctx context.Context, pg *store.Postgres) {
 		} else if n > 0 {
 			slog.Info("purged expired sessions", "count", n)
 		}
+		if n, err := pg.DeleteStalePasswordResets(ctx, now); err != nil && ctx.Err() == nil {
+			slog.Warn("password reset purge failed", "err", err)
+		} else if n > 0 {
+			slog.Info("purged stale password resets", "count", n)
+		}
 		if n, err := pg.DeleteStalePendingRegistrations(ctx, now); err != nil && ctx.Err() == nil {
 			slog.Warn("pending registration purge failed", "err", err)
 		} else if n > 0 {

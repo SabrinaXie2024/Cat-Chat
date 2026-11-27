@@ -77,6 +77,7 @@ type ChangePasswordRequest struct {
 
 // CodeRejected defines model for CodeRejected.
 type CodeRejected struct {
+	// AttemptsLeft Tries left for the current code (-1 when the code wasn't the problem)
 	AttemptsLeft int    `json:"attemptsLeft"`
 	Message      string `json:"message"`
 }
@@ -158,6 +159,18 @@ type NewPost struct {
 type NewReply struct {
 	Content string    `json:"content"`
 	Images  []ImageId `json:"images"`
+}
+
+// PasswordResetCompleteRequest defines model for PasswordResetCompleteRequest.
+type PasswordResetCompleteRequest struct {
+	Code        string `json:"code"`
+	Email       string `json:"email"`
+	NewPassword string `json:"newPassword"`
+}
+
+// PasswordResetStartRequest defines model for PasswordResetStartRequest.
+type PasswordResetStartRequest struct {
+	Email string `json:"email"`
 }
 
 // Post defines model for Post.
@@ -258,6 +271,12 @@ type LoginJSONRequestBody = LoginRequest
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
+// CompletePasswordResetJSONRequestBody defines body for CompletePasswordReset for application/json ContentType.
+type CompletePasswordResetJSONRequestBody = PasswordResetCompleteRequest
+
+// StartPasswordResetJSONRequestBody defines body for StartPasswordReset for application/json ContentType.
+type StartPasswordResetJSONRequestBody = PasswordResetStartRequest
+
 // StartRegistrationJSONRequestBody defines body for StartRegistration for application/json ContentType.
 type StartRegistrationJSONRequestBody = RegisterRequest
 
@@ -293,6 +312,12 @@ type ServerInterface interface {
 
 	// (POST /auth/password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/password-reset/complete)
+	CompletePasswordReset(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/password-reset/start)
+	StartPasswordReset(w http.ResponseWriter, r *http.Request)
 
 	// (POST /auth/register/start)
 	StartRegistration(w http.ResponseWriter, r *http.Request)
@@ -390,6 +415,34 @@ func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ChangePassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompletePasswordReset operation middleware
+func (siw *ServerInterfaceWrapper) CompletePasswordReset(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompletePasswordReset(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartPasswordReset operation middleware
+func (siw *ServerInterfaceWrapper) StartPasswordReset(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartPasswordReset(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -752,6 +805,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/health", wrapper.GetHealth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/register/start", wrapper.StartRegistration)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/register/verify", wrapper.VerifyRegistration)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/password-reset/start", wrapper.StartPasswordReset)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/password-reset/complete", wrapper.CompletePasswordReset)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/login", wrapper.Login)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/password", wrapper.ChangePassword)
@@ -983,6 +1038,122 @@ func (response ChangePassword403JSONResponse) VisitChangePasswordResponse(w http
 type ChangePassword429JSONResponse Error
 
 func (response ChangePassword429JSONResponse) VisitChangePasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompletePasswordResetRequestObject struct {
+	Body *CompletePasswordResetJSONRequestBody
+}
+
+type CompletePasswordResetResponseObject interface {
+	VisitCompletePasswordResetResponse(w http.ResponseWriter) error
+}
+
+type CompletePasswordReset200ResponseHeaders struct {
+	SetCookie *string
+}
+
+type CompletePasswordReset200JSONResponse struct {
+	Body    User
+	Headers CompletePasswordReset200ResponseHeaders
+}
+
+func (response CompletePasswordReset200JSONResponse) VisitCompletePasswordResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.SetCookie != nil {
+		{
+			v, err := runtime.StyleParamWithOptions("simple", false, "Set-Cookie", *response.Headers.SetCookie, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return fmt.Errorf("error styling response header Set-Cookie: %w", err)
+			}
+			w.Header().Set("Set-Cookie", v)
+		}
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompletePasswordReset400JSONResponse CodeRejected
+
+func (response CompletePasswordReset400JSONResponse) VisitCompletePasswordResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompletePasswordReset410JSONResponse Error
+
+func (response CompletePasswordReset410JSONResponse) VisitCompletePasswordResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(410)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartPasswordResetRequestObject struct {
+	Body *StartPasswordResetJSONRequestBody
+}
+
+type StartPasswordResetResponseObject interface {
+	VisitStartPasswordResetResponse(w http.ResponseWriter) error
+}
+
+type StartPasswordReset202JSONResponse VerificationSent
+
+func (response StartPasswordReset202JSONResponse) VisitStartPasswordResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartPasswordReset400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response StartPasswordReset400JSONResponse) VisitStartPasswordResetResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartPasswordReset429JSONResponse RateLimited
+
+func (response StartPasswordReset429JSONResponse) VisitStartPasswordResetResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
@@ -1687,6 +1858,12 @@ type StrictServerInterface interface {
 	// (POST /auth/password)
 	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
 
+	// (POST /auth/password-reset/complete)
+	CompletePasswordReset(ctx context.Context, request CompletePasswordResetRequestObject) (CompletePasswordResetResponseObject, error)
+
+	// (POST /auth/password-reset/start)
+	StartPasswordReset(ctx context.Context, request StartPasswordResetRequestObject) (StartPasswordResetResponseObject, error)
+
 	// (POST /auth/register/start)
 	StartRegistration(ctx context.Context, request StartRegistrationRequestObject) (StartRegistrationResponseObject, error)
 
@@ -1872,6 +2049,68 @@ func (sh *strictHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ChangePasswordResponseObject); ok {
 		if err := validResponse.VisitChangePasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompletePasswordReset operation middleware
+func (sh *strictHandler) CompletePasswordReset(w http.ResponseWriter, r *http.Request) {
+	var request CompletePasswordResetRequestObject
+
+	var body CompletePasswordResetJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.CompletePasswordReset(ctx, request.(CompletePasswordResetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompletePasswordReset")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompletePasswordResetResponseObject); ok {
+		if err := validResponse.VisitCompletePasswordResetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartPasswordReset operation middleware
+func (sh *strictHandler) StartPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var request StartPasswordResetRequestObject
+
+	var body StartPasswordResetJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.StartPasswordReset(ctx, request.(StartPasswordResetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartPasswordReset")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartPasswordResetResponseObject); ok {
+		if err := validResponse.VisitStartPasswordResetResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

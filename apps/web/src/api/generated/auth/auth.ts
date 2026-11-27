@@ -38,6 +38,8 @@ import type {
   CodeRejected,
   Error,
   LoginRequest,
+  PasswordResetCompleteRequest,
+  PasswordResetStartRequest,
   RateLimited,
   RegisterRequest,
   UnauthorizedResponse,
@@ -297,6 +299,206 @@ export const useVerifyRegistration = <TError = CodeRejected | Error,
         TContext
       > => {
       return useMutation(getVerifyRegistrationMutationOptions(options), queryClient);
+    }
+    export type startPasswordResetResponse202 = {
+  data: VerificationSent
+  status: 202
+}
+
+export type startPasswordResetResponse400 = {
+  data: BadRequestResponse
+  status: 400
+}
+
+export type startPasswordResetResponse429 = {
+  data: RateLimited
+  status: 429
+}
+
+export type startPasswordResetResponseSuccess = (startPasswordResetResponse202) & {
+  headers: Headers;
+};
+export type startPasswordResetResponseError = (startPasswordResetResponse400 | startPasswordResetResponse429) & {
+  headers: Headers;
+};
+
+export type startPasswordResetResponse = (startPasswordResetResponseSuccess | startPasswordResetResponseError)
+
+export const getStartPasswordResetUrl = () => {
+
+
+
+
+  return `/auth/password-reset/start`
+}
+
+/**
+ * Forgot password, step 1. Always answers 202 for a well-formed email,
+ * whether or not it's registered (no account enumeration); only
+ * registered emails actually receive a 6-digit code (valid 5 minutes).
+ */
+export const startPasswordReset = async (passwordResetStartRequest: PasswordResetStartRequest, options?: Parameters<typeof http>[1]): Promise<startPasswordResetResponse> => {
+
+  return http<startPasswordResetResponse>(getStartPasswordResetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(passwordResetStartRequest)
+  }
+);}
+
+
+
+
+
+export const getStartPasswordResetMutationKey = () => ['startPasswordReset'] as const;
+
+export const getStartPasswordResetMutationOptions = <TError = BadRequestResponse | RateLimited,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPasswordReset>>, TError,StartPasswordResetMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof startPasswordReset>>, TError,StartPasswordResetMutationVariables, TContext> => {
+
+const mutationKey = getStartPasswordResetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPasswordReset>>, StartPasswordResetMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  startPasswordReset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartPasswordResetMutationResult = NonNullable<Awaited<ReturnType<typeof startPasswordReset>>>
+    export type StartPasswordResetMutationBody = PasswordResetStartRequest
+    export type StartPasswordResetMutationError = BadRequestResponse | RateLimited
+    export type StartPasswordResetMutationVariables = {data: PasswordResetStartRequest}
+
+    /**
+ * Forgot password, step 1. Always answers 202 for a well-formed email,
+ * whether or not it's registered (no account enumeration); only
+ * registered emails actually receive a 6-digit code (valid 5 minutes).
+ */
+export const useStartPasswordReset = <TError = BadRequestResponse | RateLimited,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPasswordReset>>, TError,StartPasswordResetMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof startPasswordReset>>,
+        TError,
+        StartPasswordResetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStartPasswordResetMutationOptions(options), queryClient);
+    }
+    export type completePasswordResetResponse200 = {
+  data: User
+  status: 200
+}
+
+export type completePasswordResetResponse400 = {
+  data: CodeRejected
+  status: 400
+}
+
+export type completePasswordResetResponse410 = {
+  data: Error
+  status: 410
+}
+
+export type completePasswordResetResponseSuccess = (completePasswordResetResponse200) & {
+  headers: Headers;
+};
+export type completePasswordResetResponseError = (completePasswordResetResponse400 | completePasswordResetResponse410) & {
+  headers: Headers;
+};
+
+export type completePasswordResetResponse = (completePasswordResetResponseSuccess | completePasswordResetResponseError)
+
+export const getCompletePasswordResetUrl = () => {
+
+
+
+
+  return `/auth/password-reset/complete`
+}
+
+/**
+ * Step 2. Right code + valid new password → password replaced, every
+ * existing session revoked, and this client signed in.
+ */
+export const completePasswordReset = async (passwordResetCompleteRequest: PasswordResetCompleteRequest, options?: Parameters<typeof http>[1]): Promise<completePasswordResetResponse> => {
+
+  return http<completePasswordResetResponse>(getCompletePasswordResetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(passwordResetCompleteRequest)
+  }
+);}
+
+
+
+
+
+export const getCompletePasswordResetMutationKey = () => ['completePasswordReset'] as const;
+
+export const getCompletePasswordResetMutationOptions = <TError = CodeRejected | Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completePasswordReset>>, TError,CompletePasswordResetMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof completePasswordReset>>, TError,CompletePasswordResetMutationVariables, TContext> => {
+
+const mutationKey = getCompletePasswordResetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completePasswordReset>>, CompletePasswordResetMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  completePasswordReset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompletePasswordResetMutationResult = NonNullable<Awaited<ReturnType<typeof completePasswordReset>>>
+    export type CompletePasswordResetMutationBody = PasswordResetCompleteRequest
+    export type CompletePasswordResetMutationError = CodeRejected | Error
+    export type CompletePasswordResetMutationVariables = {data: PasswordResetCompleteRequest}
+
+    /**
+ * Step 2. Right code + valid new password → password replaced, every
+ * existing session revoked, and this client signed in.
+ */
+export const useCompletePasswordReset = <TError = CodeRejected | Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completePasswordReset>>, TError,CompletePasswordResetMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof completePasswordReset>>,
+        TError,
+        CompletePasswordResetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCompletePasswordResetMutationOptions(options), queryClient);
     }
     export type loginResponse200 = {
   data: User

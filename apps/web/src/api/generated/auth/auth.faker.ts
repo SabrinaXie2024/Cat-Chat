@@ -27,6 +27,10 @@ export const getStartRegistrationResponseMock = (overrideResponse: Partial<Extra
 
 export const getVerifyRegistrationResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 
+export const getStartPasswordResetResponseMock = (overrideResponse: Partial<Extract<VerificationSent, object>> = {}): VerificationSent => ({expiresInSeconds: faker.number.int(), resendAfterSeconds: faker.number.int(), ...overrideResponse})
+
+export const getCompletePasswordResetResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
+
 export const getLoginResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 
 export const getGetMeResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})

@@ -199,7 +199,16 @@ Guards in `pnpm-workspace.yaml`:
   `DevMailer` writes each message to `apps/api/data/mail/` (gitignored) and
   logs it — read codes there locally. The email is bilingual (中文/English).
   Go tests use a capturing mailer and an injectable clock.
-- MSW: codes live in `db.pending` (and are `console.info`'d in the browser).
+- Forgot password (`/forgot-password`, linked from login):
+  `POST /auth/password-reset/start` always answers 202 with the same body
+  for registered and unregistered emails (rows are stored for both, so
+  cooldowns match too); only registered emails get mail. `.../complete`
+  checks the new password first (a typo doesn't burn a try; `attemptsLeft:
+  -1`), then the code, then `Store.ChangePassword` (revokes every session),
+  signs this client in and clears the login lockout. Shares
+  `sendGate`/code rules with sign-up.
+- MSW: codes live in `db.pending` / `db.resets` (and are `console.info`'d in
+  the browser).
 
 - Passwords: argon2id (`apps/api/internal/auth/password.go`), PHC string with
   params embedded. Unknown-email logins verify against `DummyHash` so timing
@@ -237,7 +246,6 @@ Guards in `pnpm-workspace.yaml`:
 
 ## Not built yet
 
-- Forgot-password reset (can reuse the mailer + code machinery).
 - A Resend account, verified sending domain and production
   `RESEND_API_KEY`/`MAIL_FROM`.
 - Login limiter is still in-memory (per process) — move to Postgres/Redis
