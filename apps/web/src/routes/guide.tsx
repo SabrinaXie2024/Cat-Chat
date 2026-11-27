@@ -3,12 +3,20 @@ import { AlertTriangle, ArrowUp, Check, Lightbulb, Siren } from 'lucide-react'
 import { Children, isValidElement, type ReactNode, useEffect, useMemo, useRef } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import { PageHero } from '../components/ui'
-import guideEn from '../content/guide.en.md?raw'
-import guideZh from '../content/guide.md?raw'
 import { useScrollSpy } from '../features/guide/useScrollSpy'
 import { useI18n } from '../i18n/I18nProvider'
 
 export const Route = createFileRoute('/guide')({ component: Guide })
+
+// One guide per UI language: content/guide.<lang>.md. Missing languages fall
+// back to English.
+const guides = import.meta.glob<string>('../content/guide.*.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+const guideFor = (lang: string) =>
+  guides[`../content/guide.${lang}.md`] ?? guides['../content/guide.en.md'] ?? ''
 
 /**
  * Markdown conventions (see content/guide*.md):
@@ -119,11 +127,7 @@ const components: Components = {
 
 function Guide() {
   const { lang, t } = useI18n()
-  // Guide exists in zh and en; Chinese variants read zh, everyone else en.
-  const { title, intro, sections, footer } = useMemo(
-    () => parseGuide(lang.startsWith('zh') ? guideZh : guideEn),
-    [lang],
-  )
+  const { title, intro, sections, footer } = useMemo(() => parseGuide(guideFor(lang)), [lang])
   const ids = useMemo(() => sections.map((s) => s.id), [sections])
   // Line just below the sticky header (+ mobile chip bar).
   const { active, progress } = useScrollSpy(ids, 140)

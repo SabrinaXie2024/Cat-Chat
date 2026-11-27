@@ -133,12 +133,14 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   and forms translate with `useFieldError()`, so shown errors follow a
   language switch. Server errors stay English in the API and are mapped to
   keys in `serverErrors.ts` (unknown ones shown raw).
-- Markdown content exists in zh and en only (`content/guide*.md`); Chinese
-  variants read zh, all other languages read en. Guide conventions (parsed
-  by `routes/guide.tsx`): `# Title` + intro, `## <emoji> Section` → card +
-  TOC entry, `> 💡/⚠️/🚨 …` → tip/warning/emergency callout, trailing
-  `---` + text → disclaimer. Keep both files' sections in sync, and keep
-  medical advice hedged ("follow your vet").
+- The care guide has one file per UI language: `content/guide.<lang>.md`
+  (loaded with `import.meta.glob`; missing languages fall back to `en`).
+  `guide.zh.md` is the source; a test checks every translation has the same
+  number of sections and callouts. Conventions (parsed by
+  `routes/guide.tsx`): `# Title` + intro, `## <emoji> Section` → card + TOC
+  entry, `> 💡/⚠️/🚨 …` → tip/warning/emergency callout, trailing `---` +
+  text → disclaimer. Keep medical advice hedged ("follow your vet");
+  translations were written by Claude and should get native/vet review.
 - Tests render in 简体中文 by default; pass `{ lang }` to
   `renderApp`/`renderWithQuery` for others.
 

@@ -55,17 +55,20 @@ describe('care guide', () => {
     expect(screen.getByText(/不能代替兽医/)).toBeInTheDocument()
   })
 
-  it('serves the English guide to non-Chinese languages', async () => {
-    renderApp('/guide', { lang: 'fr' })
-    expect(
-      await screen.findByRole('heading', { level: 1, name: /Cat Care Guide/ }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: /Emergencies/ })).toBeInTheDocument()
-  })
-
-  it('serves the Chinese guide to 繁體中文 readers', async () => {
-    renderApp('/guide', { lang: 'zh-TW' })
-    expect(await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })).toBeInTheDocument()
+  it.each([
+    ['en', 'Cat Care Guide', 'Emergencies'],
+    ['zh-TW', '養貓攻略', '緊急情況'],
+    ['ja', '猫の飼い方ガイド', '緊急時'],
+    ['ko', '반려묘 가이드', '응급 상황'],
+    ['ru', 'Руководство по уходу за кошкой', 'Неотложные ситуации'],
+    ['fr', 'Guide pour bien s’occuper de son chat', 'Urgences'],
+    ['de', 'Katzenratgeber', 'Notfälle'],
+    ['es', 'Guía para cuidar a tu gato', 'Urgencias'],
+    ['pt', 'Guia de cuidados com gatos', 'Emergências'],
+  ] as const)('serves the %s guide', async (lang, title, emergencies) => {
+    renderApp('/guide', { lang })
+    expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: emergencies })).toBeInTheDocument()
   })
 })
 
@@ -100,14 +103,14 @@ describe('reading position', () => {
     renderApp('/guide')
     await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })
     fakeLayout(0)
-    await waitFor(() => expect(current()).toEqual(['🧺接猫前的准备', '1接猫前的准备']))
+    await waitFor(() => expect(current()).toEqual(['🐱选猫与领养', '1选猫与领养']))
 
     fakeLayout(2_100) // section 3's top has passed the 120px line
-    await waitFor(() => expect(current()[0]).toBe('🍽️饮食与喂养'))
+    await waitFor(() => expect(current()[0]).toBe('🏠到家第一周'))
     expect(current()).toHaveLength(2)
 
     fakeLayout(4_050)
-    await waitFor(() => expect(current()[0]).toBe('🩺健康与医疗'))
+    await waitFor(() => expect(current()[0]).toBe('🚽猫砂盆'))
   })
 
   it('marks earlier sections as read and shows progress', async () => {
@@ -128,7 +131,7 @@ describe('reading position', () => {
     renderApp('/guide')
     await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })
     fakeLayout(12_000 - window.innerHeight) // scrolled all the way down
-    await waitFor(() => expect(current()[0]).toBe('🚨紧急情况'))
+    await waitFor(() => expect(current()[0]).toBe('🌈陪它走完最后一程'))
     await waitFor(() =>
       expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100'),
     )
@@ -146,5 +149,28 @@ describe('reading position', () => {
     fakeLayout(3_000)
     await userEvent.setup().click(await screen.findByRole('button', { name: '回到顶部' }))
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
+  })
+})
+
+describe('guide translations', () => {
+  const files = import.meta.glob<string>('../content/guide.*.md', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  })
+  const sectionCount = (md: string) => md.match(/^## /gm)?.length ?? 0
+  const calloutCount = (md: string) => md.match(/^> (💡|⚠️|🚨)/gm)?.length ?? 0
+  const zh = files['../content/guide.zh.md'] ?? ''
+
+  it('has a guide for every UI language', () => {
+    for (const lang of ['zh', 'zh-TW', 'en', 'ja', 'ko', 'ru', 'fr', 'de', 'es', 'pt']) {
+      expect(files[`../content/guide.${lang}.md`], lang).toBeTruthy()
+    }
+  })
+
+  it.each(Object.entries(files))('%s matches the zh structure', (_path, md) => {
+    expect(sectionCount(md)).toBe(sectionCount(zh))
+    expect(calloutCount(md)).toBe(calloutCount(zh))
+    expect(md).toMatch(/^---$/m) // disclaimer footer
   })
 })
