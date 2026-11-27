@@ -12,30 +12,60 @@ import { EmptyState } from '../../components/ui'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useServerError } from '../../i18n/serverErrors'
 import { TimeAgo } from '../community/TimeAgo'
+import { Lightbox, useLightbox } from '../images/Lightbox'
 
 export function GalleryGrid({ canManage }: { canManage: boolean }) {
   const { t } = useI18n()
   const { data: items, error } = useListGallery({
     query: { select: (res) => res.data as GalleryItem[] },
   })
+  const viewer = useLightbox()
 
   if (error) return <p className="text-red-600">{errorMessage(error)}</p>
   if (!items) return <p className="text-stone-500">{t('post.loading')}</p>
   if (items.length === 0) return <EmptyState icon={Camera}>{t('gallery.empty')}</EmptyState>
 
+  // The viewer pages through photos only; videos play inline.
+  const photos = items
+    .filter((it) => it.kind === 'photo')
+    .map((it) => ({ src: it.url, alt: it.caption || t('gallery.photo') }))
+
   return (
-    <ul
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-      aria-label={t('gallery.list')}
-    >
-      {items.map((it) => (
-        <GalleryCard key={it.id} item={it} canManage={canManage} />
-      ))}
-    </ul>
+    <>
+      <ul
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        aria-label={t('gallery.list')}
+      >
+        {items.map((it) => (
+          <GalleryCard
+            key={it.id}
+            item={it}
+            canManage={canManage}
+            onOpenPhoto={() => viewer.open(photos.findIndex((p) => p.src === it.url))}
+          />
+        ))}
+      </ul>
+      {viewer.index !== null && (
+        <Lightbox
+          images={photos}
+          index={viewer.index}
+          onIndexChange={viewer.setIndex}
+          onClose={viewer.close}
+        />
+      )}
+    </>
   )
 }
 
-function GalleryCard({ item, canManage }: { item: GalleryItem; canManage: boolean }) {
+function GalleryCard({
+  item,
+  canManage,
+  onOpenPhoto,
+}: {
+  item: GalleryItem
+  canManage: boolean
+  onOpenPhoto: () => void
+}) {
   const { t } = useI18n()
   const serverError = useServerError()
   const qc = useQueryClient()
@@ -71,14 +101,19 @@ function GalleryCard({ item, canManage }: { item: GalleryItem; canManage: boolea
             className="size-full object-contain"
           />
         ) : (
-          <a href={item.url} target="_blank" rel="noopener noreferrer">
+          <button
+            type="button"
+            onClick={onOpenPhoto}
+            className="block size-full"
+            aria-haspopup="dialog"
+          >
             <img
               src={item.url}
               alt={label}
               loading="lazy"
               className="size-full object-cover transition duration-300 group-hover:scale-[1.02]"
             />
-          </a>
+          </button>
         )}
       </div>
       <div className="flex items-start gap-2 p-3">

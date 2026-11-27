@@ -124,6 +124,12 @@ export const ja: Messages = {
   'images.tooMany': '画像は最大 {max} 枚までです',
   'images.grid': '画像',
   'images.gridAlt': '画像 {n}',
+  'lightbox.label': '画像ビューアー',
+  'lightbox.close': '閉じる',
+  'lightbox.prev': '前の画像',
+  'lightbox.next': '次の画像',
+  'lightbox.counter': '{total} 枚中 {n} 枚目',
+  'lightbox.original': '元の画像を開く',
 
   'err.emailInvalid': '有効なメールアドレスを入力してください',
   'err.passwordRequired': 'パスワードを入力してください',

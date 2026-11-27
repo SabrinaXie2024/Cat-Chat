@@ -125,6 +125,12 @@ export const zhTW: Messages = {
   'images.tooMany': '最多 {max} 張圖片',
   'images.grid': '圖片',
   'images.gridAlt': '圖片 {n}',
+  'lightbox.label': '圖片檢視器',
+  'lightbox.close': '關閉',
+  'lightbox.prev': '上一張',
+  'lightbox.next': '下一張',
+  'lightbox.counter': '第 {n} 張，共 {total} 張',
+  'lightbox.original': '檢視原圖',
 
   'err.emailInvalid': '請輸入有效的電子郵件',
   'err.passwordRequired': '請輸入密碼',

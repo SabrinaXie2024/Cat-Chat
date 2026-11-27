@@ -125,6 +125,12 @@ export const ko: Messages = {
   'images.tooMany': '이미지는 최대 {max}장까지예요',
   'images.grid': '이미지',
   'images.gridAlt': '이미지 {n}',
+  'lightbox.label': '이미지 뷰어',
+  'lightbox.close': '닫기',
+  'lightbox.prev': '이전 이미지',
+  'lightbox.next': '다음 이미지',
+  'lightbox.counter': '{total}장 중 {n}번째',
+  'lightbox.original': '원본 보기',
 
   'err.emailInvalid': '올바른 이메일 주소를 입력해 주세요',
   'err.passwordRequired': '비밀번호를 입력해 주세요',

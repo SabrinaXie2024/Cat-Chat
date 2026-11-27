@@ -125,6 +125,12 @@ export const de: Messages = {
   'images.tooMany': 'Höchstens {max} Bilder',
   'images.grid': 'Bilder',
   'images.gridAlt': 'Bild {n}',
+  'lightbox.label': 'Bildbetrachter',
+  'lightbox.close': 'Schließen',
+  'lightbox.prev': 'Vorheriges Bild',
+  'lightbox.next': 'Nächstes Bild',
+  'lightbox.counter': '{n} von {total}',
+  'lightbox.original': 'Original öffnen',
 
   'err.emailInvalid': 'Bitte eine gültige E-Mail-Adresse eingeben',
   'err.passwordRequired': 'Bitte Passwort eingeben',

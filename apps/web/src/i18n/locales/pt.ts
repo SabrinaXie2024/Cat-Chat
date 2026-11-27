@@ -127,6 +127,12 @@ export const pt: Messages = {
   'images.tooMany': 'No máximo {max} imagens',
   'images.grid': 'Imagens',
   'images.gridAlt': 'Imagem {n}',
+  'lightbox.label': 'Visualizador de imagens',
+  'lightbox.close': 'Fechar',
+  'lightbox.prev': 'Imagem anterior',
+  'lightbox.next': 'Próxima imagem',
+  'lightbox.counter': '{n} de {total}',
+  'lightbox.original': 'Abrir original',
 
   'err.emailInvalid': 'Digite um e-mail válido',
   'err.passwordRequired': 'Digite sua senha',

@@ -125,6 +125,12 @@ export const ru: Messages = {
   'images.tooMany': 'Не более {max} изображений',
   'images.grid': 'Изображения',
   'images.gridAlt': 'Изображение {n}',
+  'lightbox.label': 'Просмотр изображений',
+  'lightbox.close': 'Закрыть',
+  'lightbox.prev': 'Предыдущее',
+  'lightbox.next': 'Следующее',
+  'lightbox.counter': '{n} из {total}',
+  'lightbox.original': 'Открыть оригинал',
 
   'err.emailInvalid': 'Введите корректный адрес эл. почты',
   'err.passwordRequired': 'Введите пароль',
