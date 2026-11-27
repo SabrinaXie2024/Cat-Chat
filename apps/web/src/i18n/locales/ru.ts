@@ -1,15 +1,15 @@
 import type { Messages } from '../messages'
 
 export const ru: Messages = {
-  brand: 'MeowSphere',
-  docTitle: 'MeowSphere',
+  brand: 'Мяусфера',
+  docTitle: 'Мяусфера · MeowSphere',
   'lang.label': 'Язык',
 
   'nav.guide': 'Уход за кошкой',
   'nav.gallery': 'Мои кошки',
   'nav.community': 'Кошачьи будни',
 
-  'home.welcome': 'Добро пожаловать в MeowSphere 🐾',
+  'home.welcome': 'Добро пожаловать в Мяусферу 🐾',
   'home.tagline':
     'Советы по уходу за кошками, будни моих кошек и место, где можно поделиться своими.',
   'home.cta': 'Смотреть кошачьи будни',

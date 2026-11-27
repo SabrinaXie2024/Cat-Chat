@@ -1,6 +1,8 @@
 # MeowSphere（喵友圈）
 
-Product name: **MeowSphere** (English) / **喵友圈** (Chinese). Code-level
+Product name: **MeowSphere** (English) / **喵友圈** (Chinese); each UI
+language has its own name (`brand` key: ニャン友, 냥친구, Мяусфера,
+MiaouSphère, MiauSphäre, Miausfera) and tab titles read "<local> · MeowSphere". Code-level
 identifiers still say `cat-chat`/`catchat` (npm scopes, Go module, databases,
 repo) on purpose — renaming them is churn with no user-visible effect.
 

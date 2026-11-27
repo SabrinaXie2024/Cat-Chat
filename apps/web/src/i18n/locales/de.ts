@@ -1,15 +1,15 @@
 import type { Messages } from '../messages'
 
 export const de: Messages = {
-  brand: 'MeowSphere',
-  docTitle: 'MeowSphere',
+  brand: 'MiauSphäre',
+  docTitle: 'MiauSphäre · MeowSphere',
   'lang.label': 'Sprache',
 
   'nav.guide': 'Katzenratgeber',
   'nav.gallery': 'Meine Katzen',
   'nav.community': 'Katzenmomente',
 
-  'home.welcome': 'Willkommen bei MeowSphere 🐾',
+  'home.welcome': 'Willkommen in der MiauSphäre 🐾',
   'home.tagline':
     'Tipps zur Katzenhaltung, der Alltag meiner Katzen und ein Ort, an dem du deine teilen kannst.',
   'home.cta': 'Katzenmomente ansehen',

@@ -1,15 +1,15 @@
 import type { Messages } from '../messages'
 
 export const ko: Messages = {
-  brand: 'MeowSphere',
-  docTitle: 'MeowSphere',
+  brand: '냥친구',
+  docTitle: '냥친구 · MeowSphere',
   'lang.label': '언어',
 
   'nav.guide': '반려묘 가이드',
   'nav.gallery': '우리 고양이',
   'nav.community': '고양이 일상',
 
-  'home.welcome': 'MeowSphere에 오신 것을 환영해요 🐾',
+  'home.welcome': '냥친구에 오신 것을 환영해요 🐾',
   'home.tagline':
     '고양이 키우기 팁, 우리 고양이의 일상, 그리고 여러분의 고양이를 나누는 공간이에요.',
   'home.cta': '고양이 일상 보러 가기',

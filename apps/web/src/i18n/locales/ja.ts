@@ -1,15 +1,15 @@
 import type { Messages } from '../messages'
 
 export const ja: Messages = {
-  brand: 'MeowSphere',
-  docTitle: 'MeowSphere',
+  brand: 'ニャン友',
+  docTitle: 'ニャン友 · MeowSphere',
   'lang.label': '言語',
 
   'nav.guide': '飼い方ガイド',
   'nav.gallery': 'うちの猫',
   'nav.community': 'ねこ日和',
 
-  'home.welcome': 'MeowSphere へようこそ 🐾',
+  'home.welcome': 'ニャン友へようこそ 🐾',
   'home.tagline': '猫の飼い方ガイド、うちの猫の日常、そしてあなたの猫もシェアできる場所です。',
   'home.cta': 'ねこ日和を見る',
   'gallery.title': 'うちの猫',

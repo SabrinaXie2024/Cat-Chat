@@ -34,6 +34,23 @@ describe('dictionaries', () => {
     }
   })
 
+  it('each language has its own product name; tab titles keep "MeowSphere"', () => {
+    const brands = Object.fromEntries(LANGUAGES.map((l) => [l.code, l.messages.brand]))
+    expect(brands).toEqual({
+      zh: '喵友圈',
+      'zh-TW': '喵友圈',
+      en: 'MeowSphere',
+      ja: 'ニャン友',
+      ko: '냥친구',
+      ru: 'Мяусфера',
+      fr: 'MiaouSphère',
+      de: 'MiauSphäre',
+      es: 'Miausfera',
+      pt: 'Miausfera',
+    })
+    for (const l of LANGUAGES) expect(l.messages.docTitle, l.code).toContain('MeowSphere')
+  })
+
   it('fills product limits and explicit vars', () => {
     expect(translate('zh', 'err.postTooLong')).toBe('最多 500 字')
     expect(translate('en', 'err.replyTooLong')).toBe('At most 100 characters')

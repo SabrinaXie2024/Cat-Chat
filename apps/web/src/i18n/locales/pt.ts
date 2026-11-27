@@ -2,15 +2,15 @@ import type { Messages } from '../messages'
 
 // Português (Brasil)
 export const pt: Messages = {
-  brand: 'MeowSphere',
-  docTitle: 'MeowSphere',
+  brand: 'Miausfera',
+  docTitle: 'Miausfera · MeowSphere',
   'lang.label': 'Idioma',
 
   'nav.guide': 'Guia felino',
   'nav.gallery': 'Meus gatos',
   'nav.community': 'Momentos felinos',
 
-  'home.welcome': 'Boas-vindas ao MeowSphere 🐾',
+  'home.welcome': 'Boas-vindas à Miausfera 🐾',
   'home.tagline':
     'Dicas para cuidar do seu gato, o dia a dia dos meus gatos e um espaço para compartilhar os seus.',
   'home.cta': 'Ver momentos felinos',
