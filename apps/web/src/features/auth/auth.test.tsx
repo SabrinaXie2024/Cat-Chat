@@ -5,7 +5,8 @@ import { DEMO_USER, db } from '../../mocks/handlers'
 import { renderApp } from '../../test/render'
 import { safeRedirect } from './useCurrentUser'
 
-const nav = () => screen.getByRole('navigation')
+// The site nav lives in the header (pages like /guide add their own nav).
+const nav = () => within(screen.getByRole('banner')).getByRole('navigation')
 
 describe('auth', () => {
   it('signs in and returns to the redirect target', async () => {

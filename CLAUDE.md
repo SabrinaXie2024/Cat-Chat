@@ -132,7 +132,11 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   language switch. Server errors stay English in the API and are mapped to
   keys in `serverErrors.ts` (unknown ones shown raw).
 - Markdown content exists in zh and en only (`content/guide*.md`); Chinese
-  variants read zh, all other languages read en.
+  variants read zh, all other languages read en. Guide conventions (parsed
+  by `routes/guide.tsx`): `# Title` + intro, `## <emoji> Section` → card +
+  TOC entry, `> 💡/⚠️/🚨 …` → tip/warning/emergency callout, trailing
+  `---` + text → disclaimer. Keep both files' sections in sync, and keep
+  medical advice hedged ("follow your vet").
 - Tests render in 简体中文 by default; pass `{ lang }` to
   `renderApp`/`renderWithQuery` for others.
 

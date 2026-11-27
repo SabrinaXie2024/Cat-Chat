@@ -5,3 +5,9 @@
   --color-brand-500: oklch(0.7 0.15 55);
   --color-brand-700: oklch(0.52 0.13 50);
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}

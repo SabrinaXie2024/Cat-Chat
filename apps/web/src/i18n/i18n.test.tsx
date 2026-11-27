@@ -101,7 +101,7 @@ describe('switching language', () => {
     current: string,
     target: string,
   ) => {
-    const nav = screen.getByRole('navigation')
+    const nav = within(screen.getByRole('banner')).getByRole('navigation')
     const button = within(nav).getByRole('button', { name: new RegExp(`: ${current}$`) })
     await user.click(button)
     expect(button).toHaveAttribute('aria-expanded', 'true')
@@ -111,7 +111,7 @@ describe('switching language', () => {
   it('dropdown lists all languages in their own names and marks the current one', async () => {
     const user = userEvent.setup()
     renderApp('/')
-    const nav = await screen.findByRole('navigation')
+    const nav = within(await screen.findByRole('banner')).getByRole('navigation')
     await user.click(within(nav).getByRole('button', { name: '语言: 简体中文' }))
     const items = within(screen.getByRole('menu', { name: '语言' })).getAllByRole('menuitemradio')
     expect(items.map((i) => i.textContent)).toEqual(LANGUAGES.map((l) => l.nativeName))
@@ -125,7 +125,7 @@ describe('switching language', () => {
   it('switches the whole UI, page title and <html lang>, and remembers the choice', async () => {
     const user = userEvent.setup()
     renderApp('/community')
-    const nav = await screen.findByRole('navigation')
+    const nav = within(await screen.findByRole('banner')).getByRole('navigation')
     expect(within(nav).getByText('喵友圈')).toBeInTheDocument()
     expect(document.documentElement.lang).toBe('zh-CN')
 
