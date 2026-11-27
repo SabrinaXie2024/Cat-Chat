@@ -15,7 +15,7 @@ export const zhTW: Messages = {
   'guide.backToTop': '回到頂部',
   'guide.section': '第 {n} 章',
 
-  'home.welcome': '歡迎來到喵友圈 🐾',
+  'home.welcome': '歡迎來到喵友圈',
   'home.tagline': '養貓攻略、我家貓咪的日常，以及和大家分享你的貓。',
   'home.cta': '去看看貓咪日常',
   'footer.tagline': '認真記錄每一隻貓咪的日常',

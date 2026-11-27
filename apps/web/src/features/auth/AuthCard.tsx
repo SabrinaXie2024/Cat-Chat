@@ -1,3 +1,4 @@
+import { Cat } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { buttonClass, inputClass as sharedInput } from '../../components/ui'
 
@@ -8,10 +9,10 @@ export function AuthCard({ title, children }: { title: string; children: ReactNo
       <div className="space-y-5 rounded-3xl bg-white p-6 shadow-lift ring-1 ring-stone-100 sm:p-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <span
-            className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-brand-100 to-amber-50 text-3xl"
+            className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-brand-100 to-amber-50 text-brand-600"
             aria-hidden
           >
-            🐱
+            <Cat className="size-7" strokeWidth={1.75} />
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-stone-900">{title}</h1>
         </div>

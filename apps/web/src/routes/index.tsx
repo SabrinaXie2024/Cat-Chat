@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, BookOpen, Cat, Images, type LucideIcon, MessageCircle } from 'lucide-react'
 import { buttonClass, PageHero } from '../components/ui'
 import { useI18n } from '../i18n/I18nProvider'
 import type { MessageKey } from '../i18n/messages'
@@ -8,28 +8,28 @@ export const Route = createFileRoute('/')({ component: Home })
 
 const features: {
   to: '/guide' | '/gallery' | '/community'
-  icon: string
+  icon: LucideIcon
   title: MessageKey
   desc: MessageKey
   tint: string
 }[] = [
   {
     to: '/guide',
-    icon: '📖',
+    icon: BookOpen,
     title: 'nav.guide',
     desc: 'home.featureGuide',
     tint: 'from-amber-100 to-orange-50',
   },
   {
     to: '/gallery',
-    icon: '🐈',
+    icon: Images,
     title: 'nav.gallery',
     desc: 'home.featureGallery',
     tint: 'from-rose-100 to-orange-50',
   },
   {
     to: '/community',
-    icon: '💬',
+    icon: MessageCircle,
     title: 'nav.community',
     desc: 'home.featureCommunity',
     tint: 'from-lime-100 to-amber-50',
@@ -40,7 +40,7 @@ function Home() {
   const { t } = useI18n()
   return (
     <div className="space-y-10">
-      <PageHero icon="🐱" title={t('home.welcome')} subtitle={t('home.tagline')} size="lg">
+      <PageHero icon={Cat} title={t('home.welcome')} subtitle={t('home.tagline')} size="lg">
         <div className="flex flex-wrap gap-3">
           <Link to="/community" className={`${buttonClass.primary} px-5 py-2.5`}>
             {t('home.cta')}
@@ -60,10 +60,10 @@ function Home() {
               className="group flex h-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-card ring-1 ring-stone-100 transition hover:-translate-y-0.5 hover:shadow-lift"
             >
               <span
-                className={`grid size-12 place-items-center rounded-2xl bg-gradient-to-br ${f.tint} text-2xl`}
+                className={`grid size-12 place-items-center rounded-2xl bg-gradient-to-br ${f.tint} text-brand-700`}
                 aria-hidden
               >
-                {f.icon}
+                <f.icon className="size-6" strokeWidth={1.75} />
               </span>
               <span className="flex items-center gap-1 text-lg font-semibold text-stone-900">
                 {t(f.title)}

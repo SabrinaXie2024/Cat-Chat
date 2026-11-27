@@ -1,4 +1,5 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router'
+import { Settings } from 'lucide-react'
 import { PageHero } from '../components/ui'
 import { ChangePasswordForm } from '../features/auth/ChangePasswordForm'
 import { useCurrentUser } from '../features/auth/useCurrentUser'
@@ -17,7 +18,7 @@ function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <PageHero icon="⚙️" title={t('settings.title')} />
+      <PageHero icon={Settings} title={t('settings.title')} />
       <section className={card} aria-labelledby="account-info">
         <h2 id="account-info" className="text-lg font-semibold text-stone-900">
           {t('settings.info')}

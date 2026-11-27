@@ -14,7 +14,7 @@ export const de: Messages = {
   'guide.backToTop': 'Nach oben',
   'guide.section': 'Teil {n}',
 
-  'home.welcome': 'Willkommen in der MiauSphäre 🐾',
+  'home.welcome': 'Willkommen in der MiauSphäre',
   'home.tagline':
     'Tipps zur Katzenhaltung, der Alltag meiner Katzen und ein Ort, an dem du deine teilen kannst.',
   'home.cta': 'Katzenmomente ansehen',

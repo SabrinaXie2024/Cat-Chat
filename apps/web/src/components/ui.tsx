@@ -1,3 +1,4 @@
+import { type LucideIcon, PawPrint } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 /*
@@ -5,15 +6,15 @@ import type { ReactNode } from 'react'
  * (introduced with the care guide). Prefer these over one-off classes.
  */
 
-/** Gradient page hero: emoji badge, title, optional subtitle and actions. */
+/** Gradient page hero: icon badge, title, optional subtitle and actions. */
 export function PageHero({
-  icon,
+  icon: Icon,
   title,
   subtitle,
   children,
   size = 'md',
 }: {
-  icon: string
+  icon: LucideIcon
   title: string
   subtitle?: ReactNode
   children?: ReactNode
@@ -25,20 +26,18 @@ export function PageHero({
         size === 'lg' ? 'p-7 sm:p-12' : 'p-6 sm:p-8'
       }`}
     >
-      <span
-        className="pointer-events-none absolute -right-4 -bottom-10 select-none text-[9rem] leading-none opacity-[0.08]"
+      <PawPrint
+        className="pointer-events-none absolute -right-6 -bottom-8 size-44 rotate-12 text-brand-500 opacity-[0.07]"
         aria-hidden
-      >
-        🐾
-      </span>
+      />
       <div className="relative flex items-start gap-4">
         <span
-          className={`grid shrink-0 place-items-center rounded-2xl bg-white/80 shadow-card ${
-            size === 'lg' ? 'size-16 text-4xl' : 'size-12 text-2xl sm:size-14 sm:text-3xl'
+          className={`grid shrink-0 place-items-center rounded-2xl bg-white/80 text-brand-600 shadow-card ${
+            size === 'lg' ? 'size-16' : 'size-12 sm:size-14'
           }`}
           aria-hidden
         >
-          {icon}
+          <Icon className={size === 'lg' ? 'size-8' : 'size-6 sm:size-7'} strokeWidth={1.75} />
         </span>
         <div className="min-w-0 space-y-2">
           <h1
@@ -125,12 +124,10 @@ export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md'
 }
 
 /** Friendly empty state. */
-export function EmptyState({ icon, children }: { icon: string; children: ReactNode }) {
+export function EmptyState({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
     <div className="rounded-2xl border-2 border-dashed border-brand-200 bg-white/60 px-6 py-12 text-center text-stone-500">
-      <div className="mb-2 text-4xl" aria-hidden>
-        {icon}
-      </div>
+      <Icon className="mx-auto mb-3 size-10 text-brand-300" strokeWidth={1.5} aria-hidden />
       {children}
     </div>
   )

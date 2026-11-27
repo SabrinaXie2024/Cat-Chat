@@ -134,7 +134,8 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   language switch. Server errors stay English in the API and are mapped to
   keys in `serverErrors.ts` (unknown ones shown raw).
 - The care guide has one file per UI language: `content/guide.<lang>.md`
-  (loaded with `import.meta.glob`; missing languages fall back to `en`).
+  (lazy `import.meta.glob`, one chunk per language; missing → `en`).
+  Tests next to routes must be named `-*.test.tsx` so the router ignores them.
   `guide.zh.md` is the source; a test checks every translation has the same
   number of sections and callouts. Conventions (parsed by
   `routes/guide.tsx`): `# Title` + intro, `## <emoji> Section` → card + TOC
@@ -150,6 +151,9 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   `cream` page background, `shadow-card` / `shadow-lift`, CJK-friendly
   `font-sans`, `--header-h` (sticky header height — offset any sticky/
   scroll-margin element by it).
+- Icons: lucide-react line icons, used sparingly; **no emoji in the UI**
+  (user content excepted). The guide's Markdown keeps emoji as section/
+  callout *markers* only; `routes/guide.tsx` maps them to lucide icons.
 - Building blocks in `src/components/ui.tsx`: `PageHero` (every page starts
   with one), `Card`, `buttonClass.{primary,secondary,ghost,link}`,
   `inputClass`, `Avatar` (initial + stable colour), `EmptyState`. Use these

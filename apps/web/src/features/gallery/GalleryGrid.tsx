@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { Camera, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   getListGalleryQueryKey,
@@ -21,7 +21,7 @@ export function GalleryGrid({ canManage }: { canManage: boolean }) {
 
   if (error) return <p className="text-red-600">{errorMessage(error)}</p>
   if (!items) return <p className="text-stone-500">{t('post.loading')}</p>
-  if (items.length === 0) return <EmptyState icon="📷">{t('gallery.empty')}</EmptyState>
+  if (items.length === 0) return <EmptyState icon={Camera}>{t('gallery.empty')}</EmptyState>
 
   return (
     <ul

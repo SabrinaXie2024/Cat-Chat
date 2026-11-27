@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2, Upload } from 'lucide-react'
+import { Loader2, Plus, Upload } from 'lucide-react'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import { getListGalleryQueryKey, useCreateGalleryItem } from '../../api/generated/gallery/gallery'
@@ -97,7 +97,7 @@ export function GalleryUploader() {
       noValidate
     >
       <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
-        <span aria-hidden>➕</span>
+        <Plus className="size-5 text-brand-600" aria-hidden />
         {t('gallery.manage')}
       </h2>
       <div className="space-y-1">

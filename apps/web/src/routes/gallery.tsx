@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { Images } from 'lucide-react'
 import { PageHero } from '../components/ui'
 import { useCurrentUser } from '../features/auth/useCurrentUser'
 import { GalleryGrid } from '../features/gallery/GalleryGrid'
@@ -13,7 +14,7 @@ function Gallery() {
   const isAdmin = user?.isAdmin === true
   return (
     <section className="space-y-6">
-      <PageHero icon="🐈" title={t('gallery.title')} subtitle={t('gallery.subtitle')} />
+      <PageHero icon={Images} title={t('gallery.title')} subtitle={t('gallery.subtitle')} />
       {isAdmin && <GalleryUploader />}
       <GalleryGrid canManage={isAdmin} />
     </section>

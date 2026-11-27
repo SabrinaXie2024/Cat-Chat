@@ -14,7 +14,7 @@ export const fr: Messages = {
   'guide.backToTop': 'Haut de page',
   'guide.section': 'Partie {n}',
 
-  'home.welcome': 'Bienvenue sur MiaouSphère 🐾',
+  'home.welcome': 'Bienvenue sur MiaouSphère',
   'home.tagline':
     'Des conseils pour bien s’occuper de son chat, le quotidien de mes chats et un espace pour partager les vôtres.',
   'home.cta': 'Voir les moments de chats',

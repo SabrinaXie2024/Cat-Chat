@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { MessageCircle } from 'lucide-react'
 import { buttonClass, PageHero } from '../components/ui'
 import { useCurrentUser } from '../features/auth/useCurrentUser'
 import { NewPostForm } from '../features/community/NewPostForm'
@@ -12,7 +13,11 @@ function Community() {
   const { data: user } = useCurrentUser()
   return (
     <section className="mx-auto max-w-3xl space-y-6">
-      <PageHero icon="💬" title={t('community.title')} subtitle={t('community.subtitle')} />
+      <PageHero
+        icon={MessageCircle}
+        title={t('community.title')}
+        subtitle={t('community.subtitle')}
+      />
       {user ? (
         <NewPostForm />
       ) : user === null ? (

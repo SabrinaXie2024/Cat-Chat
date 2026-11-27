@@ -14,7 +14,7 @@ export const es: Messages = {
   'guide.backToTop': 'Volver arriba',
   'guide.section': 'Parte {n}',
 
-  'home.welcome': 'Te damos la bienvenida a Miausfera 🐾',
+  'home.welcome': 'Te damos la bienvenida a Miausfera',
   'home.tagline':
     'Consejos para cuidar a tu gato, el día a día de mis gatos y un lugar para compartir los tuyos.',
   'home.cta': 'Ver momentos gatunos',

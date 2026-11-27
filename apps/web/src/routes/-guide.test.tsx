@@ -12,7 +12,7 @@ describe('care guide', () => {
     // Two renderings of the same TOC: mobile chips + desktop sidebar.
     const links = within(toc).getAllByRole('link')
     expect(links.length).toBeGreaterThanOrEqual(18)
-    expect(links.map((l) => l.textContent)).toContain('🚨紧急情况')
+    expect(links.map((l) => l.textContent)).toContain('紧急情况')
 
     // Every TOC entry points at a real section heading.
     for (const link of links) {
@@ -103,14 +103,14 @@ describe('reading position', () => {
     renderApp('/guide')
     await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })
     fakeLayout(0)
-    await waitFor(() => expect(current()).toEqual(['🐱选猫与领养', '1选猫与领养']))
+    await waitFor(() => expect(current()).toEqual(['选猫与领养', '1选猫与领养']))
 
     fakeLayout(2_100) // section 3's top has passed the 120px line
-    await waitFor(() => expect(current()[0]).toBe('🏠到家第一周'))
+    await waitFor(() => expect(current()[0]).toBe('到家第一周'))
     expect(current()).toHaveLength(2)
 
     fakeLayout(4_050)
-    await waitFor(() => expect(current()[0]).toBe('🚽猫砂盆'))
+    await waitFor(() => expect(current()[0]).toBe('猫砂盆'))
   })
 
   it('marks earlier sections as read and shows progress', async () => {
@@ -131,7 +131,7 @@ describe('reading position', () => {
     renderApp('/guide')
     await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })
     fakeLayout(12_000 - window.innerHeight) // scrolled all the way down
-    await waitFor(() => expect(current()[0]).toBe('🌈陪它走完最后一程'))
+    await waitFor(() => expect(current()[0]).toBe('陪它走完最后一程'))
     await waitFor(() =>
       expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100'),
     )

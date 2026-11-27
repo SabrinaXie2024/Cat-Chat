@@ -14,7 +14,7 @@ export const ko: Messages = {
   'guide.backToTop': '맨 위로',
   'guide.section': '{n}장',
 
-  'home.welcome': '냥친구에 오신 것을 환영해요 🐾',
+  'home.welcome': '냥친구에 오신 것을 환영해요',
   'home.tagline':
     '고양이 키우기 팁, 우리 고양이의 일상, 그리고 여러분의 고양이를 나누는 공간이에요.',
   'home.cta': '고양이 일상 보러 가기',

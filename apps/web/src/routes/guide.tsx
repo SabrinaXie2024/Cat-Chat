@@ -1,6 +1,37 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { AlertTriangle, ArrowUp, Check, Lightbulb, Siren } from 'lucide-react'
-import { Children, isValidElement, type ReactNode, useEffect, useMemo, useRef } from 'react'
+import {
+  AlertTriangle,
+  ArrowUp,
+  BookOpen,
+  BriefcaseMedical,
+  Brush,
+  CalendarDays,
+  Cat,
+  Check,
+  HeartPulse,
+  House,
+  Lightbulb,
+  type LucideIcon,
+  PawPrint,
+  Puzzle,
+  Rainbow,
+  ShoppingBasket,
+  Siren,
+  Stethoscope,
+  Thermometer,
+  Toilet,
+  Users,
+  UtensilsCrossed,
+} from 'lucide-react'
+import {
+  Children,
+  isValidElement,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import { PageHero } from '../components/ui'
 import { useScrollSpy } from '../features/guide/useScrollSpy'
@@ -10,13 +41,34 @@ export const Route = createFileRoute('/guide')({ component: Guide })
 
 // One guide per UI language: content/guide.<lang>.md. Missing languages fall
 // back to English.
+// Lazy: each language is its own chunk, fetched only when shown.
 const guides = import.meta.glob<string>('../content/guide.*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
 })
-const guideFor = (lang: string) =>
-  guides[`../content/guide.${lang}.md`] ?? guides['../content/guide.en.md'] ?? ''
+const loadGuide = (lang: string) =>
+  (guides[`../content/guide.${lang}.md`] ?? guides['../content/guide.en.md'])?.() ??
+  Promise.resolve('')
+
+/** Section marker emoji in the Markdown → the line icon shown in the UI. */
+const sectionIcons: Record<string, LucideIcon> = {
+  '🐱': Cat,
+  '🧺': ShoppingBasket,
+  '🏠': House,
+  '🍽️': UtensilsCrossed,
+  '🚽': Toilet,
+  '🩺': Stethoscope,
+  '✨': Brush,
+  '🐾': PawPrint,
+  '🏡': Users,
+  '🧠': Puzzle,
+  '🌡️': Thermometer,
+  '🤒': HeartPulse,
+  '📅': CalendarDays,
+  '🚨': Siren,
+  '🧰': BriefcaseMedical,
+  '🌈': Rainbow,
+}
 
 /**
  * Markdown conventions (see content/guide*.md):
@@ -125,9 +177,32 @@ const components: Components = {
   },
 }
 
+function SectionIcon({ emoji }: { emoji: string }) {
+  const Icon = sectionIcons[emoji] ?? PawPrint
+  return (
+    <span
+      className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-50 to-orange-100 text-brand-600"
+      aria-hidden
+    >
+      <Icon className="size-5" strokeWidth={1.75} />
+    </span>
+  )
+}
+
 function Guide() {
   const { lang, t } = useI18n()
-  const { title, intro, sections, footer } = useMemo(() => parseGuide(guideFor(lang)), [lang])
+  const [markdown, setMarkdown] = useState<{ lang: string; text: string }>()
+  useEffect(() => {
+    let live = true
+    void loadGuide(lang).then((text) => live && setMarkdown({ lang, text }))
+    return () => {
+      live = false
+    }
+  }, [lang])
+  const { title, intro, sections, footer } = useMemo(
+    () => parseGuide(markdown?.text ?? ''),
+    [markdown],
+  )
   const ids = useMemo(() => sections.map((s) => s.id), [sections])
   // Line just below the sticky header (+ mobile chip bar).
   const { active, progress } = useScrollSpy(ids, 140)
@@ -162,7 +237,7 @@ function Guide() {
       </div>
 
       <PageHero
-        icon="📖"
+        icon={BookOpen}
         title={title}
         subtitle={<Markdown components={components}>{intro}</Markdown>}
       />
@@ -185,7 +260,6 @@ function Guide() {
                           : 'bg-white text-stone-600 hover:text-brand-700'
                       }`}
                     >
-                      <span aria-hidden>{s.icon}</span>
                       {s.title}
                     </a>
                   </li>
@@ -261,14 +335,7 @@ function Guide() {
               className="scroll-mt-[calc(var(--header-h)+4rem)] space-y-4 rounded-2xl bg-white p-5 shadow-card ring-1 ring-stone-100 sm:p-7 lg:scroll-mt-[calc(var(--header-h)+1.5rem)]"
             >
               <div className="flex items-center gap-3">
-                {s.icon && (
-                  <span
-                    className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-50 to-orange-100 text-2xl"
-                    aria-hidden
-                  >
-                    {s.icon}
-                  </span>
-                )}
+                <SectionIcon emoji={s.icon} />
                 <div>
                   <p className="text-xs font-medium tracking-wide text-brand-700/70">
                     {t('guide.section', { n: String(i + 1).padStart(2, '0') })}

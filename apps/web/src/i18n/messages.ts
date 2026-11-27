@@ -17,7 +17,7 @@ export const zh = {
   'guide.backToTop': '回到顶部',
   'guide.section': '第 {n} 章',
 
-  'home.welcome': '欢迎来到喵友圈 🐾',
+  'home.welcome': '欢迎来到喵友圈',
   'home.tagline': '养猫攻略、我家猫咪的日常，以及和大家分享你的猫。',
   'home.cta': '去看看猫咪日常',
   'footer.tagline': '认真记录每一只猫咪的日常',
@@ -172,7 +172,7 @@ export const en: Messages = {
   'guide.backToTop': 'Back to top',
   'guide.section': 'Part {n}',
 
-  'home.welcome': 'Welcome to MeowSphere 🐾',
+  'home.welcome': 'Welcome to MeowSphere',
   'home.tagline': "Cat care tips, my cats' everyday life, and a place to share yours.",
   'home.cta': 'See cat moments',
   'footer.tagline': 'Made for cats and the people who love them',

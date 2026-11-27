@@ -1,4 +1,4 @@
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle, PawPrint } from 'lucide-react'
 import { useState } from 'react'
 import type { Post } from '../../api/generated/model'
 import { useListPosts } from '../../api/generated/posts/posts'
@@ -17,7 +17,7 @@ export function PostList() {
   if (!data) return <p className="text-stone-500">{t('post.loading')}</p>
 
   const posts = data.data
-  if (posts.length === 0) return <EmptyState icon="🐾">{t('post.empty')}</EmptyState>
+  if (posts.length === 0) return <EmptyState icon={PawPrint}>{t('post.empty')}</EmptyState>
 
   return (
     <ul className="space-y-4">

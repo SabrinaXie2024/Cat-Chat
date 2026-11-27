@@ -14,7 +14,7 @@ export const ja: Messages = {
   'guide.backToTop': 'ページの先頭へ',
   'guide.section': '第 {n} 章',
 
-  'home.welcome': 'ニャン友へようこそ 🐾',
+  'home.welcome': 'ニャン友へようこそ',
   'home.tagline': '猫の飼い方ガイド、うちの猫の日常、そしてあなたの猫もシェアできる場所です。',
   'home.cta': 'ねこ日和を見る',
   'footer.tagline': 'すべての猫と、猫を愛する人のために',
