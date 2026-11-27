@@ -1,5 +1,6 @@
-import { screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderApp } from '../test/render'
 
 describe('care guide', () => {
@@ -7,9 +8,10 @@ describe('care guide', () => {
     renderApp('/guide')
     expect(await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })).toBeInTheDocument()
 
-    const toc = screen.getByRole('navigation', { name: '养猫攻略' })
+    const toc = screen.getByRole('navigation', { name: '目录' })
+    // Two renderings of the same TOC: mobile chips + desktop sidebar.
     const links = within(toc).getAllByRole('link')
-    expect(links.length).toBeGreaterThanOrEqual(9)
+    expect(links.length).toBeGreaterThanOrEqual(18)
     expect(links.map((l) => l.textContent)).toContain('🚨紧急情况')
 
     // Every TOC entry points at a real section heading.
@@ -64,5 +66,85 @@ describe('care guide', () => {
   it('serves the Chinese guide to 繁體中文 readers', async () => {
     renderApp('/guide', { lang: 'zh-TW' })
     expect(await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })).toBeInTheDocument()
+  })
+})
+
+describe('reading position', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    // Undo fakeLayout's own-property overrides so tests don't leak layout.
+    delete (window as { scrollY?: number }).scrollY
+    delete (document.documentElement as { scrollHeight?: number }).scrollHeight
+  })
+
+  /** Fake layout: section i's top is at (i * 1000 - scrollY) px. */
+  function fakeLayout(scrollY: number, { pageHeight = 12_000 } = {}) {
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: scrollY })
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: pageHeight,
+    })
+    document.querySelectorAll('section[id^="section-"]').forEach((el, i) => {
+      vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ top: i * 1000 - scrollY } as DOMRect)
+    })
+    act(() => window.dispatchEvent(new Event('scroll')))
+  }
+
+  const current = () =>
+    Array.from(document.querySelectorAll('nav a[aria-current="location"]')).map(
+      (a) => a.textContent,
+    )
+
+  it('highlights the section being read in both TOCs', async () => {
+    renderApp('/guide')
+    await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })
+    fakeLayout(0)
+    await waitFor(() => expect(current()).toEqual(['🧺接猫前的准备', '1接猫前的准备']))
+
+    fakeLayout(2_100) // section 3's top has passed the 120px line
+    await waitFor(() => expect(current()[0]).toBe('🍽️饮食与喂养'))
+    expect(current()).toHaveLength(2)
+
+    fakeLayout(4_050)
+    await waitFor(() => expect(current()[0]).toBe('🩺健康与医疗'))
+  })
+
+  it('marks earlier sections as read and shows progress', async () => {
+    renderApp('/guide')
+    await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })
+    fakeLayout(2_100)
+    const bar = screen.getByRole('progressbar')
+    await waitFor(() =>
+      expect(bar).toHaveAttribute(
+        'aria-valuenow',
+        String(Math.round((2_100 / (12_000 - window.innerHeight)) * 100)),
+      ),
+    )
+    expect(screen.getAllByText(/已读 \d+%/).length).toBeGreaterThan(0)
+  })
+
+  it('activates the last section at the bottom of the page, even if it is short', async () => {
+    renderApp('/guide')
+    await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })
+    fakeLayout(12_000 - window.innerHeight) // scrolled all the way down
+    await waitFor(() => expect(current()[0]).toBe('🚨紧急情况'))
+    await waitFor(() =>
+      expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100'),
+    )
+  })
+
+  it('shows a back-to-top button once you have scrolled', async () => {
+    const scrollTo = vi.fn()
+    vi.stubGlobal('scrollTo', scrollTo)
+    renderApp('/guide')
+    await screen.findByRole('heading', { level: 1, name: /养猫攻略/ })
+    fakeLayout(0)
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: '回到顶部' })).not.toBeInTheDocument(),
+    )
+    fakeLayout(3_000)
+    await userEvent.setup().click(await screen.findByRole('button', { name: '回到顶部' }))
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
   })
 })

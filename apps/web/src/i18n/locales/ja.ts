@@ -9,6 +9,10 @@ export const ja: Messages = {
   'nav.guide': '飼い方ガイド',
   'nav.gallery': 'うちの猫',
   'nav.community': 'ねこ日和',
+  'guide.contents': '目次',
+  'guide.progress': '{percent}% 読了',
+  'guide.backToTop': 'ページの先頭へ',
+  'guide.section': '第 {n} 章',
 
   'home.welcome': 'ニャン友へようこそ 🐾',
   'home.tagline': '猫の飼い方ガイド、うちの猫の日常、そしてあなたの猫もシェアできる場所です。',

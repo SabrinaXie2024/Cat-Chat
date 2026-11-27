@@ -9,6 +9,10 @@ export const ko: Messages = {
   'nav.guide': '반려묘 가이드',
   'nav.gallery': '우리 고양이',
   'nav.community': '고양이 일상',
+  'guide.contents': '목차',
+  'guide.progress': '{percent}% 읽음',
+  'guide.backToTop': '맨 위로',
+  'guide.section': '{n}장',
 
   'home.welcome': '냥친구에 오신 것을 환영해요 🐾',
   'home.tagline':

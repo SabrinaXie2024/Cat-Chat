@@ -9,6 +9,10 @@ export const ru: Messages = {
   'nav.guide': 'Уход за кошкой',
   'nav.gallery': 'Мои кошки',
   'nav.community': 'Кошачьи будни',
+  'guide.contents': 'Содержание',
+  'guide.progress': 'Прочитано {percent}%',
+  'guide.backToTop': 'Наверх',
+  'guide.section': 'Раздел {n}',
 
   'home.welcome': 'Добро пожаловать в Мяусферу 🐾',
   'home.tagline':

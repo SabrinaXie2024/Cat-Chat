@@ -9,6 +9,10 @@ export const fr: Messages = {
   'nav.guide': 'Guide du chat',
   'nav.gallery': 'Mes chats',
   'nav.community': 'Moments de chats',
+  'guide.contents': 'Sommaire',
+  'guide.progress': '{percent} % lu',
+  'guide.backToTop': 'Haut de page',
+  'guide.section': 'Partie {n}',
 
   'home.welcome': 'Bienvenue sur MiaouSphère 🐾',
   'home.tagline':

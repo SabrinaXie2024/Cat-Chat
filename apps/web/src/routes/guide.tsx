@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { AlertTriangle, Lightbulb, Siren } from 'lucide-react'
-import { Children, isValidElement, type ReactNode } from 'react'
+import { AlertTriangle, ArrowUp, Check, Lightbulb, Siren } from 'lucide-react'
+import { Children, isValidElement, type ReactNode, useEffect, useMemo, useRef } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import guideEn from '../content/guide.en.md?raw'
 import guideZh from '../content/guide.md?raw'
+import { useScrollSpy } from '../features/guide/useScrollSpy'
 import { useI18n } from '../i18n/I18nProvider'
 
 export const Route = createFileRoute('/guide')({ component: Guide })
@@ -116,67 +117,190 @@ const components: Components = {
 }
 
 function Guide() {
-  const { lang } = useI18n()
+  const { lang, t } = useI18n()
   // Guide exists in zh and en; Chinese variants read zh, everyone else en.
-  const { title, intro, sections, footer } = parseGuide(lang.startsWith('zh') ? guideZh : guideEn)
+  const { title, intro, sections, footer } = useMemo(
+    () => parseGuide(lang.startsWith('zh') ? guideZh : guideEn),
+    [lang],
+  )
+  const ids = useMemo(() => sections.map((s) => s.id), [sections])
+  const { active, progress } = useScrollSpy(ids)
+  const activeIndex = Math.max(0, ids.indexOf(active ?? ''))
+  const percent = Math.round(progress * 100)
+
+  // Keep the active chip visible in the horizontal (mobile) TOC without
+  // moving the page itself.
+  const chipsRef = useRef<HTMLOListElement>(null)
+  useEffect(() => {
+    const list = chipsRef.current
+    const chip = list?.querySelector<HTMLElement>(`[data-id="${active}"]`)
+    if (!list || !chip || list.scrollWidth <= list.clientWidth) return
+    list.scrollTo?.({ left: chip.offsetLeft - (list.clientWidth - chip.offsetWidth) / 2 })
+  }, [active])
 
   return (
     <div className="space-y-8">
-      <div className="space-y-3 rounded-2xl bg-gradient-to-br from-orange-100 via-brand-50 to-amber-50 p-6 sm:p-8">
-        <h1 className="text-3xl font-bold text-stone-900">🐱 {title}</h1>
-        <div className="max-w-2xl text-stone-700">
+      {/* Reading progress across the top of the viewport. */}
+      <div
+        role="progressbar"
+        aria-label={t('guide.progress', { percent })}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        className="fixed inset-x-0 top-0 z-30 h-1 bg-transparent"
+      >
+        <div
+          className="h-full bg-brand-500 transition-[width] duration-150"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-100 via-brand-50 to-amber-50 p-6 sm:p-10">
+        <span
+          className="pointer-events-none absolute -right-6 -bottom-10 select-none text-[9rem] opacity-10"
+          aria-hidden
+        >
+          🐾
+        </span>
+        <h1 className="relative text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
+          🐱 {title}
+        </h1>
+        <div className="relative mt-3 max-w-2xl text-stone-700">
           <Markdown components={components}>{intro}</Markdown>
         </div>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[13rem_1fr] lg:gap-8">
-        {/* TOC: horizontal chips on small screens, sticky sidebar on large. */}
-        <nav aria-label={title} className="mb-6 lg:mb-0">
-          <ol className="flex gap-2 overflow-x-auto pb-2 lg:sticky lg:top-6 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
-            {sections.map((s) => (
-              <li key={s.id} className="shrink-0">
-                <a
-                  href={`#${s.id}`}
-                  className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm text-stone-700 shadow-sm hover:text-brand-700 lg:rounded-lg lg:bg-transparent lg:shadow-none lg:hover:bg-white"
-                >
-                  <span aria-hidden>{s.icon}</span>
-                  {s.title}
-                </a>
-              </li>
-            ))}
-          </ol>
+      <div className="lg:grid lg:grid-cols-[15rem_1fr] lg:gap-10">
+        <nav aria-label={t('guide.contents')} className="relative">
+          {/* Mobile: sticky horizontal chips. */}
+          <div className="sticky top-0 z-20 -mx-4 mb-6 bg-brand-50/90 px-4 py-2 backdrop-blur lg:hidden">
+            <ol ref={chipsRef} className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
+              {sections.map((s, i) => {
+                const current = i === activeIndex
+                return (
+                  <li key={s.id} data-id={s.id} className="shrink-0">
+                    <a
+                      href={`#${s.id}`}
+                      aria-current={current ? 'location' : undefined}
+                      className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm shadow-sm transition-colors ${
+                        current
+                          ? 'bg-brand-500 font-medium text-white'
+                          : 'bg-white text-stone-600 hover:text-brand-700'
+                      }`}
+                    >
+                      <span aria-hidden>{s.icon}</span>
+                      {s.title}
+                    </a>
+                  </li>
+                )
+              })}
+            </ol>
+          </div>
+
+          {/* Desktop: sticky sidebar with progress. */}
+          <div className="sticky top-6 hidden rounded-2xl bg-white/70 p-4 shadow-sm backdrop-blur lg:block">
+            <div className="mb-3 flex items-baseline justify-between">
+              <h2 className="text-sm font-semibold tracking-wide text-stone-500 uppercase">
+                {t('guide.contents')}
+              </h2>
+              <span className="text-xs text-stone-400">{t('guide.progress', { percent })}</span>
+            </div>
+            <div className="mb-3 h-1 overflow-hidden rounded-full bg-stone-100" aria-hidden>
+              <div
+                className="h-full rounded-full bg-brand-500 transition-[width] duration-150"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+            <ol className="space-y-0.5">
+              {sections.map((s, i) => {
+                const current = i === activeIndex
+                const read = i < activeIndex
+                return (
+                  <li key={s.id}>
+                    <a
+                      href={`#${s.id}`}
+                      aria-current={current ? 'location' : undefined}
+                      className={`group relative flex items-center gap-2.5 rounded-lg py-1.5 pr-2 pl-3 text-sm transition-colors ${
+                        current
+                          ? 'bg-brand-50 font-medium text-brand-700'
+                          : read
+                            ? 'text-stone-500 hover:bg-stone-50 hover:text-stone-800'
+                            : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-1.5 bottom-1.5 left-0 w-1 rounded-full transition-colors ${
+                          current ? 'bg-brand-500' : 'bg-transparent'
+                        }`}
+                        aria-hidden
+                      />
+                      <span
+                        className={`grid size-6 shrink-0 place-items-center rounded-full text-xs ${
+                          current
+                            ? 'bg-brand-500 text-white'
+                            : read
+                              ? 'bg-brand-50 text-brand-700'
+                              : 'bg-stone-100 text-stone-500'
+                        }`}
+                        aria-hidden
+                      >
+                        {read ? <Check className="size-3.5" /> : i + 1}
+                      </span>
+                      <span className="truncate">{s.title}</span>
+                    </a>
+                  </li>
+                )
+              })}
+            </ol>
+          </div>
         </nav>
 
         <div className="min-w-0 space-y-6">
-          {sections.map((s) => (
+          {sections.map((s, i) => (
             <section
               key={s.id}
               id={s.id}
               aria-labelledby={`${s.id}-title`}
-              className="scroll-mt-6 space-y-4 rounded-2xl bg-white p-5 shadow-sm sm:p-6"
+              className="scroll-mt-16 space-y-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100 sm:p-7 lg:scroll-mt-6"
             >
-              <h2
-                id={`${s.id}-title`}
-                className="flex items-center gap-3 text-xl font-bold text-stone-900"
-              >
+              <div className="flex items-center gap-3">
                 {s.icon && (
                   <span
-                    className="grid size-10 place-items-center rounded-xl bg-brand-50 text-xl"
+                    className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-50 to-orange-100 text-2xl"
                     aria-hidden
                   >
                     {s.icon}
                   </span>
                 )}
-                {s.title}
-              </h2>
-              <div className="space-y-4 text-stone-700">
+                <div>
+                  <p className="text-xs font-medium tracking-wide text-brand-700/70">
+                    {t('guide.section', { n: String(i + 1).padStart(2, '0') })}
+                  </p>
+                  <h2 id={`${s.id}-title`} className="text-xl font-bold text-stone-900 sm:text-2xl">
+                    {s.title}
+                  </h2>
+                </div>
+              </div>
+              <div className="space-y-4 text-[15px] text-stone-700 sm:text-base">
                 <Markdown components={components}>{s.body}</Markdown>
               </div>
             </section>
           ))}
-          {footer && <p className="text-center text-xs text-stone-400">{footer}</p>}
+          {footer && <p className="pt-2 text-center text-xs text-stone-400">{footer}</p>}
         </div>
       </div>
+
+      {progress > 0.08 && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0 })}
+          aria-label={t('guide.backToTop')}
+          title={t('guide.backToTop')}
+          className="fixed right-5 bottom-5 z-30 grid size-11 place-items-center rounded-full bg-white text-brand-700 shadow-lg ring-1 ring-stone-200 transition hover:bg-brand-500 hover:text-white"
+        >
+          <ArrowUp className="size-5" aria-hidden />
+        </button>
+      )}
     </div>
   )
 }

@@ -10,6 +10,10 @@ export const pt: Messages = {
   'nav.guide': 'Guia felino',
   'nav.gallery': 'Meus gatos',
   'nav.community': 'Momentos felinos',
+  'guide.contents': 'Sumário',
+  'guide.progress': '{percent}% lido',
+  'guide.backToTop': 'Voltar ao topo',
+  'guide.section': 'Parte {n}',
 
   'home.welcome': 'Boas-vindas à Miausfera 🐾',
   'home.tagline':

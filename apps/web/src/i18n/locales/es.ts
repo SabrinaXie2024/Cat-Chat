@@ -9,6 +9,10 @@ export const es: Messages = {
   'nav.guide': 'Guía felina',
   'nav.gallery': 'Mis gatos',
   'nav.community': 'Momentos gatunos',
+  'guide.contents': 'Índice',
+  'guide.progress': '{percent} % leído',
+  'guide.backToTop': 'Volver arriba',
+  'guide.section': 'Parte {n}',
 
   'home.welcome': 'Te damos la bienvenida a Miausfera 🐾',
   'home.tagline':

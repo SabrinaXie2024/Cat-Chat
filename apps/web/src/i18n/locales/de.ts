@@ -9,6 +9,10 @@ export const de: Messages = {
   'nav.guide': 'Katzenratgeber',
   'nav.gallery': 'Meine Katzen',
   'nav.community': 'Katzenmomente',
+  'guide.contents': 'Inhalt',
+  'guide.progress': '{percent} % gelesen',
+  'guide.backToTop': 'Nach oben',
+  'guide.section': 'Teil {n}',
 
   'home.welcome': 'Willkommen in der MiauSphäre 🐾',
   'home.tagline':

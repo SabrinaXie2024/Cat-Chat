@@ -10,6 +10,10 @@ export const zhTW: Messages = {
   'nav.guide': '養貓攻略',
   'nav.gallery': '我的貓咪',
   'nav.community': '貓咪日常',
+  'guide.contents': '目錄',
+  'guide.progress': '已讀 {percent}%',
+  'guide.backToTop': '回到頂部',
+  'guide.section': '第 {n} 章',
 
   'home.welcome': '歡迎來到喵友圈 🐾',
   'home.tagline': '養貓攻略、我家貓咪的日常，以及和大家分享你的貓。',
