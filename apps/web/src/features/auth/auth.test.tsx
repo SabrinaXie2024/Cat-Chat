@@ -28,17 +28,72 @@ describe('auth', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('邮箱或密码错误')
   })
 
-  it('registers a new account and signs in', async () => {
+  it('registers with an emailed code and signs in', async () => {
     const user = userEvent.setup()
     const { router } = renderApp('/register')
     await user.type(await screen.findByLabelText('邮箱'), 'new@cat.dev')
     await user.type(screen.getByLabelText('昵称'), '小黑')
     await user.type(screen.getByLabelText('密码（至少 8 位）'), 'password123')
     await user.type(screen.getByLabelText('确认密码'), 'password123')
-    await user.click(screen.getByRole('button', { name: '注册' }))
+    await user.click(screen.getByRole('button', { name: '发送验证码' }))
+
+    expect(await screen.findByText('6 位验证码已发送到 new@cat.dev')).toBeInTheDocument()
+    expect(screen.getByText(/验证码 [45]:\d\d 后过期/)).toBeInTheDocument()
+    expect(db.users).toHaveLength(1) // no account until verified
+    const code = db.pending.get('new@cat.dev')?.code ?? ''
+    const box = screen.getByLabelText('验证码')
+    expect(box).toHaveAttribute('autocomplete', 'one-time-code')
+    expect(box).toHaveAttribute('inputmode', 'numeric')
+    await user.type(box, code)
+    await user.click(screen.getByRole('button', { name: '验证并注册' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/community'))
     expect(await screen.findByText('小黑')).toBeInTheDocument()
+    expect(db.pending.size).toBe(0)
+  })
+
+  async function toCodeStep(user: ReturnType<typeof userEvent.setup>) {
+    renderApp('/register')
+    await user.type(await screen.findByLabelText('邮箱'), 'new@cat.dev')
+    await user.type(screen.getByLabelText('昵称'), '小黑')
+    await user.type(screen.getByLabelText('密码（至少 8 位）'), 'password123')
+    await user.type(screen.getByLabelText('确认密码'), 'password123')
+    await user.click(screen.getByRole('button', { name: '发送验证码' }))
+    return screen.findByLabelText('验证码')
+  }
+
+  it('reports a wrong code with the tries left', async () => {
+    const user = userEvent.setup()
+    const box = await toCodeStep(user)
+    const real = db.pending.get('new@cat.dev')?.code
+    await user.type(box, real === '000000' ? '111111' : '000000')
+    await user.click(screen.getByRole('button', { name: '验证并注册' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('验证码错误，还可以再试 4 次')
+    expect(db.users).toHaveLength(1)
+  })
+
+  it('only accepts digits, and asks for all 6', async () => {
+    const user = userEvent.setup()
+    const box = await toCodeStep(user)
+    await user.type(box, '12ab3')
+    expect(box).toHaveValue('123')
+    await user.click(screen.getByRole('button', { name: '验证并注册' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('请输入 6 位数字验证码')
+  })
+
+  it('makes you wait 60s before resending', async () => {
+    const user = userEvent.setup()
+    await toCodeStep(user)
+    const resend = screen.getByRole('button', { name: /秒后可重新发送/ })
+    expect(resend).toBeDisabled()
+  })
+
+  it('"change details" goes back with the form still filled in', async () => {
+    const user = userEvent.setup()
+    await toCodeStep(user)
+    await user.click(screen.getByRole('button', { name: '修改注册信息' }))
+    expect(await screen.findByLabelText('邮箱')).toHaveValue('new@cat.dev')
+    expect(screen.getByLabelText('昵称')).toHaveValue('小黑')
   })
 
   it('validates the register form before calling the API', async () => {
@@ -48,7 +103,7 @@ describe('auth', () => {
     await user.type(screen.getByLabelText('昵称'), '小黑')
     await user.type(screen.getByLabelText('密码（至少 8 位）'), 'short')
     await user.type(screen.getByLabelText('确认密码'), 'different')
-    await user.click(screen.getByRole('button', { name: '注册' }))
+    await user.click(screen.getByRole('button', { name: '发送验证码' }))
     expect(await screen.findByText('密码至少 8 位')).toBeInTheDocument()
     expect(screen.getByText('两次输入的密码不一致')).toBeInTheDocument()
     expect(db.users).toHaveLength(1) // only the demo user
@@ -61,7 +116,7 @@ describe('auth', () => {
     await user.type(screen.getByLabelText('昵称'), 'x')
     await user.type(screen.getByLabelText('密码（至少 8 位）'), 'password123')
     await user.type(screen.getByLabelText('确认密码'), 'password123')
-    await user.click(screen.getByRole('button', { name: '注册' }))
+    await user.click(screen.getByRole('button', { name: '发送验证码' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('这个邮箱已经注册过了')
   })
 

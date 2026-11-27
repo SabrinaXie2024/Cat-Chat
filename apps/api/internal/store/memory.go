@@ -35,6 +35,7 @@ type Memory struct {
 	imgDims  map[string][2]int
 	videos   map[string]api.VideoRecord
 	gallery  []api.GalleryEntry // newest last
+	pending  map[string]api.PendingRegistration
 	now      func() time.Time
 }
 
@@ -49,6 +50,7 @@ func NewMemory() *Memory {
 		images:   map[string]string{},
 		imgDims:  map[string][2]int{},
 		videos:   map[string]api.VideoRecord{},
+		pending:  map[string]api.PendingRegistration{},
 		now:      time.Now,
 	}
 }
@@ -131,6 +133,60 @@ func (m *Memory) ChangePassword(_ context.Context, userID, hash string) error {
 		}
 	}
 	return nil
+}
+
+// --- pending registrations ---
+
+func (m *Memory) PendingRegistration(_ context.Context, email string) (api.PendingRegistration, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	p, ok := m.pending[email]
+	if !ok {
+		return api.PendingRegistration{}, api.ErrNotFound
+	}
+	return p, nil
+}
+
+func (m *Memory) SavePendingRegistration(_ context.Context, p api.PendingRegistration) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p.Attempts = 0
+	m.pending[p.Email] = p
+	return nil
+}
+
+func (m *Memory) RecordWrongCode(_ context.Context, email string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.pending[email]
+	if !ok {
+		return 0, api.ErrNotFound
+	}
+	p.Attempts++
+	m.pending[email] = p
+	return p.Attempts, nil
+}
+
+func (m *Memory) DeletePendingRegistration(_ context.Context, email string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.pending, email)
+	return nil
+}
+
+func (m *Memory) CompleteRegistration(ctx context.Context, email string) (api.User, error) {
+	m.mu.Lock()
+	p, ok := m.pending[email]
+	m.mu.Unlock()
+	if !ok {
+		return api.User{}, api.ErrNotFound
+	}
+	u, err := m.CreateUser(ctx, p.Email, p.Nickname, p.PasswordHash)
+	if err != nil {
+		return api.User{}, err
+	}
+	_ = m.DeletePendingRegistration(ctx, email)
+	return u, nil
 }
 
 // --- images ---

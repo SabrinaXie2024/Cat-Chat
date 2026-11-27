@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/cat-chat/api/internal/blob"
+	"github.com/cat-chat/api/internal/mail"
 )
 
 // Content limits — must match packages/api-spec/openapi.yaml.
@@ -44,6 +45,14 @@ type Store interface {
 	DeleteGalleryItem(ctx context.Context, id string) error
 
 	CreateUser(ctx context.Context, email, nickname, passwordHash string) (User, error)
+
+	// Sign-up verification. CompleteRegistration creates the user and
+	// deletes the pending row atomically (ErrEmailTaken if registered since).
+	PendingRegistration(ctx context.Context, email string) (PendingRegistration, error)
+	SavePendingRegistration(ctx context.Context, p PendingRegistration) error
+	RecordWrongCode(ctx context.Context, email string) (attempts int, err error)
+	DeletePendingRegistration(ctx context.Context, email string) error
+	CompleteRegistration(ctx context.Context, email string) (User, error)
 	UserByEmail(ctx context.Context, email string) (u User, passwordHash string, err error)
 	CreateSession(ctx context.Context, tokenHash, userID string, expires time.Time) error
 	UserBySession(ctx context.Context, tokenHash string, now time.Time) (User, error)
@@ -51,6 +60,14 @@ type Store interface {
 	// ChangePassword sets a new hash and deletes all of the user's sessions,
 	// atomically.
 	ChangePassword(ctx context.Context, userID, passwordHash string) error
+}
+
+// PendingRegistration is a sign-up awaiting its emailed code.
+type PendingRegistration struct {
+	Email, Nickname, PasswordHash, CodeHash string
+	Attempts                                int
+	ExpiresAt, LastSentAt, WindowStart      time.Time
+	SendCount                               int
 }
 
 // VideoRecord is a processed video's metadata.
@@ -82,6 +99,10 @@ type Server struct {
 	VideoWorkDir string // temp files; must be on the same filesystem as VideoBlobs
 	// AdminEmails (lowercase) may manage the gallery.
 	AdminEmails map[string]bool
+	// Mailer sends verification codes; SendLimiter caps code emails per
+	// client IP (anti mail-bombing).
+	Mailer      mail.Mailer
+	SendLimiter LoginLimiter
 	Limiter     LoginLimiter
 	// SecureCookies sets the Secure flag; true everywhere except local http.
 	SecureCookies bool

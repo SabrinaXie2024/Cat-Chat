@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/png"
 	"io"
@@ -13,16 +15,61 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/cat-chat/api/internal/api"
 	"github.com/cat-chat/api/internal/auth"
 	"github.com/cat-chat/api/internal/blob"
+	"github.com/cat-chat/api/internal/mail"
 	"github.com/cat-chat/api/internal/store"
 	"github.com/cat-chat/api/internal/videos"
 )
+
+// captureMailer records verification codes instead of sending them.
+type captureMailer struct {
+	mu    sync.Mutex
+	codes map[string]string // email -> last code
+	sent  int
+}
+
+var codeRe = regexp.MustCompile(`\b\d{6}\b`)
+
+func (m *captureMailer) Send(_ context.Context, msg mail.Message) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.codes[msg.To] = codeRe.FindString(msg.Text)
+	m.sent++
+	return nil
+}
+
+// mailers maps each test server to its mailbox, so clients that share a
+// server (other.srv = c.srv) read the same codes.
+var mailers sync.Map // *httptest.Server -> *captureMailer
+
+func (c *client) mailbox() *captureMailer {
+	m, _ := mailers.Load(c.srv)
+	return m.(*captureMailer)
+}
+
+// clock lets tests move time forward (code expiry, cooldowns).
+type clock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func (k *clock) Now() time.Time          { k.mu.Lock(); defer k.mu.Unlock(); return k.now }
+func (k *clock) Advance(d time.Duration) { k.mu.Lock(); k.now = k.now.Add(d); k.mu.Unlock() }
+
+var clocks sync.Map // *httptest.Server -> *clock
+
+func (c *client) clock() *clock {
+	k, _ := clocks.Load(c.srv)
+	return k.(*clock)
+}
 
 // client is a browser-like test client: real HTTP server + cookie jar.
 type client struct {
@@ -34,7 +81,11 @@ type client struct {
 func newClient(t *testing.T) *client {
 	t.Helper()
 	videoDir := t.TempDir()
+	mb := &captureMailer{codes: map[string]string{}}
+	clk := &clock{now: time.Now()}
 	srv := httptest.NewServer(newHandler(&api.Server{
+		Mailer:       mb,
+		SendLimiter:  newSendLimiter(),
 		Store:        store.NewMemory(),
 		Blobs:        blob.Local{Dir: t.TempDir()},
 		VideoBlobs:   blob.Local{Dir: videoDir, Ext: ".video"},
@@ -42,9 +93,11 @@ func newClient(t *testing.T) *client {
 		VideoWorkDir: filepath.Join(videoDir, ".tmp"),
 		AdminEmails:  map[string]bool{"admin@cat.dev": true},
 		Limiter:      auth.NewLoginLimiter(),
-		Now:          time.Now,
+		Now:          clk.Now,
 	}))
 	t.Cleanup(srv.Close)
+	mailers.Store(srv, mb)
+	clocks.Store(srv, clk)
 	jar, _ := cookiejar.New(nil)
 	return &client{t: t, srv: srv, hc: &http.Client{Jar: jar}}
 }
@@ -74,9 +127,29 @@ func (c *client) mustStatus(want int, method, path, body string) string {
 	return b
 }
 
+// register runs both sign-up steps (start, then verify with the emailed
+// code) and returns the verify response.
+func (c *client) register(email, password, nickname string) (int, string, http.Header) {
+	c.t.Helper()
+	body, _ := json.Marshal(map[string]string{"email": email, "password": password, "nickname": nickname})
+	if code, b, _ := c.do("POST", "/api/auth/register/start", string(body)); code != 202 {
+		return code, b, nil
+	}
+	norm := strings.ToLower(strings.TrimSpace(email))
+	verify, _ := json.Marshal(map[string]string{"email": email, "code": c.mailbox().codes[norm]})
+	return c.do("POST", "/api/auth/register/verify", string(verify))
+}
+
+func (c *client) mustRegister(email, nickname string) {
+	c.t.Helper()
+	if code, b, _ := c.register(email, "password123", nickname); code != 201 {
+		c.t.Fatalf("register %s: %d %s", email, code, b)
+	}
+}
+
 func (c *client) signUp() {
 	c.t.Helper()
-	c.mustStatus(201, "POST", "/api/auth/register", `{"email":"mimi@example.com","password":"password123","nickname":"咪咪"}`)
+	c.mustRegister("mimi@example.com", "咪咪")
 }
 
 func TestHealth(t *testing.T) {
@@ -87,7 +160,7 @@ func TestAuthFlow(t *testing.T) {
 	c := newClient(t)
 	c.mustStatus(401, "GET", "/api/auth/me", "")
 
-	code, body, hdr := c.do("POST", "/api/auth/register", `{"email":" Mimi@Example.com ","password":"password123","nickname":"咪咪"}`)
+	code, body, hdr := c.register(" Mimi@Example.com ", "password123", "咪咪")
 	if code != 201 {
 		t.Fatalf("register: %d %s", code, body)
 	}
@@ -118,7 +191,7 @@ func TestAuthFlow(t *testing.T) {
 
 func TestLogoutRevokesServerSession(t *testing.T) {
 	c := newClient(t)
-	_, _, hdr := c.do("POST", "/api/auth/register", `{"email":"a@b.co","password":"password123","nickname":"a"}`)
+	_, _, hdr := c.register("a@b.co", "password123", "a")
 	stolen := hdr.Get("Set-Cookie")
 	stolen = stolen[:strings.Index(stolen, ";")]
 	c.mustStatus(204, "POST", "/api/auth/logout", "")
@@ -148,7 +221,7 @@ func TestRegisterValidation(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if code, b, _ := c.do("POST", "/api/auth/register", tc.body); code != tc.want {
+			if code, b, _ := c.do("POST", "/api/auth/register/start", tc.body); code != tc.want {
 				t.Fatalf("got %d want %d: %s", code, tc.want, b)
 			}
 		})
@@ -409,7 +482,7 @@ func TestPostImagesMustBeOwnUploads(t *testing.T) {
 	// Someone else's upload.
 	other := newClient(t)
 	other.srv = c.srv
-	other.mustStatus(201, "POST", "/api/auth/register", `{"email":"o@x.co","password":"password123","nickname":"o"}`)
+	other.mustRegister("o@x.co", "o")
 	theirs := other.mustUpload()
 
 	for name, imgs := range map[string]string{
@@ -432,7 +505,7 @@ func TestPostImagesMustBeOwnUploads(t *testing.T) {
 
 func (c *client) signUpAs(email string) {
 	c.t.Helper()
-	c.mustStatus(201, "POST", "/api/auth/register", `{"email":"`+email+`","password":"password123","nickname":"n"}`)
+	c.mustRegister(email, "n")
 }
 
 func TestIsAdminFlag(t *testing.T) {
@@ -545,4 +618,117 @@ func TestGalleryVideoUploadAndRange(t *testing.T) {
 	if code, _, _ := admin.do("GET", "/api/videos/01a2111c-2a68-7371-bce0-5b41e2f69f46", ""); code != 404 {
 		t.Fatalf("missing video: %d", code)
 	}
+}
+
+func TestRegistrationNeedsEmailCode(t *testing.T) {
+	c := newClient(t)
+	start := `{"email":"new@cat.dev","password":"password123","nickname":"新猫"}`
+	body := c.mustStatus(202, "POST", "/api/auth/register/start", start)
+	if !strings.Contains(body, `"expiresInSeconds":300`) || !strings.Contains(body, `"resendAfterSeconds":60`) {
+		t.Fatalf("start = %s", body)
+	}
+	code := c.mailbox().codes["new@cat.dev"]
+	if len(code) != 6 {
+		t.Fatalf("code = %q", code)
+	}
+	// No account yet: can't log in before verifying.
+	c.mustStatus(401, "POST", "/api/auth/login", `{"email":"new@cat.dev","password":"password123"}`)
+
+	wrong := "000000"
+	if code == wrong {
+		wrong = "111111"
+	}
+	resp := c.mustStatus(400, "POST", "/api/auth/register/verify", `{"email":"new@cat.dev","code":"`+wrong+`"}`)
+	if !strings.Contains(resp, `"attemptsLeft":4`) {
+		t.Fatalf("wrong code = %s", resp)
+	}
+	c.mustStatus(201, "POST", "/api/auth/register/verify", `{"email":"NEW@cat.dev","code":"`+code+`"}`)
+	c.mustStatus(200, "GET", "/api/auth/me", "")
+	// The code is single-use.
+	c.mustStatus(410, "POST", "/api/auth/register/verify", `{"email":"new@cat.dev","code":"`+code+`"}`)
+	// And the old one-step endpoint is gone.
+	if code, _, _ := c.do("POST", "/api/auth/register", start); code != 404 && code != 405 {
+		t.Fatalf("old /auth/register still answers: %d", code)
+	}
+}
+
+func TestVerificationCodeExpiresAfter5Minutes(t *testing.T) {
+	c := newClient(t)
+	c.mustStatus(202, "POST", "/api/auth/register/start", `{"email":"x@cat.dev","password":"password123","nickname":"x"}`)
+	code := c.mailbox().codes["x@cat.dev"]
+	c.clock().Advance(5*time.Minute + time.Second)
+	c.mustStatus(410, "POST", "/api/auth/register/verify", `{"email":"x@cat.dev","code":"`+code+`"}`)
+}
+
+func TestVerificationCodeVoidedAfter5WrongTries(t *testing.T) {
+	c := newClient(t)
+	c.mustStatus(202, "POST", "/api/auth/register/start", `{"email":"x@cat.dev","password":"password123","nickname":"x"}`)
+	code := c.mailbox().codes["x@cat.dev"]
+	wrong := "000000"
+	if code == wrong {
+		wrong = "111111"
+	}
+	for i := range 5 {
+		b := c.mustStatus(400, "POST", "/api/auth/register/verify", `{"email":"x@cat.dev","code":"`+wrong+`"}`)
+		if want := fmt.Sprintf(`"attemptsLeft":%d`, 4-i); !strings.Contains(b, want) {
+			t.Fatalf("try %d: %s", i+1, b)
+		}
+	}
+	// Even the right code no longer works.
+	c.mustStatus(410, "POST", "/api/auth/register/verify", `{"email":"x@cat.dev","code":"`+code+`"}`)
+}
+
+func TestResendCooldownAndNewCode(t *testing.T) {
+	c := newClient(t)
+	start := `{"email":"x@cat.dev","password":"password123","nickname":"x"}`
+	c.mustStatus(202, "POST", "/api/auth/register/start", start)
+	first := c.mailbox().codes["x@cat.dev"]
+
+	b := c.mustStatus(429, "POST", "/api/auth/register/start", start)
+	if !strings.Contains(b, `"retryAfterSeconds":60`) {
+		t.Fatalf("cooldown = %s", b)
+	}
+	c.clock().Advance(61 * time.Second)
+	c.mustStatus(202, "POST", "/api/auth/register/start", start)
+	second := c.mailbox().codes["x@cat.dev"]
+	if first != second {
+		c.mustStatus(400, "POST", "/api/auth/register/verify", `{"email":"x@cat.dev","code":"`+first+`"}`) // old code dead
+	}
+	c.mustStatus(201, "POST", "/api/auth/register/verify", `{"email":"x@cat.dev","code":"`+second+`"}`)
+}
+
+func TestSendLimitsPerEmailAndPerIP(t *testing.T) {
+	c := newClient(t)
+	start := `{"email":"x@cat.dev","password":"password123","nickname":"x"}`
+	for range api.MaxSendsPerEmail {
+		c.mustStatus(202, "POST", "/api/auth/register/start", start)
+		c.clock().Advance(61 * time.Second)
+	}
+	if b := c.mustStatus(429, "POST", "/api/auth/register/start", start); !strings.Contains(b, "retryAfterSeconds") {
+		t.Fatalf("per-email cap: %s", b)
+	}
+	c.clock().Advance(time.Hour)
+	c.mustStatus(202, "POST", "/api/auth/register/start", start) // window reset
+
+	// One client IP can't mail-bomb many different addresses.
+	ip := newClient(t)
+	for i := range 20 {
+		ip.mustStatus(202, "POST", "/api/auth/register/start", fmt.Sprintf(`{"email":"v%d@cat.dev","password":"password123","nickname":"v"}`, i))
+	}
+	ip.mustStatus(429, "POST", "/api/auth/register/start", `{"email":"v99@cat.dev","password":"password123","nickname":"v"}`)
+	if n := ip.mailbox().sent; n != 20 {
+		t.Fatalf("emails sent = %d, want 20", n)
+	}
+}
+
+func TestEmailTakenDuringVerification(t *testing.T) {
+	a := newClient(t)
+	b := newClient(t)
+	b.srv = a.srv
+	a.mustStatus(202, "POST", "/api/auth/register/start", `{"email":"race@cat.dev","password":"password123","nickname":"a"}`)
+	code := a.mailbox().codes["race@cat.dev"]
+	// Someone else completes a sign-up for the same address first.
+	a.clock().Advance(61 * time.Second)
+	b.mustRegister("race@cat.dev", "b")
+	a.mustStatus(410, "POST", "/api/auth/register/verify", `{"email":"race@cat.dev","code":"`+code+`"}`)
 }

@@ -9,6 +9,7 @@ const known: [test: (msg: string) => boolean, key: MessageKey][] = [
   [(m) => m.startsWith('too many failed attempts'), 'err.tooManyAttempts'],
   [(m) => m.includes('already registered'), 'err.emailTaken'],
   [(m) => m.startsWith('please sign in'), 'err.sessionExpired'],
+  [(m) => m.startsWith('code expired'), 'err.codeExpired'],
   [(m) => m.startsWith('current password is incorrect'), 'err.currentPasswordWrong'],
   [(m) => m.startsWith('new password must differ'), 'err.newPasswordSame'],
   [(m) => m.includes('maximum number of replies'), 'replies.threadFull'],

@@ -75,6 +75,12 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"newPassword"`
 }
 
+// CodeRejected defines model for CodeRejected.
+type CodeRejected struct {
+	AttemptsLeft int    `json:"attemptsLeft"`
+	Message      string `json:"message"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Message string `json:"message"`
@@ -164,6 +170,12 @@ type Post struct {
 	ReplyCount int        `json:"replyCount"`
 }
 
+// RateLimited defines model for RateLimited.
+type RateLimited struct {
+	Message           string `json:"message"`
+	RetryAfterSeconds int    `json:"retryAfterSeconds"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	// Email Validated server-side (net/mail) so errors use the JSON Error shape
@@ -191,6 +203,18 @@ type User struct {
 	// IsAdmin Site owner; may manage the gallery. Set via ADMIN_EMAILS.
 	IsAdmin  bool   `json:"isAdmin"`
 	Nickname string `json:"nickname"`
+}
+
+// VerificationSent defines model for VerificationSent.
+type VerificationSent struct {
+	ExpiresInSeconds   int `json:"expiresInSeconds"`
+	ResendAfterSeconds int `json:"resendAfterSeconds"`
+}
+
+// VerifyRegistrationRequest defines model for VerifyRegistrationRequest.
+type VerifyRegistrationRequest struct {
+	Code  string `json:"code"`
+	Email string `json:"email"`
 }
 
 // Video defines model for Video.
@@ -234,8 +258,11 @@ type LoginJSONRequestBody = LoginRequest
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
-// RegisterJSONRequestBody defines body for Register for application/json ContentType.
-type RegisterJSONRequestBody = RegisterRequest
+// StartRegistrationJSONRequestBody defines body for StartRegistration for application/json ContentType.
+type StartRegistrationJSONRequestBody = RegisterRequest
+
+// VerifyRegistrationJSONRequestBody defines body for VerifyRegistration for application/json ContentType.
+type VerifyRegistrationJSONRequestBody = VerifyRegistrationRequest
 
 // CreateGalleryItemJSONRequestBody defines body for CreateGalleryItem for application/json ContentType.
 type CreateGalleryItemJSONRequestBody = NewGalleryItem
@@ -267,8 +294,11 @@ type ServerInterface interface {
 	// (POST /auth/password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
 
-	// (POST /auth/register)
-	Register(w http.ResponseWriter, r *http.Request)
+	// (POST /auth/register/start)
+	StartRegistration(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/register/verify)
+	VerifyRegistration(w http.ResponseWriter, r *http.Request)
 
 	// (GET /gallery)
 	ListGallery(w http.ResponseWriter, r *http.Request)
@@ -369,11 +399,25 @@ func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// Register operation middleware
-func (siw *ServerInterfaceWrapper) Register(w http.ResponseWriter, r *http.Request) {
+// StartRegistration operation middleware
+func (siw *ServerInterfaceWrapper) StartRegistration(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.Register(w, r)
+		siw.Handler.StartRegistration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyRegistration operation middleware
+func (siw *ServerInterfaceWrapper) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyRegistration(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -706,7 +750,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/health", wrapper.GetHealth)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/register", wrapper.Register)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/register/start", wrapper.StartRegistration)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/register/verify", wrapper.VerifyRegistration)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/login", wrapper.Login)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/auth/password", wrapper.ChangePassword)
@@ -949,24 +994,88 @@ func (response ChangePassword429JSONResponse) VisitChangePasswordResponse(w http
 	return err
 }
 
-type RegisterRequestObject struct {
-	Body *RegisterJSONRequestBody
+type StartRegistrationRequestObject struct {
+	Body *StartRegistrationJSONRequestBody
 }
 
-type RegisterResponseObject interface {
-	VisitRegisterResponse(w http.ResponseWriter) error
+type StartRegistrationResponseObject interface {
+	VisitStartRegistrationResponse(w http.ResponseWriter) error
 }
 
-type Register201ResponseHeaders struct {
+type StartRegistration202JSONResponse VerificationSent
+
+func (response StartRegistration202JSONResponse) VisitStartRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartRegistration400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response StartRegistration400JSONResponse) VisitStartRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartRegistration409JSONResponse Error
+
+func (response StartRegistration409JSONResponse) VisitStartRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartRegistration429JSONResponse RateLimited
+
+func (response StartRegistration429JSONResponse) VisitStartRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyRegistrationRequestObject struct {
+	Body *VerifyRegistrationJSONRequestBody
+}
+
+type VerifyRegistrationResponseObject interface {
+	VisitVerifyRegistrationResponse(w http.ResponseWriter) error
+}
+
+type VerifyRegistration201ResponseHeaders struct {
 	SetCookie *string
 }
 
-type Register201JSONResponse struct {
+type VerifyRegistration201JSONResponse struct {
 	Body    User
-	Headers Register201ResponseHeaders
+	Headers VerifyRegistration201ResponseHeaders
 }
 
-func (response Register201JSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
+func (response VerifyRegistration201JSONResponse) VisitVerifyRegistrationResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response.Body); err != nil {
@@ -987,12 +1096,12 @@ func (response Register201JSONResponse) VisitRegisterResponse(w http.ResponseWri
 	return err
 }
 
-type Register400JSONResponse struct{ BadRequestJSONResponse }
+type VerifyRegistration400JSONResponse CodeRejected
 
-func (response Register400JSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
+func (response VerifyRegistration400JSONResponse) VisitVerifyRegistrationResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
-	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -1001,9 +1110,9 @@ func (response Register400JSONResponse) VisitRegisterResponse(w http.ResponseWri
 	return err
 }
 
-type Register409JSONResponse Error
+type VerifyRegistration409JSONResponse Error
 
-func (response Register409JSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
+func (response VerifyRegistration409JSONResponse) VisitVerifyRegistrationResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
@@ -1011,6 +1120,20 @@ func (response Register409JSONResponse) VisitRegisterResponse(w http.ResponseWri
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type VerifyRegistration410JSONResponse Error
+
+func (response VerifyRegistration410JSONResponse) VisitVerifyRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(410)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -1564,8 +1687,11 @@ type StrictServerInterface interface {
 	// (POST /auth/password)
 	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
 
-	// (POST /auth/register)
-	Register(ctx context.Context, request RegisterRequestObject) (RegisterResponseObject, error)
+	// (POST /auth/register/start)
+	StartRegistration(ctx context.Context, request StartRegistrationRequestObject) (StartRegistrationResponseObject, error)
+
+	// (POST /auth/register/verify)
+	VerifyRegistration(ctx context.Context, request VerifyRegistrationRequestObject) (VerifyRegistrationResponseObject, error)
 
 	// (GET /gallery)
 	ListGallery(ctx context.Context, request ListGalleryRequestObject) (ListGalleryResponseObject, error)
@@ -1753,11 +1879,11 @@ func (sh *strictHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// Register operation middleware
-func (sh *strictHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var request RegisterRequestObject
+// StartRegistration operation middleware
+func (sh *strictHandler) StartRegistration(w http.ResponseWriter, r *http.Request) {
+	var request StartRegistrationRequestObject
 
-	var body RegisterJSONRequestBody
+	var body StartRegistrationJSONRequestBody
 	if err := runtime.BindJSONBody(r, &body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -1765,18 +1891,49 @@ func (sh *strictHandler) Register(w http.ResponseWriter, r *http.Request) {
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
-		return sh.ssi.Register(ctx, request.(RegisterRequestObject))
+		return sh.ssi.StartRegistration(ctx, request.(StartRegistrationRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "Register")
+		handler = middleware(handler, "StartRegistration")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(RegisterResponseObject); ok {
-		if err := validResponse.VisitRegisterResponse(w); err != nil {
+	} else if validResponse, ok := response.(StartRegistrationResponseObject); ok {
+		if err := validResponse.VisitStartRegistrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VerifyRegistration operation middleware
+func (sh *strictHandler) VerifyRegistration(w http.ResponseWriter, r *http.Request) {
+	var request VerifyRegistrationRequestObject
+
+	var body VerifyRegistrationJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.VerifyRegistration(ctx, request.(VerifyRegistrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VerifyRegistration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VerifyRegistrationResponseObject); ok {
+		if err := validResponse.VisitVerifyRegistrationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

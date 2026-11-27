@@ -35,11 +35,15 @@ import type {
 import type {
   BadRequestResponse,
   ChangePasswordRequest,
+  CodeRejected,
   Error,
   LoginRequest,
+  RateLimited,
   RegisterRequest,
   UnauthorizedResponse,
-  User
+  User,
+  VerificationSent,
+  VerifyRegistrationRequest
 } from '../model';
 
 import { http } from '../../http';
@@ -84,41 +88,51 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type registerResponse201 = {
-  data: User
-  status: 201
+export type startRegistrationResponse202 = {
+  data: VerificationSent
+  status: 202
 }
 
-export type registerResponse400 = {
+export type startRegistrationResponse400 = {
   data: BadRequestResponse
   status: 400
 }
 
-export type registerResponse409 = {
+export type startRegistrationResponse409 = {
   data: Error
   status: 409
 }
 
-export type registerResponseSuccess = (registerResponse201) & {
-  headers: Headers;
-};
-export type registerResponseError = (registerResponse400 | registerResponse409) & {
-  headers: Headers;
-};
-
-export type registerResponse = (registerResponseSuccess | registerResponseError)
-
-export const getRegisterUrl = () => {
-
-
-
-
-  return `/auth/register`
+export type startRegistrationResponse429 = {
+  data: RateLimited
+  status: 429
 }
 
-export const register = async (registerRequest: RegisterRequest, options?: Parameters<typeof http>[1]): Promise<registerResponse> => {
+export type startRegistrationResponseSuccess = (startRegistrationResponse202) & {
+  headers: Headers;
+};
+export type startRegistrationResponseError = (startRegistrationResponse400 | startRegistrationResponse409 | startRegistrationResponse429) & {
+  headers: Headers;
+};
 
-  return http<registerResponse>(getRegisterUrl(),
+export type startRegistrationResponse = (startRegistrationResponseSuccess | startRegistrationResponseError)
+
+export const getStartRegistrationUrl = () => {
+
+
+
+
+  return `/auth/register/start`
+}
+
+/**
+ * Step 1 of sign-up. Validates the details and emails a 6-digit code
+ * valid for 5 minutes. No account exists until step 2 succeeds.
+ * Calling it again resends a fresh code (60 s cooldown).
+ */
+export const startRegistration = async (registerRequest: RegisterRequest, options?: Parameters<typeof http>[1]): Promise<startRegistrationResponse> => {
+
+  return http<startRegistrationResponse>(getStartRegistrationUrl(),
   {
     ...options,
     method: 'POST',
@@ -131,13 +145,13 @@ export const register = async (registerRequest: RegisterRequest, options?: Param
 
 
 
-export const getRegisterMutationKey = () => ['register'] as const;
+export const getStartRegistrationMutationKey = () => ['startRegistration'] as const;
 
-export const getRegisterMutationOptions = <TError = BadRequestResponse | Error,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,RegisterMutationVariables, TContext>, request?: SecondParameter<typeof http>}
-): UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,RegisterMutationVariables, TContext> => {
+export const getStartRegistrationMutationOptions = <TError = BadRequestResponse | Error | RateLimited,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startRegistration>>, TError,StartRegistrationMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof startRegistration>>, TError,StartRegistrationMutationVariables, TContext> => {
 
-const mutationKey = getRegisterMutationKey();
+const mutationKey = getStartRegistrationMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -147,10 +161,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof register>>, RegisterMutationVariables> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startRegistration>>, StartRegistrationMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  register(data,requestOptions)
+          return  startRegistration(data,requestOptions)
         }
 
 
@@ -160,20 +174,129 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type RegisterMutationResult = NonNullable<Awaited<ReturnType<typeof register>>>
-    export type RegisterMutationBody = RegisterRequest
-    export type RegisterMutationError = BadRequestResponse | Error
-    export type RegisterMutationVariables = {data: RegisterRequest}
+    export type StartRegistrationMutationResult = NonNullable<Awaited<ReturnType<typeof startRegistration>>>
+    export type StartRegistrationMutationBody = RegisterRequest
+    export type StartRegistrationMutationError = BadRequestResponse | Error | RateLimited
+    export type StartRegistrationMutationVariables = {data: RegisterRequest}
 
-    export const useRegister = <TError = BadRequestResponse | Error,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,RegisterMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+    /**
+ * Step 1 of sign-up. Validates the details and emails a 6-digit code
+ * valid for 5 minutes. No account exists until step 2 succeeds.
+ * Calling it again resends a fresh code (60 s cooldown).
+ */
+export const useStartRegistration = <TError = BadRequestResponse | Error | RateLimited,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startRegistration>>, TError,StartRegistrationMutationVariables, TContext>, request?: SecondParameter<typeof http>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof register>>,
+        Awaited<ReturnType<typeof startRegistration>>,
         TError,
-        RegisterMutationVariables,
+        StartRegistrationMutationVariables,
         TContext
       > => {
-      return useMutation(getRegisterMutationOptions(options), queryClient);
+      return useMutation(getStartRegistrationMutationOptions(options), queryClient);
+    }
+    export type verifyRegistrationResponse201 = {
+  data: User
+  status: 201
+}
+
+export type verifyRegistrationResponse400 = {
+  data: CodeRejected
+  status: 400
+}
+
+export type verifyRegistrationResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type verifyRegistrationResponse410 = {
+  data: Error
+  status: 410
+}
+
+export type verifyRegistrationResponseSuccess = (verifyRegistrationResponse201) & {
+  headers: Headers;
+};
+export type verifyRegistrationResponseError = (verifyRegistrationResponse400 | verifyRegistrationResponse409 | verifyRegistrationResponse410) & {
+  headers: Headers;
+};
+
+export type verifyRegistrationResponse = (verifyRegistrationResponseSuccess | verifyRegistrationResponseError)
+
+export const getVerifyRegistrationUrl = () => {
+
+
+
+
+  return `/auth/register/verify`
+}
+
+/**
+ * Step 2. On the right code the account is created and signed in.
+ * 5 wrong attempts void the code.
+ */
+export const verifyRegistration = async (verifyRegistrationRequest: VerifyRegistrationRequest, options?: Parameters<typeof http>[1]): Promise<verifyRegistrationResponse> => {
+
+  return http<verifyRegistrationResponse>(getVerifyRegistrationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(verifyRegistrationRequest)
+  }
+);}
+
+
+
+
+
+export const getVerifyRegistrationMutationKey = () => ['verifyRegistration'] as const;
+
+export const getVerifyRegistrationMutationOptions = <TError = CodeRejected | Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyRegistration>>, TError,VerifyRegistrationMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyRegistration>>, TError,VerifyRegistrationMutationVariables, TContext> => {
+
+const mutationKey = getVerifyRegistrationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyRegistration>>, VerifyRegistrationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyRegistration(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyRegistrationMutationResult = NonNullable<Awaited<ReturnType<typeof verifyRegistration>>>
+    export type VerifyRegistrationMutationBody = VerifyRegistrationRequest
+    export type VerifyRegistrationMutationError = CodeRejected | Error
+    export type VerifyRegistrationMutationVariables = {data: VerifyRegistrationRequest}
+
+    /**
+ * Step 2. On the right code the account is created and signed in.
+ * 5 wrong attempts void the code.
+ */
+export const useVerifyRegistration = <TError = CodeRejected | Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyRegistration>>, TError,VerifyRegistrationMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof verifyRegistration>>,
+        TError,
+        VerifyRegistrationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVerifyRegistrationMutationOptions(options), queryClient);
     }
     export type loginResponse200 = {
   data: User

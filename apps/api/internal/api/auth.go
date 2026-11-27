@@ -46,40 +46,6 @@ func (s *Server) SessionMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) Register(ctx context.Context, req RegisterRequestObject) (RegisterResponseObject, error) {
-	if req.Body == nil {
-		return Register400JSONResponse{BadRequestJSONResponse{Message: "missing body"}}, nil
-	}
-	email, err := normalizeEmail(req.Body.Email)
-	if err != nil {
-		return Register400JSONResponse{BadRequestJSONResponse{Message: err.Error()}}, nil
-	}
-	nickname := strings.TrimSpace(req.Body.Nickname)
-	if n := utf8.RuneCountInString(nickname); n == 0 || n > nicknameMaxChars {
-		return Register400JSONResponse{BadRequestJSONResponse{Message: "nickname must be 1–20 characters"}}, nil
-	}
-	if n := utf8.RuneCountInString(req.Body.Password); n < passwordMinChars || n > passwordMaxChars {
-		return Register400JSONResponse{BadRequestJSONResponse{Message: "password must be 8–128 characters"}}, nil
-	}
-	hash, err := auth.HashPassword(req.Body.Password)
-	if err != nil {
-		return nil, err
-	}
-	u, err := s.Store.CreateUser(ctx, email, nickname, hash)
-	if errors.Is(err, ErrEmailTaken) {
-		return Register409JSONResponse{Message: "this email is already registered"}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	cookie, err := s.startSession(ctx, u.Id)
-	if err != nil {
-		return nil, err
-	}
-	u.IsAdmin = s.isAdmin(u.Email)
-	return Register201JSONResponse{Body: u, Headers: Register201ResponseHeaders{SetCookie: &cookie}}, nil
-}
-
 func (s *Server) Login(ctx context.Context, req LoginRequestObject) (LoginResponseObject, error) {
 	if req.Body == nil {
 		return Login401JSONResponse{UnauthorizedJSONResponse{Message: msgBadCreds}}, nil

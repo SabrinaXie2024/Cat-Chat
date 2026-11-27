@@ -84,7 +84,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items CASCADE`); err != nil {
+	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations CASCADE`); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -247,6 +247,53 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		}
 		if _, err := s.CreateReply(ctx, p.Id, u, api.NewReply{Content: "r", Images: []string{mine}}); err != nil {
 			t.Fatal(err)
+		}
+	})
+
+	t.Run("pending registrations", func(t *testing.T) {
+		s := newStore(t)
+		if _, err := s.PendingRegistration(ctx, "p@b.co"); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("missing: %v", err)
+		}
+		at := now.Truncate(time.Second)
+		p := api.PendingRegistration{
+			Email: "p@b.co", Nickname: "小猫", PasswordHash: "h", CodeHash: "c1",
+			ExpiresAt: at.Add(5 * time.Minute), LastSentAt: at, WindowStart: at, SendCount: 1,
+		}
+		if err := s.SavePendingRegistration(ctx, p); err != nil {
+			t.Fatal(err)
+		}
+		if n, err := s.RecordWrongCode(ctx, "p@b.co"); err != nil || n != 1 {
+			t.Fatalf("attempts %d %v", n, err)
+		}
+		// Re-sending replaces the code and resets attempts.
+		p.CodeHash, p.SendCount = "c2", 2
+		_ = s.SavePendingRegistration(ctx, p)
+		got, err := s.PendingRegistration(ctx, "p@b.co")
+		if err != nil || got.CodeHash != "c2" || got.Attempts != 0 || got.SendCount != 2 || !got.ExpiresAt.Equal(p.ExpiresAt) {
+			t.Fatalf("got %+v %v", got, err)
+		}
+
+		u, err := s.CompleteRegistration(ctx, "p@b.co")
+		if err != nil || u.Email != "p@b.co" || u.Nickname != "小猫" {
+			t.Fatalf("complete %+v %v", u, err)
+		}
+		if _, hash, _ := s.UserByEmail(ctx, "p@b.co"); hash != "h" {
+			t.Fatalf("hash = %q", hash)
+		}
+		if _, err := s.PendingRegistration(ctx, "p@b.co"); !errors.Is(err, api.ErrNotFound) {
+			t.Fatal("pending row should be gone")
+		}
+
+		// Email registered meanwhile.
+		p.Email = "taken@b.co"
+		_ = s.SavePendingRegistration(ctx, p)
+		seedUser(t, s, "taken@b.co")
+		if _, err := s.CompleteRegistration(ctx, "taken@b.co"); !errors.Is(err, api.ErrEmailTaken) {
+			t.Fatalf("taken: %v", err)
+		}
+		if _, err := s.CompleteRegistration(ctx, "nobody@b.co"); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("none: %v", err)
 		}
 	})
 

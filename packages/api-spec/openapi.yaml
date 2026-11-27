@@ -27,16 +27,50 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Health" }
-  /auth/register:
+  /auth/register/start:
     post:
-      operationId: register
+      operationId: startRegistration
       tags: [auth]
       security: []
+      description: |
+        Step 1 of sign-up. Validates the details and emails a 6-digit code
+        valid for 5 minutes. No account exists until step 2 succeeds.
+        Calling it again resends a fresh code (60 s cooldown).
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "202":
+          description: Code sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VerificationSent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Sent too recently / too often
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RateLimited" }
+  /auth/register/verify:
+    post:
+      operationId: verifyRegistration
+      tags: [auth]
+      security: []
+      description: |
+        Step 2. On the right code the account is created and signed in.
+        5 wrong attempts void the code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyRegistrationRequest" }
       responses:
         "201":
           description: Account created and signed in
@@ -45,9 +79,18 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400":
+          description: Wrong code
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CodeRejected" }
         "409":
-          description: Email already registered
+          description: Email was registered meanwhile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "410":
+          description: No pending code (expired, voided, or never sent)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -408,6 +451,30 @@ components:
         email: { type: string, maxLength: 254, description: "Validated server-side (net/mail) so errors use the JSON Error shape" }
         password: { type: string, minLength: 8, maxLength: 128 }
         nickname: { type: string, minLength: 1, maxLength: 20 }
+    VerificationSent:
+      type: object
+      required: [expiresInSeconds, resendAfterSeconds]
+      properties:
+        expiresInSeconds: { type: integer }
+        resendAfterSeconds: { type: integer }
+    RateLimited:
+      type: object
+      required: [message, retryAfterSeconds]
+      properties:
+        message: { type: string }
+        retryAfterSeconds: { type: integer }
+    VerifyRegistrationRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email: { type: string, maxLength: 254 }
+        code: { type: string, pattern: "^[0-9]{6}$" }
+    CodeRejected:
+      type: object
+      required: [message, attemptsLeft]
+      properties:
+        message: { type: string }
+        attemptsLeft: { type: integer }
     LoginRequest:
       type: object
       required: [email, password]

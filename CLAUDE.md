@@ -185,6 +185,22 @@ Guards in `pnpm-workspace.yaml`:
 
 ## Auth (email + password)
 
+- Sign-up is two steps and **requires the emailed code**:
+  `POST /auth/register/start` (validates, stores a `pending_registrations`
+  row with the argon2id hash, emails a 6-digit code valid **5 min**) →
+  `POST /auth/register/verify` (creates the user + session atomically). No
+  `users` row exists before verification; there is no one-step register.
+- Code rules (`internal/api/registration.go`): crypto/rand 6 digits, stored
+  as sha256(email:code), constant-time compare, 5 wrong tries void it (410),
+  60 s resend cooldown, ≤ 5 sends/email/hour, ≤ 20 sends/IP/hour
+  (`SendLimiter`, keyed on the TCP peer — swap in the proxy's header when
+  deploying behind one). Stale pending rows are purged hourly.
+- Email: `mail.Mailer`. `RESEND_API_KEY` + `MAIL_FROM` → Resend; otherwise
+  `DevMailer` writes each message to `apps/api/data/mail/` (gitignored) and
+  logs it — read codes there locally. The email is bilingual (中文/English).
+  Go tests use a capturing mailer and an injectable clock.
+- MSW: codes live in `db.pending` (and are `console.info`'d in the browser).
+
 - Passwords: argon2id (`apps/api/internal/auth/password.go`), PHC string with
   params embedded. Unknown-email logins verify against `DummyHash` so timing
   doesn't reveal which emails exist.
@@ -221,8 +237,9 @@ Guards in `pnpm-workspace.yaml`:
 
 ## Not built yet
 
-- Email verification and forgot-password reset (need an email provider;
-  deferred by the user on 2026-11-26).
+- Forgot-password reset (can reuse the mailer + code machinery).
+- A Resend account, verified sending domain and production
+  `RESEND_API_KEY`/`MAIL_FROM`.
 - Login limiter is still in-memory (per process) — move to Postgres/Redis
   before running more than one API instance.
 - Post list returns the newest 100; no pagination yet.

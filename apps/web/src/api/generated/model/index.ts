@@ -16,6 +16,7 @@
 
 export * from './badRequestResponse';
 export * from './changePasswordRequest';
+export * from './codeRejected';
 export * from './error';
 export * from './forbiddenResponse';
 export * from './galleryItem';
@@ -32,10 +33,13 @@ export * from './newPost';
 export * from './newReply';
 export * from './notFoundResponse';
 export * from './post';
+export * from './rateLimited';
 export * from './registerRequest';
 export * from './reply';
 export * from './unauthorizedResponse';
 export * from './uploadImageBody';
 export * from './uploadVideoBody';
 export * from './user';
+export * from './verificationSent';
+export * from './verifyRegistrationRequest';
 export * from './video';

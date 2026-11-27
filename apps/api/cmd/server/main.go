@@ -19,6 +19,7 @@ import (
 	"github.com/cat-chat/api/internal/auth"
 	"github.com/cat-chat/api/internal/blob"
 	"github.com/cat-chat/api/internal/db"
+	"github.com/cat-chat/api/internal/mail"
 	"github.com/cat-chat/api/internal/store"
 	"github.com/cat-chat/api/internal/videos"
 )
@@ -50,7 +51,19 @@ func run() error {
 		return err
 	}
 	pg := store.NewPostgres(pool)
-	go purgeExpiredSessions(ctx, pg)
+	go purgeExpired(ctx, pg)
+
+	var mailer mail.Mailer = mail.DevMailer{Dir: envOr("DEV_MAIL_DIR", "data/mail")}
+	if key := os.Getenv("RESEND_API_KEY"); key != "" {
+		from := os.Getenv("MAIL_FROM")
+		if from == "" {
+			return errors.New("MAIL_FROM is required with RESEND_API_KEY (e.g. \"MeowSphere <noreply@your-domain>\")")
+		}
+		mailer = mail.Resend{APIKey: key, From: from}
+		slog.Info("email via Resend", "from", from)
+	} else {
+		slog.Warn("RESEND_API_KEY not set: verification emails are written to the dev mailbox, not sent")
+	}
 
 	if _, err := exec.LookPath(envOr("FFMPEG", "ffmpeg")); err != nil {
 		slog.Warn("ffmpeg not found; video uploads will fail", "err", err)
@@ -67,6 +80,8 @@ func run() error {
 			Videos:       videos.Processor{FFmpeg: os.Getenv("FFMPEG")},
 			VideoWorkDir: filepath.Join(videoDir, ".tmp"),
 			AdminEmails:  parseAdmins(os.Getenv("ADMIN_EMAILS")),
+			Mailer:       mailer,
+			SendLimiter:  newSendLimiter(),
 			Limiter:      auth.NewLoginLimiter(),
 			// Secure cookies need HTTPS; local dev over plain http sets
 			// INSECURE_COOKIES=1 (see root package.json dev:api).
@@ -99,6 +114,7 @@ func newHandler(s *api.Server) http.Handler {
 
 	var h http.Handler = mux
 	h = s.SessionMiddleware(h)
+	h = api.ClientIPMiddleware(h)
 	// CSRF: reject cross-origin browser POST/PUT/DELETE (Sec-Fetch-Site /
 	// Origin check). SameSite=Lax cookies are the second layer.
 	h = http.NewCrossOriginProtection().Handler(h)
@@ -139,14 +155,27 @@ func securityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-func purgeExpiredSessions(ctx context.Context, pg *store.Postgres) {
+// newSendLimiter caps verification emails per client IP: 20 per hour.
+func newSendLimiter() *auth.LoginLimiter {
+	l := auth.NewLoginLimiter()
+	l.MaxFailures, l.Window = 20, time.Hour
+	return l
+}
+
+func purgeExpired(ctx context.Context, pg *store.Postgres) {
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 	for {
-		if n, err := pg.DeleteExpiredSessions(ctx, time.Now()); err != nil && ctx.Err() == nil {
+		now := time.Now()
+		if n, err := pg.DeleteExpiredSessions(ctx, now); err != nil && ctx.Err() == nil {
 			slog.Warn("session purge failed", "err", err)
 		} else if n > 0 {
 			slog.Info("purged expired sessions", "count", n)
+		}
+		if n, err := pg.DeleteStalePendingRegistrations(ctx, now); err != nil && ctx.Err() == nil {
+			slog.Warn("pending registration purge failed", "err", err)
+		} else if n > 0 {
+			slog.Info("purged stale pending registrations", "count", n)
 		}
 		select {
 		case <-ctx.Done():

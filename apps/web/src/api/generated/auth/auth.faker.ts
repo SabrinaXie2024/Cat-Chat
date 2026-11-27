@@ -18,11 +18,14 @@ import {
 } from '@faker-js/faker';
 
 import type {
-  User
+  User,
+  VerificationSent
 } from '../model';
 
 
-export const getRegisterResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
+export const getStartRegistrationResponseMock = (overrideResponse: Partial<Extract<VerificationSent, object>> = {}): VerificationSent => ({expiresInSeconds: faker.number.int(), resendAfterSeconds: faker.number.int(), ...overrideResponse})
+
+export const getVerifyRegistrationResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 
 export const getLoginResponseMock = (overrideResponse: Partial<Extract<User, object>> = {}): User => ({id: faker.string.alpha({length: {min: 10, max: 20}}), isAdmin: faker.datatype.boolean(), email: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 1, max: 20}}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', ...overrideResponse})
 

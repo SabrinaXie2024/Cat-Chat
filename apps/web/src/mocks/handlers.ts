@@ -10,6 +10,7 @@ import type {
   RegisterRequest,
   Reply,
   User,
+  VerifyRegistrationRequest,
 } from '../api/generated/model'
 import { getGetHealthMockHandler } from '../api/generated/system/system.msw'
 import {
@@ -41,6 +42,18 @@ type Db = {
   images: Map<string, { ownerId: string; blob: Blob }>
   videos: Map<string, { ownerId: string; blob: Blob; posterId: string }>
   gallery: GalleryItem[] // newest first
+  /** Sign-ups awaiting their code, by email. */
+  pending: Map<
+    string,
+    {
+      nickname: string
+      password: string
+      code: string
+      attempts: number
+      sentAt: number
+      expiresAt: number
+    }
+  >
 }
 
 /** Dev convenience account: demo@meowsphere.dev / password123 (admin). */
@@ -58,6 +71,7 @@ export const db: Db = {
   images: new Map(),
   videos: new Map(),
   gallery: [],
+  pending: new Map(),
 }
 
 export function resetDb(seed: Post[] = defaultSeed()) {
@@ -68,6 +82,7 @@ export function resetDb(seed: Post[] = defaultSeed()) {
   db.images = new Map()
   db.videos = new Map()
   db.gallery = []
+  db.pending = new Map()
 }
 
 const imageUrl = (imageId: string) => `/api/images/${imageId}`
@@ -103,7 +118,9 @@ const id = () => `mock-${++seq}`
 export const handlers = [
   getGetHealthMockHandler({ status: 'ok' }),
 
-  http.post<never, RegisterRequest>('*/api/auth/register', async ({ request }) => {
+  // Two-step sign-up, mirroring the server: start emails a 6-digit code
+  // (here: stored in db.pending and logged), verify creates the account.
+  http.post<never, RegisterRequest>('*/api/auth/register/start', async ({ request }) => {
     const body = await request.json()
     const email = body.email.trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad('invalid email address')
@@ -113,11 +130,52 @@ export const handlers = [
     if (body.password.length < 8 || body.password.length > 128)
       return bad('password must be 8–128 characters')
     if (db.users.some((u) => u.email === email)) return bad('this email is already registered', 409)
+    const prev = db.pending.get(email)
+    const now = Date.now()
+    if (prev && now - prev.sentAt < 60_000) {
+      return HttpResponse.json(
+        {
+          message: 'please wait before requesting another code',
+          retryAfterSeconds: Math.ceil((prev.sentAt + 60_000 - now) / 1000),
+        },
+        { status: 429 },
+      )
+    }
+    const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')
+    db.pending.set(email, {
+      nickname,
+      password: body.password,
+      code,
+      attempts: 0,
+      sentAt: now,
+      expiresAt: now + 300_000,
+    })
+    if (typeof window !== 'undefined' && !import.meta.env.VITEST) {
+      console.info(`[mock mail] verification code for ${email}: ${code}`)
+    }
+    return HttpResponse.json({ expiresInSeconds: 300, resendAfterSeconds: 60 }, { status: 202 })
+  }),
+
+  http.post<never, VerifyRegistrationRequest>('*/api/auth/register/verify', async ({ request }) => {
+    const body = await request.json()
+    const email = body.email.trim().toLowerCase()
+    const p = db.pending.get(email)
+    if (!p || Date.now() >= p.expiresAt || p.attempts >= 5)
+      return bad('code expired, request a new one', 410)
+    if (body.code !== p.code) {
+      p.attempts++
+      return HttpResponse.json(
+        { message: 'incorrect verification code', attemptsLeft: Math.max(5 - p.attempts, 0) },
+        { status: 400 },
+      )
+    }
+    db.pending.delete(email)
+    if (db.users.some((u) => u.email === email)) return bad('this email is already registered', 409)
     const user: MockUser = {
       id: id(),
       email,
-      nickname,
-      password: body.password,
+      nickname: p.nickname,
+      password: p.password,
       isAdmin: false,
       createdAt: new Date().toISOString(),
     }

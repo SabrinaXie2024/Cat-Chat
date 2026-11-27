@@ -27,25 +27,40 @@ import type {
   ChangePasswordRequest,
   LoginRequest,
   RegisterRequest,
-  User
+  User,
+  VerificationSent,
+  VerifyRegistrationRequest
 } from '../model';
 
 import {
   getGetMeResponseMock,
   getLoginResponseMock,
-  getRegisterResponseMock
+  getStartRegistrationResponseMock,
+  getVerifyRegistrationResponseMock
 } from './auth.faker';
 
-export { getRegisterResponseMock, getLoginResponseMock, getGetMeResponseMock } from './auth.faker';
+export { getStartRegistrationResponseMock, getVerifyRegistrationResponseMock, getLoginResponseMock, getGetMeResponseMock } from './auth.faker';
 
 
-export const getRegisterMockHandler = (overrideResponse?: User | ((info: Parameters<HttpResponseResolver<PathParams, RegisterRequest>>[0]) => Promise<User> | User), options?: RequestHandlerOptions) => {
-  return http.post<PathParams, RegisterRequest>('*/auth/register', async (info: Parameters<HttpResponseResolver<PathParams, RegisterRequest>>[0]) => {
+export const getStartRegistrationMockHandler = (overrideResponse?: VerificationSent | ((info: Parameters<HttpResponseResolver<PathParams, RegisterRequest>>[0]) => Promise<VerificationSent> | VerificationSent), options?: RequestHandlerOptions) => {
+  return http.post<PathParams, RegisterRequest>('*/auth/register/start', async (info: Parameters<HttpResponseResolver<PathParams, RegisterRequest>>[0]) => {
 
 
     return HttpResponse.json(overrideResponse !== undefined
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
-    : getRegisterResponseMock(),
+    : getStartRegistrationResponseMock(),
+      { status: 202
+      })
+  }, options)
+}
+
+export const getVerifyRegistrationMockHandler = (overrideResponse?: User | ((info: Parameters<HttpResponseResolver<PathParams, VerifyRegistrationRequest>>[0]) => Promise<User> | User), options?: RequestHandlerOptions) => {
+  return http.post<PathParams, VerifyRegistrationRequest>('*/auth/register/verify', async (info: Parameters<HttpResponseResolver<PathParams, VerifyRegistrationRequest>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getVerifyRegistrationResponseMock(),
       { status: 201
       })
   }, options)
@@ -95,7 +110,8 @@ export const getGetMeMockHandler = (overrideResponse?: User | ((info: Parameters
   }, options)
 }
 export const getAuthMock = () => [
-  getRegisterMockHandler(),
+  getStartRegistrationMockHandler(),
+  getVerifyRegistrationMockHandler(),
   getLoginMockHandler(),
   getLogoutMockHandler(),
   getChangePasswordMockHandler(),

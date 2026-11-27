@@ -170,7 +170,7 @@ describe('switching language', () => {
     await user.type(screen.getByLabelText('Email'), 'tom@cat.dev')
     await user.type(screen.getByLabelText('Password (at least 8 characters)'), 'short')
     await user.type(screen.getByLabelText('Confirm password'), 'other')
-    await user.click(screen.getByRole('button', { name: 'Sign up' }))
+    await user.click(screen.getByRole('button', { name: 'Send code' }))
     expect(await screen.findByText('Password must be at least 8 characters')).toBeInTheDocument()
     expect(screen.getByText("Passwords don't match")).toBeInTheDocument()
 
