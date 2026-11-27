@@ -7,7 +7,7 @@ identifiers still say `cat-chat`/`catchat` (npm scopes, Go module, databases,
 repo) on purpose — renaming them is churn with no user-visible effect.
 
 Cat community site: care guide, owner's cat gallery, and a user post/reply
-community. Product requirements: `aichat/Requirement.md` (local only, not in git).
+community. Product requirements: the original brief is kept in the local `aichat/history.md` (not in git).
 
 ## Layout (pnpm monorepo)
 
