@@ -18,6 +18,13 @@ export const ko: Messages = {
   'home.tagline':
     '고양이 키우기 팁, 우리 고양이의 일상, 그리고 여러분의 고양이를 나누는 공간이에요.',
   'home.cta': '고양이 일상 보러 가기',
+  'footer.tagline': '고양이와 고양이를 사랑하는 사람들을 위해',
+  'home.ctaGuide': '반려묘 가이드 읽기',
+  'home.featureGuide': '처음 데려온 날부터 노년기까지, 식사·건강·행동을 한눈에',
+  'home.featureGallery': '우리 고양이의 사진과 동영상',
+  'home.featureCommunity': '우리 집 고양이를 자랑하고 집사들과 이야기해요',
+  'community.subtitle': '고양이의 귀여운 순간을 공유하고 다른 집사들과 이야기해요',
+  'gallery.subtitle': '우리 고양이의 일상 사진과 동영상',
   'gallery.title': '우리 고양이',
   'gallery.list': '우리 고양이 앨범',
   'gallery.empty': '아직 사진이나 동영상이 없어요',

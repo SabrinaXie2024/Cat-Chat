@@ -13,6 +13,7 @@ import {
   useListReplies,
 } from '../../api/generated/posts/posts'
 import { errorMessage } from '../../api/http'
+import { Avatar, buttonClass } from '../../components/ui'
 import { useFieldError, useI18n } from '../../i18n/I18nProvider'
 import { serverErrorKey, useServerError } from '../../i18n/serverErrors'
 import {
@@ -38,7 +39,7 @@ export function Replies({ post }: { post: Post }) {
   const full = post.replyCount >= MAX_REPLIES_PER_POST
 
   return (
-    <div className="mt-3 space-y-3 border-t border-stone-100 pt-3">
+    <div className="mt-3 space-y-3 rounded-xl bg-stone-50/80 p-3 sm:p-4">
       {/* Composer first, then newest replies: the latest conversation is
           what people came to see. */}
       {full ? (
@@ -66,12 +67,15 @@ export function Replies({ post }: { post: Post }) {
       ) : (
         <ol className="space-y-2" aria-label={t('replies.list')}>
           {replies.map((r) => (
-            <li key={r.id} className="rounded-lg bg-stone-50 px-3 py-2 text-sm">
-              <div className="mb-0.5 text-xs text-stone-500">
-                {r.author} · <TimeAgo iso={r.createdAt} />
+            <li key={r.id} className="flex gap-2.5 text-sm">
+              <Avatar name={r.author} size="sm" />
+              <div className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 ring-1 ring-stone-100">
+                <div className="mb-0.5 text-xs text-stone-500">
+                  {r.author} · <TimeAgo iso={r.createdAt} />
+                </div>
+                <p className="whitespace-pre-wrap break-words">{r.content}</p>
+                <ImageGrid urls={r.images} compact />
               </div>
-              <p className="whitespace-pre-wrap break-words">{r.content}</p>
-              <ImageGrid urls={r.images} compact />
             </li>
           ))}
         </ol>
@@ -136,14 +140,14 @@ function ReplyForm({ postId }: { postId: string }) {
           id={inputId}
           placeholder={t('replies.placeholder')}
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-lg border border-stone-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+          className="min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 focus:outline-none"
           {...form.register('content')}
         />
         <button
           type="submit"
           disabled={reply.isPending || uploading}
           title={uploading ? t('images.uploadingTitle') : undefined}
-          className="shrink-0 rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          className={`${buttonClass.primary} shrink-0 px-3 py-2 text-sm`}
         >
           {t('replies.submit')}
         </button>

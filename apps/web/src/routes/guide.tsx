@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AlertTriangle, ArrowUp, Check, Lightbulb, Siren } from 'lucide-react'
 import { Children, isValidElement, type ReactNode, useEffect, useMemo, useRef } from 'react'
 import Markdown, { type Components } from 'react-markdown'
+import { PageHero } from '../components/ui'
 import guideEn from '../content/guide.en.md?raw'
 import guideZh from '../content/guide.md?raw'
 import { useScrollSpy } from '../features/guide/useScrollSpy'
@@ -124,7 +125,8 @@ function Guide() {
     [lang],
   )
   const ids = useMemo(() => sections.map((s) => s.id), [sections])
-  const { active, progress } = useScrollSpy(ids)
+  // Line just below the sticky header (+ mobile chip bar).
+  const { active, progress } = useScrollSpy(ids, 140)
   const activeIndex = Math.max(0, ids.indexOf(active ?? ''))
   const percent = Math.round(progress * 100)
 
@@ -147,7 +149,7 @@ function Guide() {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
-        className="fixed inset-x-0 top-0 z-30 h-1 bg-transparent"
+        className="fixed inset-x-0 top-0 z-50 h-1 bg-transparent"
       >
         <div
           className="h-full bg-brand-500 transition-[width] duration-150"
@@ -155,25 +157,16 @@ function Guide() {
         />
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-100 via-brand-50 to-amber-50 p-6 sm:p-10">
-        <span
-          className="pointer-events-none absolute -right-6 -bottom-10 select-none text-[9rem] opacity-10"
-          aria-hidden
-        >
-          🐾
-        </span>
-        <h1 className="relative text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
-          🐱 {title}
-        </h1>
-        <div className="relative mt-3 max-w-2xl text-stone-700">
-          <Markdown components={components}>{intro}</Markdown>
-        </div>
-      </div>
+      <PageHero
+        icon="📖"
+        title={title}
+        subtitle={<Markdown components={components}>{intro}</Markdown>}
+      />
 
       <div className="lg:grid lg:grid-cols-[15rem_1fr] lg:gap-10">
         <nav aria-label={t('guide.contents')} className="relative">
           {/* Mobile: sticky horizontal chips. */}
-          <div className="sticky top-0 z-20 -mx-4 mb-6 bg-brand-50/90 px-4 py-2 backdrop-blur lg:hidden">
+          <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-6 bg-cream/90 px-4 py-2 backdrop-blur lg:hidden">
             <ol ref={chipsRef} className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
               {sections.map((s, i) => {
                 const current = i === activeIndex
@@ -198,7 +191,7 @@ function Guide() {
           </div>
 
           {/* Desktop: sticky sidebar with progress. */}
-          <div className="sticky top-6 hidden rounded-2xl bg-white/70 p-4 shadow-sm backdrop-blur lg:block">
+          <div className="sticky top-[calc(var(--header-h)+1.5rem)] hidden rounded-2xl bg-white p-4 shadow-card ring-1 ring-stone-100 lg:block">
             <div className="mb-3 flex items-baseline justify-between">
               <h2 className="text-sm font-semibold tracking-wide text-stone-500 uppercase">
                 {t('guide.contents')}
@@ -261,7 +254,7 @@ function Guide() {
               key={s.id}
               id={s.id}
               aria-labelledby={`${s.id}-title`}
-              className="scroll-mt-16 space-y-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100 sm:p-7 lg:scroll-mt-6"
+              className="scroll-mt-[calc(var(--header-h)+4rem)] space-y-4 rounded-2xl bg-white p-5 shadow-card ring-1 ring-stone-100 sm:p-7 lg:scroll-mt-[calc(var(--header-h)+1.5rem)]"
             >
               <div className="flex items-center gap-3">
                 {s.icon && (

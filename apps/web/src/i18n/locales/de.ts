@@ -18,6 +18,13 @@ export const de: Messages = {
   'home.tagline':
     'Tipps zur Katzenhaltung, der Alltag meiner Katzen und ein Ort, an dem du deine teilen kannst.',
   'home.cta': 'Katzenmomente ansehen',
+  'footer.tagline': 'Für Katzen und alle, die sie lieben',
+  'home.ctaGuide': 'Ratgeber lesen',
+  'home.featureGuide': 'Ernährung, Gesundheit und Verhalten – vom ersten Tag bis ins hohe Alter',
+  'home.featureGallery': 'Fotos und Videos meiner Katzen',
+  'home.featureCommunity': 'Zeig deine Katze und plaudere mit anderen Katzenfans',
+  'community.subtitle': 'Teile die schönsten Momente deiner Katze und plaudere mit anderen',
+  'gallery.subtitle': 'Alltagsfotos und -videos meiner Katzen',
   'gallery.title': 'Meine Katzen',
   'gallery.list': 'Album meiner Katzen',
   'gallery.empty': 'Noch keine Fotos oder Videos',

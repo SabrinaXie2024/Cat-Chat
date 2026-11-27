@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { Post } from '../../api/generated/model'
 import { useListPosts } from '../../api/generated/posts/posts'
 import { errorMessage } from '../../api/http'
+import { Avatar, EmptyState } from '../../components/ui'
 import { useI18n } from '../../i18n/I18nProvider'
 import { MAX_REPLIES_PER_POST } from '../../lib/limits'
 import { ImageGrid } from '../images/ImageGrid'
@@ -16,10 +17,10 @@ export function PostList() {
   if (!data) return <p className="text-stone-500">{t('post.loading')}</p>
 
   const posts = data.data
-  if (posts.length === 0) return <p className="text-stone-500">{t('post.empty')}</p>
+  if (posts.length === 0) return <EmptyState icon="🐾">{t('post.empty')}</EmptyState>
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-4">
       {posts.map((p) => (
         <PostCard key={p.id} post={p} />
       ))}
@@ -34,21 +35,33 @@ function PostCard({ post }: { post: Post }) {
 
   return (
     <li
-      className="rounded-xl bg-white p-4 shadow-sm"
+      className="rounded-2xl bg-white p-4 shadow-card ring-1 ring-stone-100 sm:p-5"
       aria-label={t('post.cardLabel', { author: post.author })}
     >
-      <div className="mb-1 text-sm text-stone-500">
-        {post.author} · <TimeAgo iso={post.createdAt} />
+      <div className="mb-3 flex items-center gap-3">
+        <Avatar name={post.author} />
+        <div className="min-w-0 leading-tight">
+          <p className="truncate font-medium text-stone-900">{post.author}</p>
+          <p className="text-xs text-stone-400">
+            <TimeAgo iso={post.createdAt} />
+          </p>
+        </div>
       </div>
       {/* Rendered as text, never HTML — React escapes it (XSS-safe). */}
-      <p className="whitespace-pre-wrap break-words">{post.content}</p>
+      <p className="whitespace-pre-wrap break-words leading-relaxed text-stone-800">
+        {post.content}
+      </p>
       <ImageGrid urls={post.images} />
       <button
         type="button"
         aria-expanded={open}
         aria-controls={repliesId}
         onClick={() => setOpen((o) => !o)}
-        className="mt-2 flex items-center gap-1 rounded-md px-1 py-0.5 text-sm text-stone-500 hover:bg-stone-100 hover:text-stone-800"
+        className={`mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors ${
+          open
+            ? 'bg-brand-100 text-brand-700'
+            : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+        }`}
       >
         <MessageCircle className="size-4" aria-hidden />
         {open ? t('replies.close') : t('replies.open')} {post.replyCount}/{MAX_REPLIES_PER_POST}

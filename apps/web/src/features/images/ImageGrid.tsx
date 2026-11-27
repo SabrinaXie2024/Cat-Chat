@@ -14,7 +14,7 @@ export function ImageGrid({ urls, compact = false }: { urls: string[]; compact?:
               src={url}
               alt={t('images.gridAlt', { n: i + 1 })}
               loading="lazy"
-              className={`${size} rounded-lg bg-stone-100 object-cover hover:opacity-90`}
+              className={`${size} rounded-xl bg-stone-100 object-cover ring-1 ring-stone-100 transition hover:opacity-90`}
             />
           </a>
         </li>

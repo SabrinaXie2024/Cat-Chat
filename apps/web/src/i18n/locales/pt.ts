@@ -19,6 +19,14 @@ export const pt: Messages = {
   'home.tagline':
     'Dicas para cuidar do seu gato, o dia a dia dos meus gatos e um espaço para compartilhar os seus.',
   'home.cta': 'Ver momentos felinos',
+  'footer.tagline': 'Para os gatos e quem os ama',
+  'home.ctaGuide': 'Ler o guia',
+  'home.featureGuide': 'Alimentação, saúde e comportamento, do primeiro dia à velhice',
+  'home.featureGallery': 'Fotos e vídeos dos meus gatos',
+  'home.featureCommunity': 'Mostre seu gato e converse com outros amantes de gatos',
+  'community.subtitle':
+    'Compartilhe os melhores momentos do seu gato e converse com outros tutores',
+  'gallery.subtitle': 'Fotos e vídeos do dia a dia dos meus gatos',
   'gallery.title': 'Meus gatos',
   'gallery.list': 'Álbum dos meus gatos',
   'gallery.empty': 'Ainda não há fotos nem vídeos',

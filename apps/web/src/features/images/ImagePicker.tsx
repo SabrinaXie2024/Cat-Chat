@@ -105,7 +105,7 @@ export function ImagePicker({
     <div className="space-y-1">
       <ul className="flex flex-wrap gap-2" aria-label={t('images.picked')}>
         {items.map((it, i) => (
-          <li key={it.key} className={`relative ${size} overflow-hidden rounded-lg bg-stone-100`}>
+          <li key={it.key} className={`relative ${size} overflow-hidden rounded-xl bg-stone-100`}>
             <img
               src={it.preview}
               alt={t('images.alt', { n: i + 1 })}
@@ -132,7 +132,7 @@ export function ImagePicker({
           <li>
             <label
               htmlFor={inputId}
-              className={`${size} grid cursor-pointer place-items-center rounded-lg border-2 border-dashed border-stone-300 text-stone-400 hover:border-brand-500 hover:text-brand-500`}
+              className={`${size} grid cursor-pointer place-items-center rounded-xl border-2 border-dashed border-brand-200 bg-brand-50/50 text-stone-400 hover:border-brand-500 hover:text-brand-500`}
             >
               <ImagePlus className="size-5" aria-hidden />
               <span className="sr-only">{t('images.add', { max })}</span>

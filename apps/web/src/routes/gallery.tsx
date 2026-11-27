@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { PageHero } from '../components/ui'
 import { useCurrentUser } from '../features/auth/useCurrentUser'
 import { GalleryGrid } from '../features/gallery/GalleryGrid'
 import { GalleryUploader } from '../features/gallery/GalleryUploader'
@@ -12,7 +13,7 @@ function Gallery() {
   const isAdmin = user?.isAdmin === true
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-bold">{t('gallery.title')}</h1>
+      <PageHero icon="🐈" title={t('gallery.title')} subtitle={t('gallery.subtitle')} />
       {isAdmin && <GalleryUploader />}
       <GalleryGrid canManage={isAdmin} />
     </section>

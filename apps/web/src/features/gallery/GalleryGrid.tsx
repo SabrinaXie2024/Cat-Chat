@@ -8,6 +8,7 @@ import {
 } from '../../api/generated/gallery/gallery'
 import type { GalleryItem } from '../../api/generated/model'
 import { errorMessage } from '../../api/http'
+import { EmptyState } from '../../components/ui'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useServerError } from '../../i18n/serverErrors'
 import { TimeAgo } from '../community/TimeAgo'
@@ -20,7 +21,7 @@ export function GalleryGrid({ canManage }: { canManage: boolean }) {
 
   if (error) return <p className="text-red-600">{errorMessage(error)}</p>
   if (!items) return <p className="text-stone-500">{t('post.loading')}</p>
-  if (items.length === 0) return <p className="text-stone-500">{t('gallery.empty')}</p>
+  if (items.length === 0) return <EmptyState icon="📷">{t('gallery.empty')}</EmptyState>
 
   return (
     <ul
@@ -50,9 +51,15 @@ function GalleryCard({ item, canManage }: { item: GalleryItem; canManage: boolea
   const label = item.caption || t(item.kind === 'video' ? 'gallery.video' : 'gallery.photo')
 
   return (
-    <li className="overflow-hidden rounded-xl bg-white shadow-sm" aria-label={label}>
+    <li
+      className="group overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-stone-100 transition hover:-translate-y-0.5 hover:shadow-lift"
+      aria-label={label}
+    >
       {/* Reserve space from known dimensions so the grid doesn't jump. */}
-      <div className="bg-stone-100" style={{ aspectRatio: `${item.width} / ${item.height}` }}>
+      <div
+        className="overflow-hidden bg-stone-100"
+        style={{ aspectRatio: `${item.width} / ${item.height}` }}
+      >
         {item.kind === 'video' ? (
           // biome-ignore lint/a11y/useMediaCaption: user cat clips have no captions track
           <video
@@ -65,7 +72,12 @@ function GalleryCard({ item, canManage }: { item: GalleryItem; canManage: boolea
           />
         ) : (
           <a href={item.url} target="_blank" rel="noopener noreferrer">
-            <img src={item.url} alt={label} loading="lazy" className="size-full object-cover" />
+            <img
+              src={item.url}
+              alt={label}
+              loading="lazy"
+              className="size-full object-cover transition duration-300 group-hover:scale-[1.02]"
+            />
           </a>
         )}
       </div>

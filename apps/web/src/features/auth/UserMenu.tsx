@@ -73,7 +73,7 @@ function AccountDropdown({ nickname }: { nickname: string }) {
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-stone-700 hover:bg-stone-100"
+        className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
       >
         {nickname}
         <ChevronDown
@@ -86,7 +86,7 @@ function AccountDropdown({ nickname }: { nickname: string }) {
           id={menuId}
           role="menu"
           aria-label={t('menu.label')}
-          className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-lg border border-stone-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-xl border border-stone-100 bg-white py-1.5 shadow-lift"
         >
           <Link to="/settings" role="menuitem" className={itemClass}>
             <Settings className="size-4" aria-hidden />

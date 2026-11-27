@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { buttonClass, PageHero } from '../components/ui'
 import { useCurrentUser } from '../features/auth/useCurrentUser'
 import { NewPostForm } from '../features/community/NewPostForm'
 import { PostList } from '../features/community/PostList'
@@ -10,16 +11,16 @@ function Community() {
   const { t } = useI18n()
   const { data: user } = useCurrentUser()
   return (
-    <section className="space-y-6">
-      <h1 className="text-2xl font-bold">{t('community.title')}</h1>
+    <section className="mx-auto max-w-3xl space-y-6">
+      <PageHero icon="💬" title={t('community.title')} subtitle={t('community.subtitle')} />
       {user ? (
         <NewPostForm />
       ) : user === null ? (
-        <p className="rounded-xl bg-white p-4 text-stone-600 shadow-sm">
+        <p className="flex flex-wrap items-center gap-x-1 gap-y-2 rounded-2xl bg-white p-4 text-stone-600 shadow-card ring-1 ring-stone-100 sm:p-5">
           <Link
             to="/login"
             search={{ redirect: '/community' }}
-            className="text-brand-700 hover:underline"
+            className={`${buttonClass.primary} px-3 py-1 text-sm`}
           >
             {t('auth.login')}
           </Link>

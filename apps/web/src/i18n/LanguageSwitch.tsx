@@ -40,7 +40,7 @@ export function LanguageSwitch() {
         aria-controls={menuId}
         aria-label={`${t('lang.label')}: ${languageInfo(lang).nativeName}`}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+        className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900"
       >
         <Languages className="size-4" aria-hidden />
         <span>{languageInfo(lang).nativeName}</span>
@@ -54,7 +54,7 @@ export function LanguageSwitch() {
           id={menuId}
           role="menu"
           aria-label={t('lang.label')}
-          className="absolute right-0 z-20 mt-1 max-h-96 w-44 overflow-y-auto rounded-lg border border-stone-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-20 mt-1 max-h-96 w-44 overflow-y-auto rounded-xl border border-stone-100 bg-white py-1.5 shadow-lift"
         >
           <button
             type="button"

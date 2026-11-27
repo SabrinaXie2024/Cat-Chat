@@ -5,9 +5,11 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { getListPostsQueryKey, useCreatePost } from '../../api/generated/posts/posts'
+import { Avatar, buttonClass } from '../../components/ui'
 import { useFieldError, useI18n } from '../../i18n/I18nProvider'
 import { useServerError } from '../../i18n/serverErrors'
 import { charCount, POST_MAX_CHARS, POST_MAX_IMAGES } from '../../lib/limits'
+import { useCurrentUser } from '../auth/useCurrentUser'
 import { ImagePicker } from '../images/ImagePicker'
 
 const schema = z.object({
@@ -39,32 +41,38 @@ export function NewPostForm() {
     },
   })
   const count = charCount(form.watch('content'))
+  const { data: me } = useCurrentUser()
 
   return (
     <form
       onSubmit={form.handleSubmit((v) =>
         create.mutate({ data: { content: v.content, images: imageIds } }),
       )}
-      className="space-y-2 rounded-xl bg-white p-4 shadow-sm"
+      className="space-y-3 rounded-2xl bg-white p-4 shadow-card ring-1 ring-stone-100 sm:p-5"
     >
-      <label htmlFor="content" className="sr-only">
-        {t('post.label')}
-      </label>
-      <textarea
-        id="content"
-        rows={3}
-        placeholder={t('post.placeholder')}
-        className="w-full resize-none rounded-lg border border-stone-200 p-3 focus:border-brand-500 focus:outline-none"
-        {...form.register('content')}
-      />
+      <div className="flex gap-3">
+        {me && <Avatar name={me.nickname} />}
+        <div className="min-w-0 flex-1">
+          <label htmlFor="content" className="sr-only">
+            {t('post.label')}
+          </label>
+          <textarea
+            id="content"
+            rows={3}
+            placeholder={t('post.placeholder')}
+            className="w-full resize-none rounded-xl border-0 bg-stone-50 p-3 text-stone-900 placeholder:text-stone-400 focus:bg-white focus:ring-4 focus:ring-brand-100 focus:outline-none"
+            {...form.register('content')}
+          />
+        </div>
+      </div>
       <ImagePicker
         max={POST_MAX_IMAGES}
         onChange={setImageIds}
         onBusyChange={setUploading}
         resetSignal={resetSignal}
       />
-      <div className="flex items-center justify-between text-sm">
-        <span className={count > POST_MAX_CHARS ? 'text-red-600' : 'text-stone-500'}>
+      <div className="flex items-center justify-between border-t border-stone-100 pt-3 text-sm">
+        <span className={count > POST_MAX_CHARS ? 'text-red-600' : 'text-stone-400'}>
           {count}/{POST_MAX_CHARS}
           {form.formState.errors.content && (
             <span role="alert" className="ml-2 text-red-600">
@@ -76,7 +84,7 @@ export function NewPostForm() {
           type="submit"
           disabled={create.isPending || uploading}
           title={uploading ? t('images.uploadingTitle') : undefined}
-          className="rounded-lg bg-brand-500 px-4 py-1.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          className={`${buttonClass.primary} px-5`}
         >
           {t('post.submit')}
         </button>

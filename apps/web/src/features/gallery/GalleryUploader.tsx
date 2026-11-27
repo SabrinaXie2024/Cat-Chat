@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { getListGalleryQueryKey, useCreateGalleryItem } from '../../api/generated/gallery/gallery'
 import { uploadImage } from '../../api/generated/images/images'
 import type { Image } from '../../api/generated/model'
+import { buttonClass, inputClass } from '../../components/ui'
 import { useI18n } from '../../i18n/I18nProvider'
 import type { MessageKey } from '../../i18n/messages'
 import { useServerError } from '../../i18n/serverErrors'
@@ -90,8 +91,15 @@ export function GalleryUploader() {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl bg-white p-4 shadow-sm" noValidate>
-      <h2 className="font-semibold">{t('gallery.manage')}</h2>
+    <form
+      onSubmit={submit}
+      className="space-y-4 rounded-2xl border-2 border-dashed border-brand-200 bg-white p-5 shadow-card sm:p-6"
+      noValidate
+    >
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+        <span aria-hidden>➕</span>
+        {t('gallery.manage')}
+      </h2>
       <div className="space-y-1">
         <label htmlFor={fileId} className="block text-sm font-medium text-stone-700">
           {t('gallery.chooseFile')}
@@ -106,7 +114,7 @@ export function GalleryUploader() {
             setError(null)
             setFile(e.target.files?.[0] ?? null)
           }}
-          className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-brand-700 hover:file:bg-orange-100"
+          className="block w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-brand-100 file:px-4 file:py-2 file:font-medium file:text-brand-700 hover:file:bg-brand-200"
         />
         <p className="text-xs text-stone-400">{t('gallery.fileHint')}</p>
       </div>
@@ -119,7 +127,7 @@ export function GalleryUploader() {
           value={caption}
           disabled={busy}
           onChange={(e) => setCaption(e.target.value)}
-          className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          className={inputClass}
         />
         <p
           className={`text-right text-xs ${captionLen > GALLERY_CAPTION_MAX_CHARS ? 'text-red-600' : 'text-stone-400'}`}
@@ -133,11 +141,7 @@ export function GalleryUploader() {
         </p>
       )}
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={busy}
-          className="flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-1.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-        >
+        <button type="submit" disabled={busy} className={buttonClass.primary}>
           {busy ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
           ) : (

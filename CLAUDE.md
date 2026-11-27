@@ -142,6 +142,20 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
 - Tests render in 简体中文 by default; pass `{ lang }` to
   `renderApp`/`renderWithQuery` for others.
 
+## UI system
+
+- Tokens in `apps/web/src/index.css` (`@theme`): brand ramp `brand-50…700`,
+  `cream` page background, `shadow-card` / `shadow-lift`, CJK-friendly
+  `font-sans`, `--header-h` (sticky header height — offset any sticky/
+  scroll-margin element by it).
+- Building blocks in `src/components/ui.tsx`: `PageHero` (every page starts
+  with one), `Card`, `buttonClass.{primary,secondary,ghost,link}`,
+  `inputClass`, `Avatar` (initial + stable colour), `EmptyState`. Use these
+  instead of one-off classes so pages stay consistent.
+- Shell (`routes/__root.tsx`): sticky blurred header with pill nav, footer;
+  content max width `max-w-5xl` (reading pages narrower, e.g. community
+  `max-w-3xl`).
+
 ## Conventions
 
 - **Content limits live in three places and must agree:** the spec,

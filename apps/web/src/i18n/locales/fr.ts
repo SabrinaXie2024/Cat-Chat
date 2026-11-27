@@ -18,6 +18,14 @@ export const fr: Messages = {
   'home.tagline':
     'Des conseils pour bien s’occuper de son chat, le quotidien de mes chats et un espace pour partager les vôtres.',
   'home.cta': 'Voir les moments de chats',
+  'footer.tagline': 'Pour les chats et ceux qui les aiment',
+  'home.ctaGuide': 'Lire le guide',
+  'home.featureGuide': 'Alimentation, santé et comportement, du premier jour aux vieux jours',
+  'home.featureGallery': 'Photos et vidéos de mes chats',
+  'home.featureCommunity': 'Montrez votre chat et discutez avec d’autres amoureux des chats',
+  'community.subtitle':
+    'Partagez les meilleurs moments de votre chat et discutez avec la communauté',
+  'gallery.subtitle': 'Photos et vidéos du quotidien de mes chats',
   'gallery.title': 'Mes chats',
   'gallery.list': 'Album de mes chats',
   'gallery.empty': 'Aucune photo ni vidéo pour le moment',

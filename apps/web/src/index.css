@@ -1,9 +1,43 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Warm "cat café" palette: cream page, white cards, an
+ * orange brand ramp. Use these (bg-brand-*, text-ink-*) rather than ad-hoc
+ * colours so every page matches. Shared building blocks: components/ui.tsx.
+ */
 @theme {
   --color-brand-50: oklch(0.98 0.02 70);
+  --color-brand-100: oklch(0.95 0.045 68);
+  --color-brand-200: oklch(0.9 0.08 62);
+  --color-brand-300: oklch(0.83 0.12 58);
   --color-brand-500: oklch(0.7 0.15 55);
+  --color-brand-600: oklch(0.62 0.15 52);
   --color-brand-700: oklch(0.52 0.13 50);
+  --color-cream: oklch(0.985 0.012 80);
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans",
+    "Microsoft YaHei", "Noto Sans CJK SC", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+
+  --shadow-card: 0 1px 2px oklch(0.4 0.05 60 / 0.06), 0 4px 16px -4px oklch(0.4 0.05 60 / 0.08);
+  --shadow-lift: 0 2px 4px oklch(0.4 0.05 60 / 0.06), 0 12px 32px -8px oklch(0.4 0.05 60 / 0.16);
+}
+
+:root {
+  /* Height of the sticky site header; sticky page elements sit below it. */
+  --header-h: 3.6rem;
+}
+
+@layer base {
+  body {
+    @apply bg-cream text-stone-800 antialiased;
+  }
+  ::selection {
+    @apply bg-brand-200 text-stone-900;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
