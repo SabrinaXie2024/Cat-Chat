@@ -10,3 +10,8 @@ apps/api/bin/
 apps/web/src/routeTree.gen.ts
 *.tsbuildinfo
 apps/api/data/
+
+# Local AI chat history (never commit)
+aichat/
+CLAUDE.local.md
+.claude/settings.local.json
