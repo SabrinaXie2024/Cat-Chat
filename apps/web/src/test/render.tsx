@@ -18,12 +18,13 @@ export function renderWithQuery(ui: ReactElement, { lang = 'zh' }: { lang?: Lang
 }
 
 /** Renders the whole app (real routes, MSW API) starting at `path`. */
-export function renderApp(path = '/', { lang = 'zh' }: { lang?: Lang } = {}) {
+/** `lang: null` = no pinned language, i.e. follow the (stubbed) system language. */
+export function renderApp(path = '/', { lang = 'zh' }: { lang?: Lang | null } = {}) {
   const queryClient = newQueryClient()
   const history = createMemoryHistory({ initialEntries: [path] })
   const router = createRouter({ routeTree, history, context: { queryClient } })
   const result = render(
-    <I18nProvider initialLang={lang}>
+    <I18nProvider initialLang={lang ?? undefined}>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
         <Toaster />

@@ -38,17 +38,22 @@ const limitVars = {
 type Vars = Record<string, string | number>
 export type T = (key: MessageKey, vars?: Vars) => string
 
-type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: T; dateLocale: Locale }
+type Ctx = {
+  lang: Lang
+  /** Pin a language (saved). */
+  setLang: (l: Lang) => void
+  /** True when no language is pinned and the system language is used. */
+  followingSystem: boolean
+  systemLang: Lang
+  /** Forget the pinned language and follow the system again. */
+  followSystem: () => void
+  t: T
+  dateLocale: Locale
+}
 const I18nContext = createContext<Ctx | null>(null)
 
-/** Saved choice → first supported browser language → English. */
-export function detectLang(): Lang {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (isLang(saved)) return saved
-  } catch {
-    // storage blocked (private mode etc.) — fall through
-  }
+/** First supported language in the browser/OS preference list, else English. */
+export function systemLang(): Lang {
   const prefs =
     typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language])
   for (const tag of prefs) {
@@ -56,6 +61,20 @@ export function detectLang(): Lang {
     if (lang) return lang
   }
   return 'en'
+}
+
+function savedLang(): Lang | undefined {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return isLang(saved) ? saved : undefined
+  } catch {
+    return undefined // storage blocked (private mode etc.)
+  }
+}
+
+/** Saved choice → system language → English. */
+export function detectLang(): Lang {
+  return savedLang() ?? systemLang()
 }
 
 export function translate(lang: Lang, key: MessageKey, vars?: Vars): string {
@@ -72,14 +91,32 @@ export function I18nProvider({
   children: ReactNode
   initialLang?: Lang
 }) {
-  const [lang, setLangState] = useState<Lang>(() => initialLang ?? detectLang())
+  // No saved choice = follow the system language (and its later changes).
+  const [chosen, setChosen] = useState<Lang | undefined>(() => initialLang ?? savedLang())
+  const [system, setSystem] = useState<Lang>(systemLang)
+  const lang = chosen ?? system
+
+  useEffect(() => {
+    const onChange = () => setSystem(systemLang())
+    window.addEventListener('languagechange', onChange)
+    return () => window.removeEventListener('languagechange', onChange)
+  }, [])
 
   const setLang = useCallback((l: Lang) => {
-    setLangState(l)
+    setChosen(l)
     try {
       localStorage.setItem(STORAGE_KEY, l)
     } catch {
       // not persisted; still switches for this visit
+    }
+  }, [])
+
+  const followSystem = useCallback(() => {
+    setChosen(undefined)
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch {
+      // nothing saved to clear
     }
   }, [])
 
@@ -93,10 +130,13 @@ export function I18nProvider({
     () => ({
       lang,
       setLang,
+      followingSystem: chosen === undefined,
+      systemLang: system,
+      followSystem,
       t: (key, vars) => translate(lang, key, vars),
       dateLocale: languageInfo(lang).dateLocale,
     }),
-    [lang, setLang],
+    [lang, chosen, system, setLang, followSystem],
   )
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }

@@ -124,9 +124,11 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   speakers review before relying on them.
 - `useI18n()` → `{ lang, setLang, t, dateLocale }`. `t(key, vars)`; product
   limits (`{postMax}`, `{passwordMin}`, `{captionMax}` …) are always vars.
-- Language = saved choice (`localStorage.lang`) → first supported browser
-  language (`matchLang`: zh-Hant/TW/HK/MO → zh-TW, other zh → zh, else by
-  base tag) → English. Picker: `LanguageSwitch` dropdown (menuitemradio).
+- Language = pinned choice (`localStorage.lang`) → system language: first
+  supported entry of `navigator.languages` (`matchLang`: zh-Hant/TW/HK/MO →
+  zh-TW, other zh → zh, else by base tag) → English. With nothing pinned the
+  UI follows `languagechange` live. Picker: `LanguageSwitch` dropdown —
+  "跟随系统 / Match system" (un-pins) + the 10 languages.
 - **Never hard-code UI text.** Zod schemas use message *keys* as messages
   and forms translate with `useFieldError()`, so shown errors follow a
   language switch. Server errors stay English in the API and are mapped to

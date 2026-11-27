@@ -5,7 +5,7 @@ import { LANGUAGES, languageInfo } from './languages'
 
 /** Accessible language picker (menu of radio items, Escape/outside-click close). */
 export function LanguageSwitch() {
-  const { lang, setLang, t } = useI18n()
+  const { lang, setLang, t, followingSystem, systemLang, followSystem } = useI18n()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -54,14 +54,36 @@ export function LanguageSwitch() {
           id={menuId}
           role="menu"
           aria-label={t('lang.label')}
-          className="absolute right-0 z-20 mt-1 max-h-80 w-40 overflow-y-auto rounded-lg border border-stone-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-20 mt-1 max-h-96 w-44 overflow-y-auto rounded-lg border border-stone-200 bg-white py-1 shadow-lg"
         >
+          <button
+            type="button"
+            role="menuitemradio"
+            aria-checked={followingSystem}
+            onClick={() => {
+              followSystem()
+              setOpen(false)
+              buttonRef.current?.focus()
+            }}
+            className="flex w-full items-center justify-between gap-2 border-b border-stone-100 px-3 py-1.5 text-left text-sm text-stone-700 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none"
+          >
+            <span>
+              {t('lang.system')}
+              <span
+                className="block text-xs text-stone-400"
+                lang={languageInfo(systemLang).htmlLang}
+              >
+                {languageInfo(systemLang).nativeName}
+              </span>
+            </span>
+            {followingSystem && <Check className="size-4 shrink-0 text-brand-700" aria-hidden />}
+          </button>
           {LANGUAGES.map((l) => (
             <button
               key={l.code}
               type="button"
               role="menuitemradio"
-              aria-checked={l.code === lang}
+              aria-checked={!followingSystem && l.code === lang}
               lang={l.htmlLang}
               onClick={() => {
                 setLang(l.code)
@@ -71,7 +93,9 @@ export function LanguageSwitch() {
               className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm text-stone-700 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none"
             >
               {l.nativeName}
-              {l.code === lang && <Check className="size-4 text-brand-700" aria-hidden />}
+              {!followingSystem && l.code === lang && (
+                <Check className="size-4 text-brand-700" aria-hidden />
+              )}
             </button>
           ))}
         </div>

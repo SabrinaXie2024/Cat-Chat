@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEMO_USER, db } from '../mocks/handlers'
@@ -93,6 +93,70 @@ describe('detectLang', () => {
   })
 })
 
+describe('following the system language', () => {
+  afterEach(() => {
+    localStorage.clear()
+    vi.unstubAllGlobals()
+  })
+  const system = (languages: string[]) =>
+    vi.stubGlobal('navigator', { ...navigator, languages, language: languages[0] })
+  const heading = (name: string) => screen.findByRole('heading', { name })
+
+  it('uses the system language when nothing is pinned', async () => {
+    system(['ja-JP', 'en'])
+    renderApp('/community', { lang: null })
+    expect(await heading('ねこ日和')).toBeInTheDocument()
+  })
+
+  it('falls back to English for an unsupported system language', async () => {
+    system(['it-IT', 'nl-NL'])
+    renderApp('/community', { lang: null })
+    expect(await heading('Cat Moments')).toBeInTheDocument()
+  })
+
+  it('"match system" un-pins a chosen language', async () => {
+    system(['ko-KR'])
+    localStorage.setItem('lang', 'de')
+    const user = userEvent.setup()
+    renderApp('/community', { lang: null })
+    expect(await heading('Katzenmomente')).toBeInTheDocument()
+
+    const nav = within(screen.getByRole('banner')).getByRole('navigation')
+    await user.click(within(nav).getByRole('button', { name: /: Deutsch$/ }))
+    const follow = within(screen.getByRole('menu')).getAllByRole('menuitemradio')[0] as HTMLElement
+    expect(follow).toHaveTextContent('한국어') // shows what "system" currently is
+    await user.click(follow)
+
+    expect(await heading('고양이 일상')).toBeInTheDocument()
+    expect(localStorage.getItem('lang')).toBeNull()
+    await user.click(within(nav).getByRole('button', { name: /: 한국어$/ }))
+    expect(within(screen.getByRole('menu')).getAllByRole('menuitemradio')[0]).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+  })
+
+  it('follows OS language changes live, but not once a language is pinned', async () => {
+    system(['fr-FR'])
+    const user = userEvent.setup()
+    renderApp('/community', { lang: null })
+    expect(await heading('Moments de chats')).toBeInTheDocument()
+
+    system(['es-ES'])
+    act(() => window.dispatchEvent(new Event('languagechange')))
+    expect(await heading('Momentos gatunos')).toBeInTheDocument()
+
+    const nav = within(screen.getByRole('banner')).getByRole('navigation')
+    await user.click(within(nav).getByRole('button', { name: /: Español$/ }))
+    await user.click(
+      within(screen.getByRole('menu')).getByRole('menuitemradio', { name: 'English' }),
+    )
+    system(['ja-JP'])
+    act(() => window.dispatchEvent(new Event('languagechange')))
+    expect(await heading('Cat Moments')).toBeInTheDocument()
+  })
+})
+
 describe('switching language', () => {
   afterEach(() => localStorage.clear())
 
@@ -108,13 +172,14 @@ describe('switching language', () => {
     await user.click(within(screen.getByRole('menu')).getByRole('menuitemradio', { name: target }))
   }
 
-  it('dropdown lists all languages in their own names and marks the current one', async () => {
+  it('dropdown offers "match system" plus all languages in their own names', async () => {
     const user = userEvent.setup()
     renderApp('/')
     const nav = within(await screen.findByRole('banner')).getByRole('navigation')
     await user.click(within(nav).getByRole('button', { name: '语言: 简体中文' }))
     const items = within(screen.getByRole('menu', { name: '语言' })).getAllByRole('menuitemradio')
-    expect(items.map((i) => i.textContent)).toEqual(LANGUAGES.map((l) => l.nativeName))
+    expect(items[0]).toHaveTextContent('跟随系统')
+    expect(items.slice(1).map((i) => i.textContent)).toEqual(LANGUAGES.map((l) => l.nativeName))
     expect(
       items.filter((i) => i.getAttribute('aria-checked') === 'true').map((i) => i.textContent),
     ).toEqual(['简体中文'])

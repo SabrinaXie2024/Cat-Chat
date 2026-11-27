@@ -4,6 +4,7 @@ export const ru: Messages = {
   brand: 'Мяусфера',
   docTitle: 'Мяусфера · MeowSphere',
   'lang.label': 'Язык',
+  'lang.system': 'Как в системе',
 
   'nav.guide': 'Уход за кошкой',
   'nav.gallery': 'Мои кошки',

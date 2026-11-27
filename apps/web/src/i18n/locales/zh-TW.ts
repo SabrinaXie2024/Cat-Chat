@@ -5,6 +5,7 @@ export const zhTW: Messages = {
   brand: '喵友圈',
   docTitle: '喵友圈 · MeowSphere',
   'lang.label': '語言',
+  'lang.system': '跟隨系統',
 
   'nav.guide': '養貓攻略',
   'nav.gallery': '我的貓咪',

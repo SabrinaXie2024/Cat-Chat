@@ -5,6 +5,7 @@ export const pt: Messages = {
   brand: 'Miausfera',
   docTitle: 'Miausfera · MeowSphere',
   'lang.label': 'Idioma',
+  'lang.system': 'Idioma do sistema',
 
   'nav.guide': 'Guia felino',
   'nav.gallery': 'Meus gatos',

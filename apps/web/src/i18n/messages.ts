@@ -7,6 +7,7 @@ export const zh = {
   brand: '喵友圈',
   docTitle: '喵友圈 · MeowSphere',
   'lang.label': '语言',
+  'lang.system': '跟随系统',
 
   'nav.guide': '养猫攻略',
   'nav.gallery': '我的猫咪',
@@ -150,6 +151,7 @@ export const en: Messages = {
   brand: 'MeowSphere',
   docTitle: 'MeowSphere',
   'lang.label': 'Language',
+  'lang.system': 'Match system',
 
   'nav.guide': 'Cat Care',
   'nav.gallery': 'My Cats',

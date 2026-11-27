@@ -4,6 +4,7 @@ export const ko: Messages = {
   brand: '냥친구',
   docTitle: '냥친구 · MeowSphere',
   'lang.label': '언어',
+  'lang.system': '시스템 설정 따르기',
 
   'nav.guide': '반려묘 가이드',
   'nav.gallery': '우리 고양이',

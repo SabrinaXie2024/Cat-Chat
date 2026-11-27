@@ -4,6 +4,7 @@ export const ja: Messages = {
   brand: 'ニャン友',
   docTitle: 'ニャン友 · MeowSphere',
   'lang.label': '言語',
+  'lang.system': 'システムに合わせる',
 
   'nav.guide': '飼い方ガイド',
   'nav.gallery': 'うちの猫',
