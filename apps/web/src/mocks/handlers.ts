@@ -60,6 +60,9 @@ type Db = {
   >
 }
 
+/** Every mock verification code (sign-up and password reset). */
+export const MOCK_CODE = '123456'
+
 /** Dev convenience account: demo@meowsphere.dev / password123 (admin). */
 export const DEMO_USER = {
   email: 'demo@meowsphere.dev',
@@ -147,7 +150,7 @@ export const handlers = [
         { status: 429 },
       )
     }
-    const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')
+    const code = MOCK_CODE
     db.pending.set(email, {
       nickname,
       password: body.password,
@@ -208,7 +211,7 @@ export const handlers = [
           { status: 429 },
         )
       }
-      const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')
+      const code = MOCK_CODE
       db.resets.set(email, { code, attempts: 0, sentAt: now, expiresAt: now + 300_000 })
       if (
         db.users.some((u) => u.email === email) &&

@@ -64,6 +64,10 @@ func run() error {
 	} else {
 		slog.Warn("RESEND_API_KEY not set: verification emails are written to the dev mailbox, not sent")
 	}
+	fixedCode, err := devFixedCode(os.Getenv("DEV_FIXED_CODE"), os.Getenv("RESEND_API_KEY") != "")
+	if err != nil {
+		return err
+	}
 
 	if _, err := exec.LookPath(envOr("FFMPEG", "ffmpeg")); err != nil {
 		slog.Warn("ffmpeg not found; video uploads will fail", "err", err)
@@ -82,6 +86,7 @@ func run() error {
 			AdminEmails:  parseAdmins(os.Getenv("ADMIN_EMAILS")),
 			Mailer:       mailer,
 			SendLimiter:  newSendLimiter(),
+			FixedCode:    fixedCode,
 			Limiter:      auth.NewLoginLimiter(),
 			// Secure cookies need HTTPS; local dev over plain http sets
 			// INSECURE_COOKIES=1 (see root package.json dev:api).
@@ -153,6 +158,22 @@ func securityHeaders(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// devFixedCode validates DEV_FIXED_CODE. It's a local testing aid and is
+// refused outright when real email is configured, so it can't reach users.
+func devFixedCode(v string, realEmail bool) (string, error) {
+	if v == "" {
+		return "", nil
+	}
+	if realEmail {
+		return "", errors.New("DEV_FIXED_CODE must not be set when RESEND_API_KEY is (real email = real users)")
+	}
+	if len(v) != 6 || strings.Trim(v, "0123456789") != "" {
+		return "", errors.New("DEV_FIXED_CODE must be 6 digits")
+	}
+	slog.Warn("DEV_FIXED_CODE is set: every verification code is " + v + " (testing only)")
+	return v, nil
 }
 
 // newSendLimiter caps verification emails per client IP: 20 per hour.

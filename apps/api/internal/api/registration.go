@@ -49,7 +49,12 @@ func clientIP(ctx context.Context) string {
 	return ip
 }
 
-func newCode() (string, error) {
+// newCode returns a fresh 6-digit code, or FixedCode when set (local testing
+// only — main refuses to start with it when real email is configured).
+func (s *Server) newCode() (string, error) {
+	if s.FixedCode != "" {
+		return s.FixedCode, nil
+	}
 	n, err := rand.Int(rand.Reader, big.NewInt(1_000_000))
 	if err != nil {
 		return "", err
@@ -144,7 +149,7 @@ func (s *Server) StartRegistration(ctx context.Context, req StartRegistrationReq
 	if err != nil {
 		return nil, err
 	}
-	code, err := newCode()
+	code, err := s.newCode()
 	if err != nil {
 		return nil, err
 	}

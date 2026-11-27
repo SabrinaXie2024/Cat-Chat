@@ -116,7 +116,9 @@ type Server struct {
 	// client IP (anti mail-bombing).
 	Mailer      mail.Mailer
 	SendLimiter LoginLimiter
-	Limiter     LoginLimiter
+	// FixedCode, if set, replaces random verification codes (dev only).
+	FixedCode string
+	Limiter   LoginLimiter
 	// SecureCookies sets the Secure flag; true everywhere except local http.
 	SecureCookies bool
 	Now           func() time.Time

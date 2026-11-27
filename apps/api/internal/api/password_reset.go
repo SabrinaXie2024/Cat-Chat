@@ -51,7 +51,7 @@ func (s *Server) StartPasswordReset(ctx context.Context, req StartPasswordResetR
 	}
 	registered := lookupErr == nil
 
-	code, err := newCode()
+	code, err := s.newCode()
 	if err != nil {
 		return nil, err
 	}

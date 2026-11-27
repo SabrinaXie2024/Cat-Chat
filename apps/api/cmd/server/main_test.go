@@ -832,3 +832,38 @@ func TestPasswordResetExpiresAndUnlocksLogin(t *testing.T) {
 	// The owner proved access, so the login lockout is lifted.
 	newClientOn(t, c).mustStatus(200, "POST", "/api/auth/login", `{"email":"mimi@example.com","password":"newpassword1"}`)
 }
+
+func TestDevFixedCode(t *testing.T) {
+	if v, err := devFixedCode("", false); v != "" || err != nil {
+		t.Fatalf("unset: %q %v", v, err)
+	}
+	if v, err := devFixedCode("123456", false); v != "123456" || err != nil {
+		t.Fatalf("dev: %q %v", v, err)
+	}
+	if _, err := devFixedCode("123456", true); err == nil {
+		t.Fatal("must refuse a fixed code when real email is configured")
+	}
+	for _, bad := range []string{"12345", "1234567", "12345a"} {
+		if _, err := devFixedCode(bad, false); err == nil {
+			t.Fatalf("%q should be rejected", bad)
+		}
+	}
+}
+
+func TestFixedCodeIsUsedWhenSet(t *testing.T) {
+	c := newClient(t)
+	// Reach into the server under test: newClient builds it, so rebuild one
+	// with FixedCode to check both flows honour it.
+	mb := &captureMailer{codes: map[string]string{}}
+	srv := httptest.NewServer(newHandler(&api.Server{
+		Store: store.NewMemory(), Blobs: blob.Local{Dir: t.TempDir()}, Mailer: mb,
+		SendLimiter: newSendLimiter(), Limiter: auth.NewLoginLimiter(), Now: time.Now, FixedCode: "123456",
+	}))
+	t.Cleanup(srv.Close)
+	mailers.Store(srv, mb)
+	c.srv = srv
+	c.mustStatus(202, "POST", "/api/auth/register/start", `{"email":"f@cat.dev","password":"password123","nickname":"f"}`)
+	c.mustStatus(201, "POST", "/api/auth/register/verify", `{"email":"f@cat.dev","code":"123456"}`)
+	c.mustStatus(202, "POST", "/api/auth/password-reset/start", `{"email":"f@cat.dev"}`)
+	c.mustStatus(200, "POST", "/api/auth/password-reset/complete", `{"email":"f@cat.dev","code":"123456","newPassword":"newpassword1"}`)
+}

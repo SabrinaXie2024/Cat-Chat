@@ -199,6 +199,9 @@ Guards in `pnpm-workspace.yaml`:
   `DevMailer` writes each message to `apps/api/data/mail/` (gitignored) and
   logs it — read codes there locally. The email is bilingual (中文/English).
   Go tests use a capturing mailer and an injectable clock.
+- `DEV_FIXED_CODE=123456` (set in the local `.env.local`) makes every code
+  fixed for manual testing; `main` refuses to start if it's combined with
+  `RESEND_API_KEY`. MSW mocks always use `MOCK_CODE` (123456).
 - Forgot password (`/forgot-password`, linked from login):
   `POST /auth/password-reset/start` always answers 202 with the same body
   for registered and unregistered emails (rows are stored for both, so
