@@ -186,4 +186,8 @@ export const fr: Messages = {
   'avatar.siamese': 'Siamois',
   'avatar.tuxedo': 'Smoking',
   'avatar.tabby': 'Tigré',
+  'avatar.silver': 'Tigré argenté',
+  'avatar.tortie': 'Écaille de tortue',
+  'avatar.cream': 'Crème',
+  'avatar.orange-white': 'Roux et blanc',
 }

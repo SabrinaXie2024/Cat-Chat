@@ -184,4 +184,8 @@ export const ko: Messages = {
   'avatar.siamese': '샴',
   'avatar.tuxedo': '턱시도',
   'avatar.tabby': '고등어',
+  'avatar.silver': '은색 고등어',
+  'avatar.tortie': '카오스',
+  'avatar.cream': '크림',
+  'avatar.orange-white': '치즈 흰둥이',
 }

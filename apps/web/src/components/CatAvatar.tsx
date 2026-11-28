@@ -105,6 +105,54 @@ const LOOKS: Record<Avatar, Look> = {
     mark: '#6e5232',
     marks: stripes,
   },
+  silver: {
+    bg: '#eef2f6',
+    fur: '#cbd2da',
+    ear: '#ead0d6',
+    eye: '#15803d',
+    nose: '#d97b8f',
+    mark: '#7b8490',
+    marks: stripes,
+  },
+  tortie: {
+    bg: '#f6e7da',
+    fur: '#3a2e2a',
+    ear: '#6b5248',
+    eye: '#eab308',
+    nose: '#a8606c',
+    mark: '',
+    marks: () => (
+      <>
+        <ellipse cx="18" cy="30" rx="10" ry="9" fill="#c26b2e" />
+        <ellipse cx="45" cy="25" rx="7" ry="6" fill="#e3a15a" />
+        <ellipse cx="47" cy="46" rx="8" ry="7" fill="#c26b2e" />
+        <ellipse cx="24" cy="51" rx="6" ry="5" fill="#e3a15a" />
+      </>
+    ),
+  },
+  cream: {
+    bg: '#fff7e6',
+    fur: '#f3dcb3',
+    ear: '#f7ccb4',
+    eye: '#b45309',
+    nose: '#e08a8a',
+    mark: '#e0b981',
+    marks: stripes,
+  },
+  'orange-white': {
+    bg: '#fff1e0',
+    fur: '#f59e42',
+    ear: '#fbcfa0',
+    eye: '#3f6212',
+    nose: '#e86a6a',
+    mark: '#fdfcfa',
+    marks: (c) => (
+      <>
+        <path d="M32 24 L26 44 H38 Z" fill={c} />
+        <ellipse cx="32" cy="48" rx="11" ry="8" fill={c} />
+      </>
+    ),
+  },
 }
 
 const SIZES = { sm: 'size-7', md: 'size-10', lg: 'size-20 sm:size-24' } as const

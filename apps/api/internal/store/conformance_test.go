@@ -44,6 +44,22 @@ func TestPostgres(t *testing.T) {
 		if err == nil {
 			t.Fatal("non-lowercase email should be rejected")
 		}
+		// The users.avatar CHECK must accept exactly the API's Avatar enum.
+		all := []api.Avatar{
+			api.Orange, api.Black, api.White, api.Gray, api.Calico, api.Siamese,
+			api.Tuxedo, api.Tabby, api.Silver, api.Tortie, api.Cream, api.OrangeWhite,
+		}
+		for _, a := range all {
+			if !a.Valid() {
+				t.Fatalf("%q is not in the Avatar enum", a)
+			}
+			if _, err := pool.Exec(ctx, `UPDATE users SET avatar = $2 WHERE id = $1`, u.Id, string(a)); err != nil {
+				t.Fatalf("CHECK rejects enum avatar %q: %v", a, err)
+			}
+		}
+		if _, err := pool.Exec(ctx, `UPDATE users SET avatar = 'dog' WHERE id = $1`, u.Id); err == nil {
+			t.Fatal("avatar outside the enum should violate the CHECK")
+		}
 	})
 
 	t.Run("expired sessions are purged", func(t *testing.T) {

@@ -16,6 +16,8 @@
 
 /**
  * One of the site's preset cat avatars (custom uploads aren't allowed).
+ * The users.avatar CHECK constraint repeats this list (latest:
+ * migration 00007).
  */
 export type Avatar = typeof Avatar[keyof typeof Avatar];
 
@@ -29,4 +31,8 @@ export const Avatar = {
   siamese: 'siamese',
   tuxedo: 'tuxedo',
   tabby: 'tabby',
+  silver: 'silver',
+  tortie: 'tortie',
+  cream: 'cream',
+  'orange-white': 'orange-white',
 } as const;

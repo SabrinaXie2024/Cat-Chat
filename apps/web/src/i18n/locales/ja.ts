@@ -183,4 +183,8 @@ export const ja: Messages = {
   'avatar.siamese': 'シャム',
   'avatar.tuxedo': 'ハチワレ',
   'avatar.tabby': 'キジトラ',
+  'avatar.silver': 'サバトラ',
+  'avatar.tortie': 'サビ',
+  'avatar.cream': 'クリーム',
+  'avatar.orange-white': '茶白',
 }

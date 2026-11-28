@@ -209,7 +209,7 @@ function EditProfile({ me, onDone }: { me: User; onDone: () => void }) {
       </div>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-stone-700">{t('profile.avatar')}</legend>
-        <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+        <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
           {AVATARS.map((a) => (
             <label
               key={a}

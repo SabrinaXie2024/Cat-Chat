@@ -41,10 +41,14 @@ export function PostCard({ post }: { post: Post }) {
       aria-label={t('post.cardLabel', { author: post.author })}
     >
       <div className="mb-3 flex items-center gap-3">
+        {/* Same target as the name link below: mouse-only (hover title), so
+            keyboard and screen-reader users get one link per author. */}
         <Link
           to="/users/$userId"
           params={{ userId: post.authorId }}
-          aria-label={t('profile.viewProfile', { name: post.author })}
+          title={t('profile.viewProfile', { name: post.author })}
+          tabIndex={-1}
+          aria-hidden
           className="rounded-full"
         >
           <CatAvatar avatar={post.authorAvatar} />

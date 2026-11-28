@@ -184,4 +184,8 @@ export const zhTW: Messages = {
   'avatar.siamese': '暹羅',
   'avatar.tuxedo': '乳牛貓',
   'avatar.tabby': '虎斑',
+  'avatar.silver': '銀虎斑',
+  'avatar.tortie': '玳瑁',
+  'avatar.cream': '奶油貓',
+  'avatar.orange-white': '橘白',
 }

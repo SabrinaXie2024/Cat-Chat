@@ -184,4 +184,8 @@ export const ru: Messages = {
   'avatar.siamese': 'Сиамский',
   'avatar.tuxedo': 'Смокинг',
   'avatar.tabby': 'Полосатый',
+  'avatar.silver': 'Серебристый',
+  'avatar.tortie': 'Черепаховый',
+  'avatar.cream': 'Кремовый',
+  'avatar.orange-white': 'Рыже-белый',
 }

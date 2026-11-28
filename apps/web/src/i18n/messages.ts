@@ -186,6 +186,10 @@ export const zh = {
   'avatar.siamese': '暹罗',
   'avatar.tuxedo': '奶牛猫',
   'avatar.tabby': '虎斑',
+  'avatar.silver': '银虎斑',
+  'avatar.tortie': '玳瑁',
+  'avatar.cream': '奶油猫',
+  'avatar.orange-white': '橘白',
 } as const
 
 export type MessageKey = keyof typeof zh
@@ -374,4 +378,8 @@ export const en: Messages = {
   'avatar.siamese': 'Siamese',
   'avatar.tuxedo': 'Tuxedo',
   'avatar.tabby': 'Tabby',
+  'avatar.silver': 'Silver tabby',
+  'avatar.tortie': 'Tortoiseshell',
+  'avatar.cream': 'Cream',
+  'avatar.orange-white': 'Orange & white',
 }

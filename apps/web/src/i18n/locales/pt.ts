@@ -186,4 +186,8 @@ export const pt: Messages = {
   'avatar.siamese': 'Siamês',
   'avatar.tuxedo': 'Frajola',
   'avatar.tabby': 'Tigrado',
+  'avatar.silver': 'Tigrado prateado',
+  'avatar.tortie': 'Escaminha',
+  'avatar.cream': 'Creme',
+  'avatar.orange-white': 'Laranja e branco',
 }

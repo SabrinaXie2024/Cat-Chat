@@ -550,8 +550,11 @@ components:
   schemas:
     Avatar:
       type: string
-      description: One of the site's preset cat avatars (custom uploads aren't allowed).
-      enum: [orange, black, white, gray, calico, siamese, tuxedo, tabby]
+      description: |
+        One of the site's preset cat avatars (custom uploads aren't allowed).
+        The users.avatar CHECK constraint repeats this list (latest:
+        migration 00007).
+      enum: [orange, black, white, gray, calico, siamese, tuxedo, tabby, silver, tortie, cream, orange-white]
     ProfileUpdate:
       type: object
       properties:

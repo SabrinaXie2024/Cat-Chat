@@ -20,14 +20,18 @@ import (
 
 // Defines values for Avatar.
 const (
-	Black   Avatar = "black"
-	Calico  Avatar = "calico"
-	Gray    Avatar = "gray"
-	Orange  Avatar = "orange"
-	Siamese Avatar = "siamese"
-	Tabby   Avatar = "tabby"
-	Tuxedo  Avatar = "tuxedo"
-	White   Avatar = "white"
+	Black       Avatar = "black"
+	Calico      Avatar = "calico"
+	Cream       Avatar = "cream"
+	Gray        Avatar = "gray"
+	Orange      Avatar = "orange"
+	OrangeWhite Avatar = "orange-white"
+	Siamese     Avatar = "siamese"
+	Silver      Avatar = "silver"
+	Tabby       Avatar = "tabby"
+	Tortie      Avatar = "tortie"
+	Tuxedo      Avatar = "tuxedo"
+	White       Avatar = "white"
 )
 
 // Valid indicates whether the value is a known member of the Avatar enum.
@@ -37,13 +41,21 @@ func (e Avatar) Valid() bool {
 		return true
 	case Calico:
 		return true
+	case Cream:
+		return true
 	case Gray:
 		return true
 	case Orange:
 		return true
+	case OrangeWhite:
+		return true
 	case Siamese:
 		return true
+	case Silver:
+		return true
 	case Tabby:
+		return true
+	case Tortie:
 		return true
 	case Tuxedo:
 		return true
@@ -106,6 +118,8 @@ func (e NewGalleryItemKind) Valid() bool {
 }
 
 // Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+// The users.avatar CHECK constraint repeats this list (latest:
+// migration 00007).
 type Avatar string
 
 // ChangePasswordRequest defines model for ChangePasswordRequest.
@@ -217,6 +231,8 @@ type Post struct {
 	Author string `json:"author"`
 
 	// AuthorAvatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	// The users.avatar CHECK constraint repeats this list (latest:
+	// migration 00007).
 	AuthorAvatar Avatar     `json:"authorAvatar"`
 	AuthorId     string     `json:"authorId"`
 	Content      string     `json:"content"`
@@ -229,6 +245,8 @@ type Post struct {
 // Profile defines model for Profile.
 type Profile struct {
 	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	// The users.avatar CHECK constraint repeats this list (latest:
+	// migration 00007).
 	Avatar    Avatar    `json:"avatar"`
 	CreatedAt time.Time `json:"createdAt"`
 
@@ -244,6 +262,8 @@ type Profile struct {
 // ProfileUpdate defines model for ProfileUpdate.
 type ProfileUpdate struct {
 	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	// The users.avatar CHECK constraint repeats this list (latest:
+	// migration 00007).
 	Avatar   *Avatar `json:"avatar,omitempty"`
 	Nickname *string `json:"nickname,omitempty"`
 }
@@ -267,6 +287,8 @@ type Reply struct {
 	Author string `json:"author"`
 
 	// AuthorAvatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	// The users.avatar CHECK constraint repeats this list (latest:
+	// migration 00007).
 	AuthorAvatar Avatar     `json:"authorAvatar"`
 	AuthorId     string     `json:"authorId"`
 	Content      string     `json:"content"`
@@ -279,6 +301,8 @@ type Reply struct {
 // User defines model for User.
 type User struct {
 	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	// The users.avatar CHECK constraint repeats this list (latest:
+	// migration 00007).
 	Avatar    Avatar    `json:"avatar"`
 	CreatedAt time.Time `json:"createdAt"`
 	Email     string    `json:"email"`

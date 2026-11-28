@@ -184,4 +184,8 @@ export const de: Messages = {
   'avatar.siamese': 'Siam',
   'avatar.tuxedo': 'Smoking',
   'avatar.tabby': 'Getigert',
+  'avatar.silver': 'Silber getigert',
+  'avatar.tortie': 'Schildpatt',
+  'avatar.cream': 'Creme',
+  'avatar.orange-white': 'Rot-weiß',
 }

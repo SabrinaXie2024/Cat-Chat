@@ -184,4 +184,8 @@ export const es: Messages = {
   'avatar.siamese': 'Siamés',
   'avatar.tuxedo': 'Esmoquin',
   'avatar.tabby': 'Atigrado',
+  'avatar.silver': 'Atigrado plateado',
+  'avatar.tortie': 'Carey',
+  'avatar.cream': 'Crema',
+  'avatar.orange-white': 'Naranja y blanco',
 }

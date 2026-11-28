@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { AVATARS } from '../../components/CatAvatar'
 import { db, resetDb, SEED_AUTHOR_ID } from '../../mocks/handlers'
 import { renderApp } from '../../test/render'
 
@@ -22,6 +23,16 @@ describe('profile page', () => {
     expect(stat('粉丝')).toBe('0')
     expect(screen.getByRole('heading', { name: 'TA 的帖子' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '登录后关注' })).toBeInTheDocument()
+  })
+
+  it('gives keyboard users one link per post author (the avatar copy is mouse-only)', async () => {
+    renderApp('/community')
+    const card = await screen.findByRole('listitem', { name: '橘子妈 的帖子' })
+    const links = within(card).getAllByRole('link')
+    expect(links.map((l) => l.textContent)).toEqual(['橘子妈'])
+    const avatarLink = card.querySelector('a[tabindex="-1"]')
+    expect(avatarLink).toHaveAttribute('aria-hidden', 'true')
+    expect(avatarLink).toHaveAttribute('href', `/users/${SEED_AUTHOR_ID}`)
   })
 
   it('lets a signed-in user follow and unfollow', async () => {
@@ -64,8 +75,12 @@ describe('profile page', () => {
     expect(within(form).getByText('请输入昵称')).toBeInTheDocument()
 
     await user.type(name, '小橘')
-    // Only the presets are offered.
-    expect(within(form).getAllByRole('radio')).toHaveLength(8)
+    // Only the presets are offered — all of them, each with its name.
+    expect(within(form).getAllByRole('radio')).toHaveLength(AVATARS.length)
+    expect(AVATARS).toHaveLength(12)
+    for (const name of ['银虎斑', '玳瑁', '奶油猫', '橘白']) {
+      expect(within(form).getByRole('radio', { name })).toBeInTheDocument()
+    }
     await user.click(within(form).getByRole('radio', { name: '三花' }))
     await user.click(within(form).getByRole('button', { name: '保存' }))
 
