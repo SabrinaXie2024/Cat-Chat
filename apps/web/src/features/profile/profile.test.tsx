@@ -21,7 +21,9 @@ describe('profile page', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '橘子妈' })).toBeInTheDocument()
     expect(stat('帖子')).toBe('1')
     expect(stat('粉丝')).toBe('0')
-    expect(screen.getByRole('heading', { name: 'TA 的帖子' })).toBeInTheDocument()
+    const tabs = within(screen.getByRole('tablist')).getAllByRole('tab')
+    // Favorites are private, so other people's profiles don't show that tab.
+    expect(tabs.map((x) => x.textContent)).toEqual(['帖子', '点赞', '关注', '粉丝'])
     expect(screen.getByRole('link', { name: '登录后关注' })).toBeInTheDocument()
   })
 
@@ -64,7 +66,7 @@ describe('profile page', () => {
     await user.click(await within(banner).findByRole('button', { name: /演示用户/ }))
     await user.click(screen.getByRole('menuitem', { name: '个人主页' }))
     expect(await screen.findByRole('heading', { level: 1, name: '演示用户' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '我的帖子' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '收藏' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '关注' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '编辑资料' }))
@@ -77,8 +79,8 @@ describe('profile page', () => {
     await user.type(name, '小橘')
     // Only the presets are offered — all of them, each with its name.
     expect(within(form).getAllByRole('radio')).toHaveLength(AVATARS.length)
-    expect(AVATARS).toHaveLength(12)
-    for (const name of ['银虎斑', '玳瑁', '奶油猫', '橘白']) {
+    expect(AVATARS).toHaveLength(13)
+    for (const name of ['银虎斑', '玳瑁', '奶油猫', '橘白', '狸花']) {
       expect(within(form).getByRole('radio', { name })).toBeInTheDocument()
     }
     await user.click(within(form).getByRole('radio', { name: '三花' }))

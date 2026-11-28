@@ -105,8 +105,167 @@ func (q *Queries) CreateReply(ctx context.Context, arg CreateReplyParams) (Creat
 	return i, err
 }
 
+const favorite = `-- name: Favorite :exec
+INSERT INTO favorites (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
+`
+
+type FavoriteParams struct {
+	UserID uuid.UUID
+	PostID uuid.UUID
+}
+
+func (q *Queries) Favorite(ctx context.Context, arg FavoriteParams) error {
+	_, err := q.db.Exec(ctx, favorite, arg.UserID, arg.PostID)
+	return err
+}
+
+const like = `-- name: Like :exec
+INSERT INTO likes (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
+`
+
+type LikeParams struct {
+	UserID uuid.UUID
+	PostID uuid.UUID
+}
+
+func (q *Queries) Like(ctx context.Context, arg LikeParams) error {
+	_, err := q.db.Exec(ctx, like, arg.UserID, arg.PostID)
+	return err
+}
+
+const listFavoritePosts = `-- name: ListFavoritePosts :many
+SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at,
+       (SELECT count(*) FROM likes l WHERE l.post_id = p.id)::int AS like_count,
+       EXISTS (SELECT 1 FROM likes l WHERE l.post_id = p.id AND l.user_id = $1::uuid) AS liked_by_me,
+       EXISTS (SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $1::uuid) AS favorited_by_me
+FROM posts p
+JOIN users u ON u.id = p.author_id
+JOIN favorites mine ON mine.post_id = p.id
+WHERE mine.user_id = $2
+ORDER BY mine.created_at DESC, p.id DESC
+LIMIT 100
+`
+
+type ListFavoritePostsParams struct {
+	Viewer *uuid.UUID
+	UserID uuid.UUID
+}
+
+type ListFavoritePostsRow struct {
+	ID            uuid.UUID
+	AuthorID      uuid.UUID
+	Author        string
+	AuthorAvatar  string
+	Content       string
+	Images        []string
+	ReplyCount    int32
+	CreatedAt     time.Time
+	LikeCount     int32
+	LikedByMe     bool
+	FavoritedByMe bool
+}
+
+func (q *Queries) ListFavoritePosts(ctx context.Context, arg ListFavoritePostsParams) ([]ListFavoritePostsRow, error) {
+	rows, err := q.db.Query(ctx, listFavoritePosts, arg.Viewer, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFavoritePostsRow
+	for rows.Next() {
+		var i ListFavoritePostsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AuthorID,
+			&i.Author,
+			&i.AuthorAvatar,
+			&i.Content,
+			&i.Images,
+			&i.ReplyCount,
+			&i.CreatedAt,
+			&i.LikeCount,
+			&i.LikedByMe,
+			&i.FavoritedByMe,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLikedPosts = `-- name: ListLikedPosts :many
+SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at,
+       (SELECT count(*) FROM likes l WHERE l.post_id = p.id)::int AS like_count,
+       EXISTS (SELECT 1 FROM likes l WHERE l.post_id = p.id AND l.user_id = $1::uuid) AS liked_by_me,
+       EXISTS (SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $1::uuid) AS favorited_by_me
+FROM posts p
+JOIN users u ON u.id = p.author_id
+JOIN likes mine ON mine.post_id = p.id
+WHERE mine.user_id = $2
+ORDER BY mine.created_at DESC, p.id DESC
+LIMIT 100
+`
+
+type ListLikedPostsParams struct {
+	Viewer *uuid.UUID
+	UserID uuid.UUID
+}
+
+type ListLikedPostsRow struct {
+	ID            uuid.UUID
+	AuthorID      uuid.UUID
+	Author        string
+	AuthorAvatar  string
+	Content       string
+	Images        []string
+	ReplyCount    int32
+	CreatedAt     time.Time
+	LikeCount     int32
+	LikedByMe     bool
+	FavoritedByMe bool
+}
+
+func (q *Queries) ListLikedPosts(ctx context.Context, arg ListLikedPostsParams) ([]ListLikedPostsRow, error) {
+	rows, err := q.db.Query(ctx, listLikedPosts, arg.Viewer, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLikedPostsRow
+	for rows.Next() {
+		var i ListLikedPostsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AuthorID,
+			&i.Author,
+			&i.AuthorAvatar,
+			&i.Content,
+			&i.Images,
+			&i.ReplyCount,
+			&i.CreatedAt,
+			&i.LikeCount,
+			&i.LikedByMe,
+			&i.FavoritedByMe,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPosts = `-- name: ListPosts :many
-SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at
+SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at,
+       (SELECT count(*) FROM likes l WHERE l.post_id = p.id)::int AS like_count,
+       EXISTS (SELECT 1 FROM likes l WHERE l.post_id = p.id AND l.user_id = $1::uuid) AS liked_by_me,
+       EXISTS (SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $1::uuid) AS favorited_by_me
 FROM posts p
 JOIN users u ON u.id = p.author_id
 ORDER BY p.created_at DESC, p.id DESC
@@ -114,18 +273,22 @@ LIMIT 100
 `
 
 type ListPostsRow struct {
-	ID           uuid.UUID
-	AuthorID     uuid.UUID
-	Author       string
-	AuthorAvatar string
-	Content      string
-	Images       []string
-	ReplyCount   int32
-	CreatedAt    time.Time
+	ID            uuid.UUID
+	AuthorID      uuid.UUID
+	Author        string
+	AuthorAvatar  string
+	Content       string
+	Images        []string
+	ReplyCount    int32
+	CreatedAt     time.Time
+	LikeCount     int32
+	LikedByMe     bool
+	FavoritedByMe bool
 }
 
-func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
-	rows, err := q.db.Query(ctx, listPosts)
+// Every post list selects the same columns (store converts rows to ListPostsRow).
+func (q *Queries) ListPosts(ctx context.Context, viewer *uuid.UUID) ([]ListPostsRow, error) {
+	rows, err := q.db.Query(ctx, listPosts, viewer)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +305,9 @@ func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
 			&i.Images,
 			&i.ReplyCount,
 			&i.CreatedAt,
+			&i.LikeCount,
+			&i.LikedByMe,
+			&i.FavoritedByMe,
 		); err != nil {
 			return nil, err
 		}
@@ -202,27 +368,38 @@ func (q *Queries) ListReplies(ctx context.Context, postID uuid.UUID) ([]ListRepl
 }
 
 const listUserPosts = `-- name: ListUserPosts :many
-SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at
+SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at,
+       (SELECT count(*) FROM likes l WHERE l.post_id = p.id)::int AS like_count,
+       EXISTS (SELECT 1 FROM likes l WHERE l.post_id = p.id AND l.user_id = $1::uuid) AS liked_by_me,
+       EXISTS (SELECT 1 FROM favorites f WHERE f.post_id = p.id AND f.user_id = $1::uuid) AS favorited_by_me
 FROM posts p
 JOIN users u ON u.id = p.author_id
-WHERE p.author_id = $1
+WHERE p.author_id = $2
 ORDER BY p.created_at DESC, p.id DESC
 LIMIT 100
 `
 
-type ListUserPostsRow struct {
-	ID           uuid.UUID
-	AuthorID     uuid.UUID
-	Author       string
-	AuthorAvatar string
-	Content      string
-	Images       []string
-	ReplyCount   int32
-	CreatedAt    time.Time
+type ListUserPostsParams struct {
+	Viewer   *uuid.UUID
+	AuthorID uuid.UUID
 }
 
-func (q *Queries) ListUserPosts(ctx context.Context, authorID uuid.UUID) ([]ListUserPostsRow, error) {
-	rows, err := q.db.Query(ctx, listUserPosts, authorID)
+type ListUserPostsRow struct {
+	ID            uuid.UUID
+	AuthorID      uuid.UUID
+	Author        string
+	AuthorAvatar  string
+	Content       string
+	Images        []string
+	ReplyCount    int32
+	CreatedAt     time.Time
+	LikeCount     int32
+	LikedByMe     bool
+	FavoritedByMe bool
+}
+
+func (q *Queries) ListUserPosts(ctx context.Context, arg ListUserPostsParams) ([]ListUserPostsRow, error) {
+	rows, err := q.db.Query(ctx, listUserPosts, arg.Viewer, arg.AuthorID)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +416,9 @@ func (q *Queries) ListUserPosts(ctx context.Context, authorID uuid.UUID) ([]List
 			&i.Images,
 			&i.ReplyCount,
 			&i.CreatedAt,
+			&i.LikeCount,
+			&i.LikedByMe,
+			&i.FavoritedByMe,
 		); err != nil {
 			return nil, err
 		}
@@ -259,4 +439,32 @@ func (q *Queries) PostExists(ctx context.Context, id uuid.UUID) (bool, error) {
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const unfavorite = `-- name: Unfavorite :exec
+DELETE FROM favorites WHERE user_id = $1 AND post_id = $2
+`
+
+type UnfavoriteParams struct {
+	UserID uuid.UUID
+	PostID uuid.UUID
+}
+
+func (q *Queries) Unfavorite(ctx context.Context, arg UnfavoriteParams) error {
+	_, err := q.db.Exec(ctx, unfavorite, arg.UserID, arg.PostID)
+	return err
+}
+
+const unlike = `-- name: Unlike :exec
+DELETE FROM likes WHERE user_id = $1 AND post_id = $2
+`
+
+type UnlikeParams struct {
+	UserID uuid.UUID
+	PostID uuid.UUID
+}
+
+func (q *Queries) Unlike(ctx context.Context, arg UnlikeParams) error {
+	_, err := q.db.Exec(ctx, unlike, arg.UserID, arg.PostID)
+	return err
 }

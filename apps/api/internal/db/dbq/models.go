@@ -10,6 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type Favorite struct {
+	UserID    uuid.UUID
+	PostID    uuid.UUID
+	CreatedAt time.Time
+}
+
 type Follow struct {
 	FollowerID uuid.UUID
 	FolloweeID uuid.UUID
@@ -32,6 +38,12 @@ type Image struct {
 	Width     int32
 	Height    int32
 	Bytes     int32
+	CreatedAt time.Time
+}
+
+type Like struct {
+	UserID    uuid.UUID
+	PostID    uuid.UUID
 	CreatedAt time.Time
 }
 

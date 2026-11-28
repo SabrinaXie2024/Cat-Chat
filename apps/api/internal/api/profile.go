@@ -35,11 +35,7 @@ func (s *Server) UpdateProfile(ctx context.Context, req UpdateProfileRequestObje
 }
 
 func (s *Server) GetProfile(ctx context.Context, req GetProfileRequestObject) (GetProfileResponseObject, error) {
-	viewer := ""
-	if u, ok := UserFrom(ctx); ok {
-		viewer = u.Id
-	}
-	p, err := s.Store.Profile(ctx, req.UserId, viewer)
+	p, err := s.Store.Profile(ctx, req.UserId, viewerID(ctx))
 	if errors.Is(err, ErrNotFound) {
 		return GetProfile404JSONResponse{NotFoundJSONResponse{Message: "user not found"}}, nil
 	}
@@ -50,7 +46,7 @@ func (s *Server) GetProfile(ctx context.Context, req GetProfileRequestObject) (G
 }
 
 func (s *Server) ListUserPosts(ctx context.Context, req ListUserPostsRequestObject) (ListUserPostsResponseObject, error) {
-	posts, err := s.Store.ListUserPosts(ctx, req.UserId)
+	posts, err := s.Store.ListUserPosts(ctx, req.UserId, viewerID(ctx))
 	if errors.Is(err, ErrNotFound) {
 		return ListUserPosts404JSONResponse{NotFoundJSONResponse{Message: "user not found"}}, nil
 	}
@@ -91,4 +87,64 @@ func (s *Server) UnfollowUser(ctx context.Context, req UnfollowUserRequestObject
 		return nil, err
 	}
 	return UnfollowUser204Response{}, nil
+}
+
+// viewerID is the signed-in user's id, or "".
+func viewerID(ctx context.Context) string {
+	if u, ok := UserFrom(ctx); ok {
+		return u.Id
+	}
+	return ""
+}
+
+func withImageURLs(posts []Post) []Post {
+	for i := range posts {
+		posts[i].Images = imageURLs(posts[i].Images)
+	}
+	return posts
+}
+
+func (s *Server) ListUserLikes(ctx context.Context, req ListUserLikesRequestObject) (ListUserLikesResponseObject, error) {
+	posts, err := s.Store.ListLikedPosts(ctx, req.UserId, viewerID(ctx))
+	if errors.Is(err, ErrNotFound) {
+		return ListUserLikes404JSONResponse{NotFoundJSONResponse{Message: "user not found"}}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ListUserLikes200JSONResponse(withImageURLs(posts)), nil
+}
+
+func (s *Server) ListMyFavorites(ctx context.Context, _ ListMyFavoritesRequestObject) (ListMyFavoritesResponseObject, error) {
+	user, ok := UserFrom(ctx)
+	if !ok {
+		return ListMyFavorites401JSONResponse{UnauthorizedJSONResponse{Message: msgSignIn}}, nil
+	}
+	posts, err := s.Store.ListFavorites(ctx, user.Id)
+	if err != nil {
+		return nil, err
+	}
+	return ListMyFavorites200JSONResponse(withImageURLs(posts)), nil
+}
+
+func (s *Server) ListFollowers(ctx context.Context, req ListFollowersRequestObject) (ListFollowersResponseObject, error) {
+	us, err := s.Store.ListFollowers(ctx, req.UserId)
+	if errors.Is(err, ErrNotFound) {
+		return ListFollowers404JSONResponse{NotFoundJSONResponse{Message: "user not found"}}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ListFollowers200JSONResponse(us), nil
+}
+
+func (s *Server) ListFollowing(ctx context.Context, req ListFollowingRequestObject) (ListFollowingResponseObject, error) {
+	us, err := s.Store.ListFollowing(ctx, req.UserId)
+	if errors.Is(err, ErrNotFound) {
+		return ListFollowing404JSONResponse{NotFoundJSONResponse{Message: "user not found"}}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ListFollowing200JSONResponse(us), nil
 }

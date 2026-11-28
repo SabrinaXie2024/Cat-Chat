@@ -906,3 +906,40 @@ func TestProfileAndFollow(t *testing.T) {
 	other.mustStatus(204, "DELETE", "/api/users/"+me.Id+"/follow", "")
 	other.mustStatus(404, "PUT", "/api/users/nope/follow", "")
 }
+
+func TestLikesAndFavorites(t *testing.T) {
+	c := newClient(t)
+	c.signUp()
+	var post api.Post
+	_ = json.Unmarshal([]byte(c.mustStatus(201, "POST", "/api/posts", `{"content":"hi","images":[]}`)), &post)
+	var me api.User
+	_ = json.Unmarshal([]byte(c.mustStatus(200, "GET", "/api/auth/me", "")), &me)
+
+	anon := newClient(t)
+	anon.srv = c.srv
+	anon.mustStatus(401, "PUT", "/api/posts/"+post.Id+"/like", "")
+	anon.mustStatus(401, "GET", "/api/auth/me/favorites", "")
+
+	c.mustStatus(204, "PUT", "/api/posts/"+post.Id+"/like", "")
+	c.mustStatus(204, "PUT", "/api/posts/"+post.Id+"/favorite", "")
+	c.mustStatus(404, "PUT", "/api/posts/nope/like", "")
+	if body := c.mustStatus(200, "GET", "/api/posts", ""); !strings.Contains(body, `"likedByMe":true`) || !strings.Contains(body, `"favoritedByMe":true`) {
+		t.Fatalf("own view: %s", body)
+	}
+	body := anon.mustStatus(200, "GET", "/api/posts", "")
+	if !strings.Contains(body, `"likeCount":1`) || strings.Contains(body, `"likedByMe":true`) || strings.Contains(body, `"favoritedByMe":true`) {
+		t.Fatalf("anonymous view: %s", body)
+	}
+	if body := anon.mustStatus(200, "GET", "/api/users/"+me.Id+"/likes", ""); !strings.Contains(body, post.Id) {
+		t.Fatalf("likes are public: %s", body)
+	}
+	if body := c.mustStatus(200, "GET", "/api/auth/me/favorites", ""); !strings.Contains(body, post.Id) {
+		t.Fatalf("favorites: %s", body)
+	}
+	c.mustStatus(204, "DELETE", "/api/posts/"+post.Id+"/favorite", "")
+	if body := c.mustStatus(200, "GET", "/api/auth/me/favorites", ""); body != "[]\n" && body != "[]" {
+		t.Fatalf("after unfavorite: %q", body)
+	}
+	anon.mustStatus(200, "GET", "/api/users/"+me.Id+"/followers", "")
+	anon.mustStatus(404, "GET", "/api/users/nope/following", "")
+}

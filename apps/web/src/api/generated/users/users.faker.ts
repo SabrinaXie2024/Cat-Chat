@@ -22,11 +22,20 @@ import {
 } from '../model';
 import type {
   Post,
-  Profile
+  Profile,
+  UserSummary
 } from '../model';
 
 
 export const getGetProfileResponseMock = (overrideResponse: Partial<Extract<Profile, object>> = {}): Profile => ({id: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 10, max: 20}}), avatar: faker.helpers.arrayElement(Object.values(Avatar)), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', postCount: faker.number.int(), followerCount: faker.number.int(), followingCount: faker.number.int(), followedByMe: faker.datatype.boolean(), ...overrideResponse})
 
-export const getListUserPostsResponseMock = (): Post[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), authorId: faker.string.alpha({length: {min: 10, max: 20}}), authorAvatar: faker.helpers.arrayElement(Object.values(Avatar)), content: faker.string.alpha({length: {min: 10, max: 500}}), images: Array.from({ length: faker.number.int({min: 1, max: 5}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), replyCount: faker.number.int({min: 0, max: 10}), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})))
+export const getListUserPostsResponseMock = (): Post[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), authorId: faker.string.alpha({length: {min: 10, max: 20}}), authorAvatar: faker.helpers.arrayElement(Object.values(Avatar)), content: faker.string.alpha({length: {min: 10, max: 500}}), images: Array.from({ length: faker.number.int({min: 1, max: 5}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), replyCount: faker.number.int({min: 0, max: 10}), likeCount: faker.number.int({min: 0}), likedByMe: faker.datatype.boolean(), favoritedByMe: faker.datatype.boolean(), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})))
+
+export const getListUserLikesResponseMock = (): Post[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), authorId: faker.string.alpha({length: {min: 10, max: 20}}), authorAvatar: faker.helpers.arrayElement(Object.values(Avatar)), content: faker.string.alpha({length: {min: 10, max: 500}}), images: Array.from({ length: faker.number.int({min: 1, max: 5}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), replyCount: faker.number.int({min: 0, max: 10}), likeCount: faker.number.int({min: 0}), likedByMe: faker.datatype.boolean(), favoritedByMe: faker.datatype.boolean(), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})))
+
+export const getListMyFavoritesResponseMock = (): Post[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), author: faker.string.alpha({length: {min: 10, max: 20}}), authorId: faker.string.alpha({length: {min: 10, max: 20}}), authorAvatar: faker.helpers.arrayElement(Object.values(Avatar)), content: faker.string.alpha({length: {min: 10, max: 500}}), images: Array.from({ length: faker.number.int({min: 1, max: 5}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), replyCount: faker.number.int({min: 0, max: 10}), likeCount: faker.number.int({min: 0}), likedByMe: faker.datatype.boolean(), favoritedByMe: faker.datatype.boolean(), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})))
+
+export const getListFollowersResponseMock = (): UserSummary[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 10, max: 20}}), avatar: faker.helpers.arrayElement(Object.values(Avatar))})))
+
+export const getListFollowingResponseMock = (): UserSummary[] => (Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), nickname: faker.string.alpha({length: {min: 10, max: 20}}), avatar: faker.helpers.arrayElement(Object.values(Avatar))})))
 

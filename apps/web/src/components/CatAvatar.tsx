@@ -153,6 +153,27 @@ const LOOKS: Record<Avatar, Look> = {
       </>
     ),
   },
+  // 狸花 (Dragon Li): warm brown-grey coat, bold black mackerel stripes with
+  // the forehead "M", pale muzzle, yellow-green eyes.
+  lihua: {
+    bg: '#eef3e2',
+    fur: '#b09468',
+    ear: '#d9b99a',
+    eye: '#a3b81a',
+    nose: '#a8606c',
+    mark: '#2b2622',
+    marks: (c) => (
+      <>
+        <ellipse cx="32" cy="47" rx="10" ry="7" fill="#efe4d0" />
+        <g stroke={c} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          <path d="M25 28l2.5-5 4.5 5 4.5-5 2.5 5" />
+          <path d="M32 18v4M27 19l1 3M37 19l-1 3" />
+          <path d="M12 35l7 1M12 40l6 0.5M13 45l5-1M52 35l-7 1M52 40l-6 0.5M51 45l-5-1" />
+          <path d="M28.5 40.5l-2.5 2M35.5 40.5l2.5 2" strokeWidth="1.6" />
+        </g>
+      </>
+    ),
+  },
 }
 
 const SIZES = { sm: 'size-7', md: 'size-10', lg: 'size-20 sm:size-24' } as const

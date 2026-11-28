@@ -5,19 +5,17 @@ import { PawPrint, Pencil, UserRoundX } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useUpdateProfile } from '../api/generated/auth/auth'
-import type { Avatar, Post, Profile, User } from '../api/generated/model'
+import type { Avatar, Profile, User } from '../api/generated/model'
 import {
   getGetProfileQueryKey,
   useFollowUser,
   useGetProfile,
-  useListUserPosts,
   useUnfollowUser,
 } from '../api/generated/users/users'
-import { errorMessage } from '../api/http'
 import { AVATARS, CatAvatar } from '../components/CatAvatar'
 import { buttonClass, Card, EmptyState, inputClass } from '../components/ui'
 import { meQueryKey, useCurrentUser } from '../features/auth/useCurrentUser'
-import { PostCard } from '../features/community/PostList'
+import { ProfileTabs } from '../features/profile/ProfileTabs'
 import { useI18n } from '../i18n/I18nProvider'
 import type { MessageKey } from '../i18n/messages'
 import { useServerError } from '../i18n/serverErrors'
@@ -67,7 +65,7 @@ function ProfilePage() {
         }
       />
       {isMe && me && editing && <EditProfile me={me} onDone={() => setEditing(false)} />}
-      <UserPosts userId={p.id} title={t(isMe ? 'profile.myPosts' : 'profile.theirPosts')} />
+      <ProfileTabs userId={p.id} isMe={isMe} />
     </div>
   )
 }
@@ -238,32 +236,5 @@ function EditProfile({ me, onDone }: { me: User; onDone: () => void }) {
         </button>
       </div>
     </Card>
-  )
-}
-
-function UserPosts({ userId, title }: { userId: string; title: string }) {
-  const { t } = useI18n()
-  const { data, error } = useListUserPosts(userId, {
-    query: { select: (res) => res.data as Post[] },
-  })
-  return (
-    <section className="space-y-4" aria-labelledby="user-posts">
-      <h2 id="user-posts" className="text-lg font-semibold text-stone-900">
-        {title}
-      </h2>
-      {error ? (
-        <p className="text-red-600">{errorMessage(error)}</p>
-      ) : !data ? (
-        <p className="text-stone-500">{t('profile.loading')}</p>
-      ) : data.length === 0 ? (
-        <EmptyState icon={PawPrint}>{t('profile.noPosts')}</EmptyState>
-      ) : (
-        <ul className="space-y-4">
-          {data.map((p) => (
-            <PostCard key={p.id} post={p} />
-          ))}
-        </ul>
-      )}
-    </section>
   )
 }

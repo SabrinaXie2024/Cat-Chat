@@ -513,6 +513,105 @@ paths:
         "204": { description: Not following }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /posts/{postId}/like:
+    parameters:
+      - { name: postId, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: likePost
+      tags: [posts]
+      description: Like a post. Idempotent.
+      responses:
+        "204": { description: Done }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: unlikePost
+      tags: [posts]
+      description: Undo. Idempotent.
+      responses:
+        "204": { description: Done }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /posts/{postId}/favorite:
+    parameters:
+      - { name: postId, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: favoritePost
+      tags: [posts]
+      description: Save a post to your favorites (private). Idempotent.
+      responses:
+        "204": { description: Done }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: unfavoritePost
+      tags: [posts]
+      description: Undo. Idempotent.
+      responses:
+        "204": { description: Done }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /users/{userId}/likes:
+    parameters:
+      - { name: userId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listUserLikes
+      tags: [users]
+      security: []
+      responses:
+        "200":
+          description: Posts the user liked, most recently liked first (max 100)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Post" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /auth/me/favorites:
+    get:
+      operationId: listMyFavorites
+      tags: [users]
+      responses:
+        "200":
+          description: Your favorites, most recently saved first (max 100). Private.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Post" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /users/{userId}/followers:
+    parameters:
+      - { name: userId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listFollowers
+      tags: [users]
+      security: []
+      responses:
+        "200":
+          description: Who follows the user, newest first (max 100)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserSummary" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /users/{userId}/following:
+    parameters:
+      - { name: userId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listFollowing
+      tags: [users]
+      security: []
+      responses:
+        "200":
+          description: Whom the user follows, newest first (max 100)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserSummary" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     sessionCookie:
@@ -548,13 +647,20 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    UserSummary:
+      type: object
+      required: [id, nickname, avatar]
+      properties:
+        id: { type: string }
+        nickname: { type: string }
+        avatar: { $ref: "#/components/schemas/Avatar" }
     Avatar:
       type: string
       description: |
         One of the site's preset cat avatars (custom uploads aren't allowed).
         The users.avatar CHECK constraint repeats this list (latest:
         migration 00007).
-      enum: [orange, black, white, gray, calico, siamese, tuxedo, tabby, silver, tortie, cream, orange-white]
+      enum: [orange, black, white, gray, calico, siamese, tuxedo, tabby, silver, tortie, cream, orange-white, lihua]
     ProfileUpdate:
       type: object
       properties:
@@ -706,7 +812,7 @@ components:
           items: { $ref: "#/components/schemas/ImageId" }
     Post:
       type: object
-      required: [id, authorId, authorAvatar, author, content, images, replyCount, createdAt]
+      required: [id, authorId, authorAvatar, author, content, images, replyCount, likeCount, likedByMe, favoritedByMe, createdAt]
       properties:
         id: { type: string }
         author: { type: string }
@@ -718,6 +824,9 @@ components:
           maxItems: 5
           items: { $ref: "#/components/schemas/ImageUrl" }
         replyCount: { type: integer, minimum: 0, maximum: 10 }
+        likeCount: { type: integer, minimum: 0 }
+        likedByMe: { type: boolean, description: "false when signed out" }
+        favoritedByMe: { type: boolean, description: "false when signed out" }
         createdAt: { type: string, format: date-time }
     NewReply:
       type: object

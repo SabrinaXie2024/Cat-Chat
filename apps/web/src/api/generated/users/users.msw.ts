@@ -24,15 +24,20 @@ import type {
 
 import type {
   Post,
-  Profile
+  Profile,
+  UserSummary
 } from '../model';
 
 import {
   getGetProfileResponseMock,
+  getListFollowersResponseMock,
+  getListFollowingResponseMock,
+  getListMyFavoritesResponseMock,
+  getListUserLikesResponseMock,
   getListUserPostsResponseMock
 } from './users.faker';
 
-export { getGetProfileResponseMock, getListUserPostsResponseMock } from './users.faker';
+export { getGetProfileResponseMock, getListUserPostsResponseMock, getListUserLikesResponseMock, getListMyFavoritesResponseMock, getListFollowersResponseMock, getListFollowingResponseMock } from './users.faker';
 
 
 export const getGetProfileMockHandler = (overrideResponse?: Profile | ((info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => Promise<Profile> | Profile), options?: RequestHandlerOptions) => {
@@ -78,9 +83,61 @@ export const getUnfollowUserMockHandler = (overrideResponse?: void | ((info: Par
       })
   }, options)
 }
+
+export const getListUserLikesMockHandler = (overrideResponse?: Post[] | ((info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => Promise<Post[]> | Post[]), options?: RequestHandlerOptions) => {
+  return http.get<{ userId: string }>('*/users/:userId/likes', async (info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListUserLikesResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
+export const getListMyFavoritesMockHandler = (overrideResponse?: Post[] | ((info: Parameters<HttpResponseResolver>[0]) => Promise<Post[]> | Post[]), options?: RequestHandlerOptions) => {
+  return http.get('*/auth/me/favorites', async (info: Parameters<HttpResponseResolver>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListMyFavoritesResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
+export const getListFollowersMockHandler = (overrideResponse?: UserSummary[] | ((info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => Promise<UserSummary[]> | UserSummary[]), options?: RequestHandlerOptions) => {
+  return http.get<{ userId: string }>('*/users/:userId/followers', async (info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListFollowersResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
+export const getListFollowingMockHandler = (overrideResponse?: UserSummary[] | ((info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => Promise<UserSummary[]> | UserSummary[]), options?: RequestHandlerOptions) => {
+  return http.get<{ userId: string }>('*/users/:userId/following', async (info: Parameters<HttpResponseResolver<{ userId: string }>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getListFollowingResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
 export const getUsersMock = () => [
   getGetProfileMockHandler(),
   getListUserPostsMockHandler(),
   getFollowUserMockHandler(),
-  getUnfollowUserMockHandler()
+  getUnfollowUserMockHandler(),
+  getListUserLikesMockHandler(),
+  getListMyFavoritesMockHandler(),
+  getListFollowersMockHandler(),
+  getListFollowingMockHandler()
 ]

@@ -47,8 +47,11 @@ type Db = {
   images: Map<string, { ownerId: string; blob: Blob }>
   videos: Map<string, { ownerId: string; blob: Blob; posterId: string }>
   gallery: GalleryItem[] // newest first
-  /** `${followerId}>${followeeId}` */
+  /** `${followerId}>${followeeId}`, oldest first (Sets keep insertion order). */
   follows: Set<string>
+  /** `${userId}>${postId}` */
+  likes: Set<string>
+  favorites: Set<string>
   /** Forgot-password codes, by email (also for unknown emails, like the server). */
   resets: Map<string, { code: string; attempts: number; sentAt: number; expiresAt: number }>
   /** Sign-ups awaiting their code, by email. */
@@ -84,6 +87,8 @@ export const db: Db = {
   videos: new Map(),
   gallery: [],
   follows: new Set(),
+  likes: new Set(),
+  favorites: new Set(),
   pending: new Map(),
   resets: new Map(),
 }
@@ -110,6 +115,8 @@ export function resetDb(seed: Post[] = defaultSeed()) {
     },
   ]
   db.follows = new Set()
+  db.likes = new Set()
+  db.favorites = new Set()
   db.sessionUserId = null
   db.images = new Map()
   db.videos = new Map()
@@ -127,6 +134,29 @@ function resolveImages(ids: string[], ownerId: string): string[] | null {
   return ids.map(imageUrl)
 }
 
+/** Counted and per-viewer fields, like the server computes them. */
+function view(p: Post): Post {
+  const me = db.sessionUserId
+  return {
+    ...p,
+    likeCount: [...db.likes].filter((k) => k.endsWith(`>${p.id}`)).length,
+    likedByMe: db.likes.has(`${me}>${p.id}`),
+    favoritedByMe: db.favorites.has(`${me}>${p.id}`),
+  }
+}
+
+/** Posts referenced by `${userId}>${postId}` keys, most recent first. */
+function postsIn(set: Set<string>, userId: string): Post[] {
+  return [...set]
+    .reverse()
+    .filter((k) => k.startsWith(`${userId}>`))
+    .map((k) => db.posts.find((p) => `${userId}>${p.id}` === k))
+    .filter((p): p is Post => !!p)
+    .map(view)
+}
+
+const summary = (u: MockUser) => ({ id: u.id, nickname: u.nickname, avatar: u.avatar })
+
 const currentUser = () => db.users.find((u) => u.id === db.sessionUserId)
 const publicUser = ({ password: _, ...u }: MockUser): User => u
 
@@ -140,6 +170,9 @@ function defaultSeed(): Post[] {
       authorId: SEED_AUTHOR_ID,
       author: '橘子妈',
       authorAvatar: Avatar.calico,
+      likeCount: 0,
+      likedByMe: false,
+      favoritedByMe: false,
       content: '今天橘子又把杯子推下桌了 🙃',
       images: [],
       replyCount: 0,
@@ -408,7 +441,7 @@ export const handlers = [
     return user ? HttpResponse.json(publicUser(user)) : bad('please sign in', 401)
   }),
 
-  http.get('*/api/posts', () => HttpResponse.json(db.posts)),
+  http.get('*/api/posts', () => HttpResponse.json(db.posts.map(view))),
 
   http.post<never, NewPost>('*/api/posts', async ({ request }) => {
     const user = currentUser()
@@ -429,6 +462,9 @@ export const handlers = [
       content: body.content,
       images,
       replyCount: 0,
+      likeCount: 0,
+      likedByMe: false,
+      favoritedByMe: false,
       createdAt: new Date().toISOString(),
     }
     db.posts.unshift(post)
@@ -518,7 +554,7 @@ export const handlers = [
 
   http.get<{ userId: string }>('*/api/users/:userId/posts', ({ params }) => {
     if (!db.users.some((x) => x.id === params.userId)) return bad('user not found', 404)
-    return HttpResponse.json(db.posts.filter((p) => p.authorId === params.userId))
+    return HttpResponse.json(db.posts.filter((p) => p.authorId === params.userId).map(view))
   }),
 
   http.put<{ userId: string }>('*/api/users/:userId/follow', ({ params }) => {
@@ -537,4 +573,50 @@ export const handlers = [
     db.follows.delete(`${user.id}>${params.userId}`)
     return new HttpResponse(null, { status: 204 })
   }),
+  ...(['like', 'favorite'] as const).flatMap((kind) => {
+    const set = () => (kind === 'like' ? db.likes : db.favorites)
+    const toggle =
+      (on: boolean) =>
+      ({ params }: { params: { postId?: string | readonly string[] } }) => {
+        const user = currentUser()
+        if (!user) return bad('please sign in', 401)
+        if (!db.posts.some((p) => p.id === params.postId)) return bad('post not found', 404)
+        const key = `${user.id}>${params.postId}`
+        if (on) set().add(key)
+        else set().delete(key)
+        return new HttpResponse(null, { status: 204 })
+      }
+    return [
+      http.put(`*/api/posts/:postId/${kind}`, toggle(true)),
+      http.delete(`*/api/posts/:postId/${kind}`, toggle(false)),
+    ]
+  }),
+
+  http.get<{ userId: string }>('*/api/users/:userId/likes', ({ params }) => {
+    if (!db.users.some((x) => x.id === params.userId)) return bad('user not found', 404)
+    return HttpResponse.json(postsIn(db.likes, params.userId))
+  }),
+
+  http.get('*/api/auth/me/favorites', () => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    return HttpResponse.json(postsIn(db.favorites, user.id))
+  }),
+
+  ...(['followers', 'following'] as const).map((kind) =>
+    http.get<{ userId: string }>(`*/api/users/:userId/${kind}`, ({ params }) => {
+      if (!db.users.some((x) => x.id === params.userId)) return bad('user not found', 404)
+      const ids = [...db.follows]
+        .reverse()
+        .map((k) => k.split('>') as [string, string])
+        .filter(([a, b]) => (kind === 'followers' ? b : a) === params.userId)
+        .map(([a, b]) => (kind === 'followers' ? a : b))
+      return HttpResponse.json(
+        ids.flatMap((id) => {
+          const u = db.users.find((x) => x.id === id)
+          return u ? [summary(u)] : []
+        }),
+      )
+    }),
+  ),
 ]

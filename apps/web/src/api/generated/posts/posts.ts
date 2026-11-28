@@ -495,3 +495,383 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getCreateReplyMutationOptions(options), queryClient);
     }
+    export type likePostResponse204 = {
+  data: void
+  status: 204
+}
+
+export type likePostResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type likePostResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type likePostResponseSuccess = (likePostResponse204) & {
+  headers: Headers;
+};
+export type likePostResponseError = (likePostResponse401 | likePostResponse404) & {
+  headers: Headers;
+};
+
+export type likePostResponse = (likePostResponseSuccess | likePostResponseError)
+
+export const getLikePostUrl = (postId: string,) => {
+
+
+
+
+  return `/posts/${postId}/like`
+}
+
+/**
+ * Like a post. Idempotent.
+ */
+export const likePost = async (postId: string, options?: Parameters<typeof http>[1]): Promise<likePostResponse> => {
+
+  return http<likePostResponse>(getLikePostUrl(postId),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+
+export const getLikePostMutationKey = () => ['likePost'] as const;
+
+export const getLikePostMutationOptions = <TError = UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof likePost>>, TError,LikePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof likePost>>, TError,LikePostMutationVariables, TContext> => {
+
+const mutationKey = getLikePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof likePost>>, LikePostMutationVariables> = (props) => {
+          const {postId} = props ?? {};
+
+          return  likePost(postId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LikePostMutationResult = NonNullable<Awaited<ReturnType<typeof likePost>>>
+
+    export type LikePostMutationError = UnauthorizedResponse | NotFoundResponse
+    export type LikePostMutationVariables = {postId: string}
+
+    /** Like a post. Idempotent. */
+export const useLikePost = <TError = UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof likePost>>, TError,LikePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof likePost>>,
+        TError,
+        LikePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getLikePostMutationOptions(options), queryClient);
+    }
+    export type unlikePostResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unlikePostResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type unlikePostResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type unlikePostResponseSuccess = (unlikePostResponse204) & {
+  headers: Headers;
+};
+export type unlikePostResponseError = (unlikePostResponse401 | unlikePostResponse404) & {
+  headers: Headers;
+};
+
+export type unlikePostResponse = (unlikePostResponseSuccess | unlikePostResponseError)
+
+export const getUnlikePostUrl = (postId: string,) => {
+
+
+
+
+  return `/posts/${postId}/like`
+}
+
+/**
+ * Undo. Idempotent.
+ */
+export const unlikePost = async (postId: string, options?: Parameters<typeof http>[1]): Promise<unlikePostResponse> => {
+
+  return http<unlikePostResponse>(getUnlikePostUrl(postId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnlikePostMutationKey = () => ['unlikePost'] as const;
+
+export const getUnlikePostMutationOptions = <TError = UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlikePost>>, TError,UnlikePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof unlikePost>>, TError,UnlikePostMutationVariables, TContext> => {
+
+const mutationKey = getUnlikePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unlikePost>>, UnlikePostMutationVariables> = (props) => {
+          const {postId} = props ?? {};
+
+          return  unlikePost(postId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnlikePostMutationResult = NonNullable<Awaited<ReturnType<typeof unlikePost>>>
+
+    export type UnlikePostMutationError = UnauthorizedResponse | NotFoundResponse
+    export type UnlikePostMutationVariables = {postId: string}
+
+    /** Undo. Idempotent. */
+export const useUnlikePost = <TError = UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlikePost>>, TError,UnlikePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unlikePost>>,
+        TError,
+        UnlikePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUnlikePostMutationOptions(options), queryClient);
+    }
+    export type favoritePostResponse204 = {
+  data: void
+  status: 204
+}
+
+export type favoritePostResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type favoritePostResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type favoritePostResponseSuccess = (favoritePostResponse204) & {
+  headers: Headers;
+};
+export type favoritePostResponseError = (favoritePostResponse401 | favoritePostResponse404) & {
+  headers: Headers;
+};
+
+export type favoritePostResponse = (favoritePostResponseSuccess | favoritePostResponseError)
+
+export const getFavoritePostUrl = (postId: string,) => {
+
+
+
+
+  return `/posts/${postId}/favorite`
+}
+
+/**
+ * Save a post to your favorites (private). Idempotent.
+ */
+export const favoritePost = async (postId: string, options?: Parameters<typeof http>[1]): Promise<favoritePostResponse> => {
+
+  return http<favoritePostResponse>(getFavoritePostUrl(postId),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+
+export const getFavoritePostMutationKey = () => ['favoritePost'] as const;
+
+export const getFavoritePostMutationOptions = <TError = UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof favoritePost>>, TError,FavoritePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof favoritePost>>, TError,FavoritePostMutationVariables, TContext> => {
+
+const mutationKey = getFavoritePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof favoritePost>>, FavoritePostMutationVariables> = (props) => {
+          const {postId} = props ?? {};
+
+          return  favoritePost(postId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FavoritePostMutationResult = NonNullable<Awaited<ReturnType<typeof favoritePost>>>
+
+    export type FavoritePostMutationError = UnauthorizedResponse | NotFoundResponse
+    export type FavoritePostMutationVariables = {postId: string}
+
+    /** Save a post to your favorites (private). Idempotent. */
+export const useFavoritePost = <TError = UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof favoritePost>>, TError,FavoritePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof favoritePost>>,
+        TError,
+        FavoritePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getFavoritePostMutationOptions(options), queryClient);
+    }
+    export type unfavoritePostResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unfavoritePostResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type unfavoritePostResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type unfavoritePostResponseSuccess = (unfavoritePostResponse204) & {
+  headers: Headers;
+};
+export type unfavoritePostResponseError = (unfavoritePostResponse401 | unfavoritePostResponse404) & {
+  headers: Headers;
+};
+
+export type unfavoritePostResponse = (unfavoritePostResponseSuccess | unfavoritePostResponseError)
+
+export const getUnfavoritePostUrl = (postId: string,) => {
+
+
+
+
+  return `/posts/${postId}/favorite`
+}
+
+/**
+ * Undo. Idempotent.
+ */
+export const unfavoritePost = async (postId: string, options?: Parameters<typeof http>[1]): Promise<unfavoritePostResponse> => {
+
+  return http<unfavoritePostResponse>(getUnfavoritePostUrl(postId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnfavoritePostMutationKey = () => ['unfavoritePost'] as const;
+
+export const getUnfavoritePostMutationOptions = <TError = UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unfavoritePost>>, TError,UnfavoritePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof unfavoritePost>>, TError,UnfavoritePostMutationVariables, TContext> => {
+
+const mutationKey = getUnfavoritePostMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unfavoritePost>>, UnfavoritePostMutationVariables> = (props) => {
+          const {postId} = props ?? {};
+
+          return  unfavoritePost(postId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnfavoritePostMutationResult = NonNullable<Awaited<ReturnType<typeof unfavoritePost>>>
+
+    export type UnfavoritePostMutationError = UnauthorizedResponse | NotFoundResponse
+    export type UnfavoritePostMutationVariables = {postId: string}
+
+    /** Undo. Idempotent. */
+export const useUnfavoritePost = <TError = UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unfavoritePost>>, TError,UnfavoritePostMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unfavoritePost>>,
+        TError,
+        UnfavoritePostMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUnfavoritePostMutationOptions(options), queryClient);
+    }

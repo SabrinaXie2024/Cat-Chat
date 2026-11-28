@@ -37,7 +37,8 @@ import type {
   NotFoundResponse,
   Post,
   Profile,
-  UnauthorizedResponse
+  UnauthorizedResponse,
+  UserSummary
 } from '../model';
 
 import { http } from '../../http';
@@ -481,3 +482,451 @@ export const useUnfollowUser = <TError = UnauthorizedResponse | NotFoundResponse
       > => {
       return useMutation(getUnfollowUserMutationOptions(options), queryClient);
     }
+    export type listUserLikesResponse200 = {
+  data: Post[]
+  status: 200
+}
+
+export type listUserLikesResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type listUserLikesResponseSuccess = (listUserLikesResponse200) & {
+  headers: Headers;
+};
+export type listUserLikesResponseError = (listUserLikesResponse404) & {
+  headers: Headers;
+};
+
+export type listUserLikesResponse = (listUserLikesResponseSuccess | listUserLikesResponseError)
+
+export const getListUserLikesUrl = (userId: string,) => {
+
+
+
+
+  return `/users/${userId}/likes`
+}
+
+export const listUserLikes = async (userId: string, options?: Parameters<typeof http>[1]): Promise<listUserLikesResponse> => {
+
+  return http<listUserLikesResponse>(getListUserLikesUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListUserLikesQueryKey = (userId: string,) => {
+    return [
+    `/users/${userId}/likes`
+    ] as const;
+    }
+
+
+export const getListUserLikesQueryOptions = <TData = Awaited<ReturnType<typeof listUserLikes>>, TError = NotFoundResponse>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserLikes>>, TError, TData>>, request?: SecondParameter<typeof http>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUserLikesQueryKey(userId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUserLikes>>> = ({ signal }) => listUserLikes(userId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: userId !== null && userId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUserLikes>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListUserLikesQueryResult = NonNullable<Awaited<ReturnType<typeof listUserLikes>>>
+export type ListUserLikesQueryError = NotFoundResponse
+
+
+export function useListUserLikes<TData = Awaited<ReturnType<typeof listUserLikes>>, TError = NotFoundResponse>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserLikes>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUserLikes>>,
+          TError,
+          Awaited<ReturnType<typeof listUserLikes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUserLikes<TData = Awaited<ReturnType<typeof listUserLikes>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserLikes>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUserLikes>>,
+          TError,
+          Awaited<ReturnType<typeof listUserLikes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUserLikes<TData = Awaited<ReturnType<typeof listUserLikes>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserLikes>>, TError, TData>>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUserLikes<TData = Awaited<ReturnType<typeof listUserLikes>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserLikes>>, TError, TData>>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListUserLikesQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type listMyFavoritesResponse200 = {
+  data: Post[]
+  status: 200
+}
+
+export type listMyFavoritesResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type listMyFavoritesResponseSuccess = (listMyFavoritesResponse200) & {
+  headers: Headers;
+};
+export type listMyFavoritesResponseError = (listMyFavoritesResponse401) & {
+  headers: Headers;
+};
+
+export type listMyFavoritesResponse = (listMyFavoritesResponseSuccess | listMyFavoritesResponseError)
+
+export const getListMyFavoritesUrl = () => {
+
+
+
+
+  return `/auth/me/favorites`
+}
+
+export const listMyFavorites = async ( options?: Parameters<typeof http>[1]): Promise<listMyFavoritesResponse> => {
+
+  return http<listMyFavoritesResponse>(getListMyFavoritesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyFavoritesQueryKey = () => {
+    return [
+    `/auth/me/favorites`
+    ] as const;
+    }
+
+
+export const getListMyFavoritesQueryOptions = <TData = Awaited<ReturnType<typeof listMyFavorites>>, TError = UnauthorizedResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyFavorites>>, TError, TData>>, request?: SecondParameter<typeof http>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyFavoritesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyFavorites>>> = ({ signal }) => listMyFavorites({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyFavorites>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMyFavoritesQueryResult = NonNullable<Awaited<ReturnType<typeof listMyFavorites>>>
+export type ListMyFavoritesQueryError = UnauthorizedResponse
+
+
+export function useListMyFavorites<TData = Awaited<ReturnType<typeof listMyFavorites>>, TError = UnauthorizedResponse>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyFavorites>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyFavorites>>,
+          TError,
+          Awaited<ReturnType<typeof listMyFavorites>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyFavorites<TData = Awaited<ReturnType<typeof listMyFavorites>>, TError = UnauthorizedResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyFavorites>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyFavorites>>,
+          TError,
+          Awaited<ReturnType<typeof listMyFavorites>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyFavorites<TData = Awaited<ReturnType<typeof listMyFavorites>>, TError = UnauthorizedResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyFavorites>>, TError, TData>>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyFavorites<TData = Awaited<ReturnType<typeof listMyFavorites>>, TError = UnauthorizedResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyFavorites>>, TError, TData>>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMyFavoritesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type listFollowersResponse200 = {
+  data: UserSummary[]
+  status: 200
+}
+
+export type listFollowersResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type listFollowersResponseSuccess = (listFollowersResponse200) & {
+  headers: Headers;
+};
+export type listFollowersResponseError = (listFollowersResponse404) & {
+  headers: Headers;
+};
+
+export type listFollowersResponse = (listFollowersResponseSuccess | listFollowersResponseError)
+
+export const getListFollowersUrl = (userId: string,) => {
+
+
+
+
+  return `/users/${userId}/followers`
+}
+
+export const listFollowers = async (userId: string, options?: Parameters<typeof http>[1]): Promise<listFollowersResponse> => {
+
+  return http<listFollowersResponse>(getListFollowersUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFollowersQueryKey = (userId: string,) => {
+    return [
+    `/users/${userId}/followers`
+    ] as const;
+    }
+
+
+export const getListFollowersQueryOptions = <TData = Awaited<ReturnType<typeof listFollowers>>, TError = NotFoundResponse>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowers>>, TError, TData>>, request?: SecondParameter<typeof http>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFollowersQueryKey(userId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFollowers>>> = ({ signal }) => listFollowers(userId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: userId !== null && userId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFollowers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFollowersQueryResult = NonNullable<Awaited<ReturnType<typeof listFollowers>>>
+export type ListFollowersQueryError = NotFoundResponse
+
+
+export function useListFollowers<TData = Awaited<ReturnType<typeof listFollowers>>, TError = NotFoundResponse>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowers>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFollowers>>,
+          TError,
+          Awaited<ReturnType<typeof listFollowers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFollowers<TData = Awaited<ReturnType<typeof listFollowers>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowers>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFollowers>>,
+          TError,
+          Awaited<ReturnType<typeof listFollowers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFollowers<TData = Awaited<ReturnType<typeof listFollowers>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowers>>, TError, TData>>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFollowers<TData = Awaited<ReturnType<typeof listFollowers>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowers>>, TError, TData>>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFollowersQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type listFollowingResponse200 = {
+  data: UserSummary[]
+  status: 200
+}
+
+export type listFollowingResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type listFollowingResponseSuccess = (listFollowingResponse200) & {
+  headers: Headers;
+};
+export type listFollowingResponseError = (listFollowingResponse404) & {
+  headers: Headers;
+};
+
+export type listFollowingResponse = (listFollowingResponseSuccess | listFollowingResponseError)
+
+export const getListFollowingUrl = (userId: string,) => {
+
+
+
+
+  return `/users/${userId}/following`
+}
+
+export const listFollowing = async (userId: string, options?: Parameters<typeof http>[1]): Promise<listFollowingResponse> => {
+
+  return http<listFollowingResponse>(getListFollowingUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFollowingQueryKey = (userId: string,) => {
+    return [
+    `/users/${userId}/following`
+    ] as const;
+    }
+
+
+export const getListFollowingQueryOptions = <TData = Awaited<ReturnType<typeof listFollowing>>, TError = NotFoundResponse>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowing>>, TError, TData>>, request?: SecondParameter<typeof http>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFollowingQueryKey(userId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFollowing>>> = ({ signal }) => listFollowing(userId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: userId !== null && userId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFollowing>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFollowingQueryResult = NonNullable<Awaited<ReturnType<typeof listFollowing>>>
+export type ListFollowingQueryError = NotFoundResponse
+
+
+export function useListFollowing<TData = Awaited<ReturnType<typeof listFollowing>>, TError = NotFoundResponse>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowing>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFollowing>>,
+          TError,
+          Awaited<ReturnType<typeof listFollowing>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFollowing<TData = Awaited<ReturnType<typeof listFollowing>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowing>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFollowing>>,
+          TError,
+          Awaited<ReturnType<typeof listFollowing>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFollowing<TData = Awaited<ReturnType<typeof listFollowing>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowing>>, TError, TData>>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFollowing<TData = Awaited<ReturnType<typeof listFollowing>>, TError = NotFoundResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFollowing>>, TError, TData>>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFollowingQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+

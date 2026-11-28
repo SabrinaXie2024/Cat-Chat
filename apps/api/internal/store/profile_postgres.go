@@ -31,11 +31,7 @@ func (p *Postgres) Profile(ctx context.Context, userID, viewerID string) (api.Pr
 	if err != nil {
 		return api.Profile{}, err
 	}
-	var viewer *uuid.UUID
-	if v, err := uuid.Parse(viewerID); err == nil {
-		viewer = &v
-	}
-	r, err := p.q.GetProfile(ctx, dbq.GetProfileParams{ID: uid, Viewer: viewer})
+	r, err := p.q.GetProfile(ctx, dbq.GetProfileParams{ID: uid, Viewer: optID(viewerID)})
 	if err != nil {
 		return api.Profile{}, notFound(err)
 	}
@@ -46,7 +42,7 @@ func (p *Postgres) Profile(ctx context.Context, userID, viewerID string) (api.Pr
 	}, nil
 }
 
-func (p *Postgres) ListUserPosts(ctx context.Context, userID string) ([]api.Post, error) {
+func (p *Postgres) ListUserPosts(ctx context.Context, userID, viewerID string) ([]api.Post, error) {
 	uid, err := parseID(userID)
 	if err != nil {
 		return nil, err
@@ -54,18 +50,11 @@ func (p *Postgres) ListUserPosts(ctx context.Context, userID string) ([]api.Post
 	if err := p.requireUser(ctx, uid); err != nil {
 		return nil, err
 	}
-	rows, err := p.q.ListUserPosts(ctx, uid)
+	rows, err := p.q.ListUserPosts(ctx, dbq.ListUserPostsParams{AuthorID: uid, Viewer: optID(viewerID)})
 	if err != nil {
 		return nil, err
 	}
-	out := make([]api.Post, len(rows))
-	for i, r := range rows {
-		out[i] = api.Post{
-			Id: r.ID.String(), AuthorId: r.AuthorID.String(), Author: r.Author, AuthorAvatar: api.Avatar(r.AuthorAvatar),
-			Content: r.Content, Images: nonNil(r.Images), ReplyCount: int(r.ReplyCount), CreatedAt: r.CreatedAt.UTC(),
-		}
-	}
-	return out, nil
+	return convertRows(rows), nil
 }
 
 func (p *Postgres) requireUser(ctx context.Context, id uuid.UUID) error {

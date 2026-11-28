@@ -30,5 +30,11 @@ export interface Post {
      * @maximum 10
      */
   replyCount: number;
+  /** @minimum 0 */
+  likeCount: number;
+  /** false when signed out */
+  likedByMe: boolean;
+  /** false when signed out */
+  favoritedByMe: boolean;
   createdAt: string;
 }

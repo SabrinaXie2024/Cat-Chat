@@ -35,4 +35,5 @@ export const Avatar = {
   tortie: 'tortie',
   cream: 'cream',
   'orange-white': 'orange-white',
+  lihua: 'lihua',
 } as const;

@@ -45,6 +45,7 @@ export * from './unauthorizedResponse';
 export * from './uploadImageBody';
 export * from './uploadVideoBody';
 export * from './user';
+export * from './userSummary';
 export * from './verificationSent';
 export * from './verifyRegistrationRequest';
 export * from './video';

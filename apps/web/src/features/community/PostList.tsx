@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/ui'
 import { useI18n } from '../../i18n/I18nProvider'
 import { MAX_REPLIES_PER_POST } from '../../lib/limits'
 import { ImageGrid } from '../images/ImageGrid'
+import { Reactions } from './Reactions'
 import { Replies } from './Replies'
 import { TimeAgo } from './TimeAgo'
 
@@ -71,20 +72,23 @@ export function PostCard({ post }: { post: Post }) {
         {post.content}
       </p>
       <ImageGrid urls={post.images} />
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={repliesId}
-        onClick={() => setOpen((o) => !o)}
-        className={`mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors ${
-          open
-            ? 'bg-brand-100 text-brand-700'
-            : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
-        }`}
-      >
-        <MessageCircle className="size-4" aria-hidden />
-        {open ? t('replies.close') : t('replies.open')} {post.replyCount}/{MAX_REPLIES_PER_POST}
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={repliesId}
+          onClick={() => setOpen((o) => !o)}
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm transition-colors ${
+            open
+              ? 'bg-brand-100 text-brand-700'
+              : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+          }`}
+        >
+          <MessageCircle className="size-4" aria-hidden />
+          {open ? t('replies.close') : t('replies.open')} {post.replyCount}/{MAX_REPLIES_PER_POST}
+        </button>
+        <Reactions post={post} />
+      </div>
       <div id={repliesId}>{open && <Replies post={post} />}</div>
     </li>
   )

@@ -55,3 +55,17 @@ ON CONFLICT DO NOTHING;
 
 -- name: Unfollow :exec
 DELETE FROM follows WHERE follower_id = $1 AND followee_id = $2;
+
+-- name: ListFollowers :many
+SELECT u.id, u.nickname, u.avatar
+FROM follows f JOIN users u ON u.id = f.follower_id
+WHERE f.followee_id = $1
+ORDER BY f.created_at DESC, u.id
+LIMIT 100;
+
+-- name: ListFollowing :many
+SELECT u.id, u.nickname, u.avatar
+FROM follows f JOIN users u ON u.id = f.followee_id
+WHERE f.follower_id = $1
+ORDER BY f.created_at DESC, u.id
+LIMIT 100;

@@ -24,6 +24,7 @@ const (
 	Calico      Avatar = "calico"
 	Cream       Avatar = "cream"
 	Gray        Avatar = "gray"
+	Lihua       Avatar = "lihua"
 	Orange      Avatar = "orange"
 	OrangeWhite Avatar = "orange-white"
 	Siamese     Avatar = "siamese"
@@ -44,6 +45,8 @@ func (e Avatar) Valid() bool {
 	case Cream:
 		return true
 	case Gray:
+		return true
+	case Lihua:
 		return true
 	case Orange:
 		return true
@@ -233,13 +236,20 @@ type Post struct {
 	// AuthorAvatar One of the site's preset cat avatars (custom uploads aren't allowed).
 	// The users.avatar CHECK constraint repeats this list (latest:
 	// migration 00007).
-	AuthorAvatar Avatar     `json:"authorAvatar"`
-	AuthorId     string     `json:"authorId"`
-	Content      string     `json:"content"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	Id           string     `json:"id"`
-	Images       []ImageUrl `json:"images"`
-	ReplyCount   int        `json:"replyCount"`
+	AuthorAvatar Avatar    `json:"authorAvatar"`
+	AuthorId     string    `json:"authorId"`
+	Content      string    `json:"content"`
+	CreatedAt    time.Time `json:"createdAt"`
+
+	// FavoritedByMe false when signed out
+	FavoritedByMe bool       `json:"favoritedByMe"`
+	Id            string     `json:"id"`
+	Images        []ImageUrl `json:"images"`
+	LikeCount     int        `json:"likeCount"`
+
+	// LikedByMe false when signed out
+	LikedByMe  bool `json:"likedByMe"`
+	ReplyCount int  `json:"replyCount"`
 }
 
 // Profile defines model for Profile.
@@ -310,6 +320,16 @@ type User struct {
 
 	// IsAdmin Site owner; may manage the gallery. Set via ADMIN_EMAILS.
 	IsAdmin  bool   `json:"isAdmin"`
+	Nickname string `json:"nickname"`
+}
+
+// UserSummary defines model for UserSummary.
+type UserSummary struct {
+	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	// The users.avatar CHECK constraint repeats this list (latest:
+	// migration 00007).
+	Avatar   Avatar `json:"avatar"`
+	Id       string `json:"id"`
 	Nickname string `json:"nickname"`
 }
 
@@ -408,6 +428,9 @@ type ServerInterface interface {
 	// (GET /auth/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
 
+	// (GET /auth/me/favorites)
+	ListMyFavorites(w http.ResponseWriter, r *http.Request)
+
 	// (PATCH /auth/me/profile)
 	UpdateProfile(w http.ResponseWriter, r *http.Request)
 
@@ -450,6 +473,18 @@ type ServerInterface interface {
 	// (POST /posts)
 	CreatePost(w http.ResponseWriter, r *http.Request)
 
+	// (DELETE /posts/{postId}/favorite)
+	UnfavoritePost(w http.ResponseWriter, r *http.Request, postId string)
+
+	// (PUT /posts/{postId}/favorite)
+	FavoritePost(w http.ResponseWriter, r *http.Request, postId string)
+
+	// (DELETE /posts/{postId}/like)
+	UnlikePost(w http.ResponseWriter, r *http.Request, postId string)
+
+	// (PUT /posts/{postId}/like)
+	LikePost(w http.ResponseWriter, r *http.Request, postId string)
+
 	// (GET /posts/{postId}/replies)
 	ListReplies(w http.ResponseWriter, r *http.Request, postId string)
 
@@ -464,6 +499,15 @@ type ServerInterface interface {
 
 	// (PUT /users/{userId}/follow)
 	FollowUser(w http.ResponseWriter, r *http.Request, userId string)
+
+	// (GET /users/{userId}/followers)
+	ListFollowers(w http.ResponseWriter, r *http.Request, userId string)
+
+	// (GET /users/{userId}/following)
+	ListFollowing(w http.ResponseWriter, r *http.Request, userId string)
+
+	// (GET /users/{userId}/likes)
+	ListUserLikes(w http.ResponseWriter, r *http.Request, userId string)
 
 	// (GET /users/{userId}/posts)
 	ListUserPosts(w http.ResponseWriter, r *http.Request, userId string)
@@ -514,6 +558,20 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyFavorites operation middleware
+func (siw *ServerInterfaceWrapper) ListMyFavorites(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyFavorites(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -743,6 +801,110 @@ func (siw *ServerInterfaceWrapper) CreatePost(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// UnfavoritePost operation middleware
+func (siw *ServerInterfaceWrapper) UnfavoritePost(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "postId" -------------
+	var postId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "postId", r.PathValue("postId"), &postId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnfavoritePost(w, r, postId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FavoritePost operation middleware
+func (siw *ServerInterfaceWrapper) FavoritePost(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "postId" -------------
+	var postId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "postId", r.PathValue("postId"), &postId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FavoritePost(w, r, postId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnlikePost operation middleware
+func (siw *ServerInterfaceWrapper) UnlikePost(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "postId" -------------
+	var postId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "postId", r.PathValue("postId"), &postId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnlikePost(w, r, postId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LikePost operation middleware
+func (siw *ServerInterfaceWrapper) LikePost(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "postId" -------------
+	var postId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "postId", r.PathValue("postId"), &postId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LikePost(w, r, postId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListReplies operation middleware
 func (siw *ServerInterfaceWrapper) ListReplies(w http.ResponseWriter, r *http.Request) {
 
@@ -864,6 +1026,84 @@ func (siw *ServerInterfaceWrapper) FollowUser(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.FollowUser(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListFollowers operation middleware
+func (siw *ServerInterfaceWrapper) ListFollowers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFollowers(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListFollowing operation middleware
+func (siw *ServerInterfaceWrapper) ListFollowing(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFollowing(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListUserLikes operation middleware
+func (siw *ServerInterfaceWrapper) ListUserLikes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUserLikes(w, r, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1057,6 +1297,14 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/users/{userId}/posts", wrapper.ListUserPosts)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/users/{userId}/follow", wrapper.UnfollowUser)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/users/{userId}/follow", wrapper.FollowUser)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/posts/{postId}/like", wrapper.UnlikePost)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/posts/{postId}/like", wrapper.LikePost)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/posts/{postId}/favorite", wrapper.UnfavoritePost)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/posts/{postId}/favorite", wrapper.FavoritePost)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/users/{userId}/likes", wrapper.ListUserLikes)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/me/favorites", wrapper.ListMyFavorites)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/users/{userId}/followers", wrapper.ListFollowers)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/users/{userId}/following", wrapper.ListFollowing)
 
 	return m
 }
@@ -1188,6 +1436,41 @@ func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) e
 type GetMe401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response GetMe401JSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMyFavoritesRequestObject struct {
+}
+
+type ListMyFavoritesResponseObject interface {
+	VisitListMyFavoritesResponse(w http.ResponseWriter) error
+}
+
+type ListMyFavorites200JSONResponse []Post
+
+func (response ListMyFavorites200JSONResponse) VisitListMyFavoritesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMyFavorites401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListMyFavorites401JSONResponse) VisitListMyFavoritesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
@@ -1936,6 +2219,182 @@ func (response CreatePost401JSONResponse) VisitCreatePostResponse(w http.Respons
 	return err
 }
 
+type UnfavoritePostRequestObject struct {
+	PostId string `json:"postId"`
+}
+
+type UnfavoritePostResponseObject interface {
+	VisitUnfavoritePostResponse(w http.ResponseWriter) error
+}
+
+type UnfavoritePost204Response struct {
+}
+
+func (response UnfavoritePost204Response) VisitUnfavoritePostResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnfavoritePost401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnfavoritePost401JSONResponse) VisitUnfavoritePostResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnfavoritePost404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnfavoritePost404JSONResponse) VisitUnfavoritePostResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FavoritePostRequestObject struct {
+	PostId string `json:"postId"`
+}
+
+type FavoritePostResponseObject interface {
+	VisitFavoritePostResponse(w http.ResponseWriter) error
+}
+
+type FavoritePost204Response struct {
+}
+
+func (response FavoritePost204Response) VisitFavoritePostResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type FavoritePost401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response FavoritePost401JSONResponse) VisitFavoritePostResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FavoritePost404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response FavoritePost404JSONResponse) VisitFavoritePostResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnlikePostRequestObject struct {
+	PostId string `json:"postId"`
+}
+
+type UnlikePostResponseObject interface {
+	VisitUnlikePostResponse(w http.ResponseWriter) error
+}
+
+type UnlikePost204Response struct {
+}
+
+func (response UnlikePost204Response) VisitUnlikePostResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnlikePost401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnlikePost401JSONResponse) VisitUnlikePostResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnlikePost404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnlikePost404JSONResponse) VisitUnlikePostResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LikePostRequestObject struct {
+	PostId string `json:"postId"`
+}
+
+type LikePostResponseObject interface {
+	VisitLikePostResponse(w http.ResponseWriter) error
+}
+
+type LikePost204Response struct {
+}
+
+func (response LikePost204Response) VisitLikePostResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type LikePost401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response LikePost401JSONResponse) VisitLikePostResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LikePost404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response LikePost404JSONResponse) VisitLikePostResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListRepliesRequestObject struct {
 	PostId string `json:"postId"`
 }
@@ -2189,6 +2648,114 @@ func (response FollowUser404JSONResponse) VisitFollowUserResponse(w http.Respons
 	return err
 }
 
+type ListFollowersRequestObject struct {
+	UserId string `json:"userId"`
+}
+
+type ListFollowersResponseObject interface {
+	VisitListFollowersResponse(w http.ResponseWriter) error
+}
+
+type ListFollowers200JSONResponse []UserSummary
+
+func (response ListFollowers200JSONResponse) VisitListFollowersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListFollowers404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListFollowers404JSONResponse) VisitListFollowersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListFollowingRequestObject struct {
+	UserId string `json:"userId"`
+}
+
+type ListFollowingResponseObject interface {
+	VisitListFollowingResponse(w http.ResponseWriter) error
+}
+
+type ListFollowing200JSONResponse []UserSummary
+
+func (response ListFollowing200JSONResponse) VisitListFollowingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListFollowing404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListFollowing404JSONResponse) VisitListFollowingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUserLikesRequestObject struct {
+	UserId string `json:"userId"`
+}
+
+type ListUserLikesResponseObject interface {
+	VisitListUserLikesResponse(w http.ResponseWriter) error
+}
+
+type ListUserLikes200JSONResponse []Post
+
+func (response ListUserLikes200JSONResponse) VisitListUserLikesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUserLikes404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListUserLikes404JSONResponse) VisitListUserLikesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListUserPostsRequestObject struct {
 	UserId string `json:"userId"`
 }
@@ -2315,6 +2882,9 @@ type StrictServerInterface interface {
 	// (GET /auth/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
 
+	// (GET /auth/me/favorites)
+	ListMyFavorites(ctx context.Context, request ListMyFavoritesRequestObject) (ListMyFavoritesResponseObject, error)
+
 	// (PATCH /auth/me/profile)
 	UpdateProfile(ctx context.Context, request UpdateProfileRequestObject) (UpdateProfileResponseObject, error)
 
@@ -2357,6 +2927,18 @@ type StrictServerInterface interface {
 	// (POST /posts)
 	CreatePost(ctx context.Context, request CreatePostRequestObject) (CreatePostResponseObject, error)
 
+	// (DELETE /posts/{postId}/favorite)
+	UnfavoritePost(ctx context.Context, request UnfavoritePostRequestObject) (UnfavoritePostResponseObject, error)
+
+	// (PUT /posts/{postId}/favorite)
+	FavoritePost(ctx context.Context, request FavoritePostRequestObject) (FavoritePostResponseObject, error)
+
+	// (DELETE /posts/{postId}/like)
+	UnlikePost(ctx context.Context, request UnlikePostRequestObject) (UnlikePostResponseObject, error)
+
+	// (PUT /posts/{postId}/like)
+	LikePost(ctx context.Context, request LikePostRequestObject) (LikePostResponseObject, error)
+
 	// (GET /posts/{postId}/replies)
 	ListReplies(ctx context.Context, request ListRepliesRequestObject) (ListRepliesResponseObject, error)
 
@@ -2371,6 +2953,15 @@ type StrictServerInterface interface {
 
 	// (PUT /users/{userId}/follow)
 	FollowUser(ctx context.Context, request FollowUserRequestObject) (FollowUserResponseObject, error)
+
+	// (GET /users/{userId}/followers)
+	ListFollowers(ctx context.Context, request ListFollowersRequestObject) (ListFollowersResponseObject, error)
+
+	// (GET /users/{userId}/following)
+	ListFollowing(ctx context.Context, request ListFollowingRequestObject) (ListFollowingResponseObject, error)
+
+	// (GET /users/{userId}/likes)
+	ListUserLikes(ctx context.Context, request ListUserLikesRequestObject) (ListUserLikesResponseObject, error)
 
 	// (GET /users/{userId}/posts)
 	ListUserPosts(ctx context.Context, request ListUserPostsRequestObject) (ListUserPostsResponseObject, error)
@@ -2493,6 +3084,30 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMeResponseObject); ok {
 		if err := validResponse.VisitGetMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMyFavorites operation middleware
+func (sh *strictHandler) ListMyFavorites(w http.ResponseWriter, r *http.Request) {
+	var request ListMyFavoritesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ListMyFavorites(ctx, request.(ListMyFavoritesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMyFavorites")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMyFavoritesResponseObject); ok {
+		if err := validResponse.VisitListMyFavoritesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2903,6 +3518,110 @@ func (sh *strictHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UnfavoritePost operation middleware
+func (sh *strictHandler) UnfavoritePost(w http.ResponseWriter, r *http.Request, postId string) {
+	var request UnfavoritePostRequestObject
+
+	request.PostId = postId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.UnfavoritePost(ctx, request.(UnfavoritePostRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnfavoritePost")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnfavoritePostResponseObject); ok {
+		if err := validResponse.VisitUnfavoritePostResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FavoritePost operation middleware
+func (sh *strictHandler) FavoritePost(w http.ResponseWriter, r *http.Request, postId string) {
+	var request FavoritePostRequestObject
+
+	request.PostId = postId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.FavoritePost(ctx, request.(FavoritePostRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FavoritePost")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FavoritePostResponseObject); ok {
+		if err := validResponse.VisitFavoritePostResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnlikePost operation middleware
+func (sh *strictHandler) UnlikePost(w http.ResponseWriter, r *http.Request, postId string) {
+	var request UnlikePostRequestObject
+
+	request.PostId = postId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.UnlikePost(ctx, request.(UnlikePostRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnlikePost")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnlikePostResponseObject); ok {
+		if err := validResponse.VisitUnlikePostResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LikePost operation middleware
+func (sh *strictHandler) LikePost(w http.ResponseWriter, r *http.Request, postId string) {
+	var request LikePostRequestObject
+
+	request.PostId = postId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.LikePost(ctx, request.(LikePostRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LikePost")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LikePostResponseObject); ok {
+		if err := validResponse.VisitLikePostResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListReplies operation middleware
 func (sh *strictHandler) ListReplies(w http.ResponseWriter, r *http.Request, postId string) {
 	var request ListRepliesRequestObject
@@ -3033,6 +3752,84 @@ func (sh *strictHandler) FollowUser(w http.ResponseWriter, r *http.Request, user
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(FollowUserResponseObject); ok {
 		if err := validResponse.VisitFollowUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListFollowers operation middleware
+func (sh *strictHandler) ListFollowers(w http.ResponseWriter, r *http.Request, userId string) {
+	var request ListFollowersRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ListFollowers(ctx, request.(ListFollowersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListFollowers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListFollowersResponseObject); ok {
+		if err := validResponse.VisitListFollowersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListFollowing operation middleware
+func (sh *strictHandler) ListFollowing(w http.ResponseWriter, r *http.Request, userId string) {
+	var request ListFollowingRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ListFollowing(ctx, request.(ListFollowingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListFollowing")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListFollowingResponseObject); ok {
+		if err := validResponse.VisitListFollowingResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListUserLikes operation middleware
+func (sh *strictHandler) ListUserLikes(w http.ResponseWriter, r *http.Request, userId string) {
+	var request ListUserLikesRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ListUserLikes(ctx, request.(ListUserLikesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUserLikes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListUserLikesResponseObject); ok {
+		if err := validResponse.VisitListUserLikesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

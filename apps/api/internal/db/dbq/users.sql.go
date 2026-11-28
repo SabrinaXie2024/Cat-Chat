@@ -148,6 +148,74 @@ func (q *Queries) GetProfile(ctx context.Context, arg GetProfileParams) (GetProf
 	return i, err
 }
 
+const listFollowers = `-- name: ListFollowers :many
+SELECT u.id, u.nickname, u.avatar
+FROM follows f JOIN users u ON u.id = f.follower_id
+WHERE f.followee_id = $1
+ORDER BY f.created_at DESC, u.id
+LIMIT 100
+`
+
+type ListFollowersRow struct {
+	ID       uuid.UUID
+	Nickname string
+	Avatar   string
+}
+
+func (q *Queries) ListFollowers(ctx context.Context, followeeID uuid.UUID) ([]ListFollowersRow, error) {
+	rows, err := q.db.Query(ctx, listFollowers, followeeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFollowersRow
+	for rows.Next() {
+		var i ListFollowersRow
+		if err := rows.Scan(&i.ID, &i.Nickname, &i.Avatar); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFollowing = `-- name: ListFollowing :many
+SELECT u.id, u.nickname, u.avatar
+FROM follows f JOIN users u ON u.id = f.followee_id
+WHERE f.follower_id = $1
+ORDER BY f.created_at DESC, u.id
+LIMIT 100
+`
+
+type ListFollowingRow struct {
+	ID       uuid.UUID
+	Nickname string
+	Avatar   string
+}
+
+func (q *Queries) ListFollowing(ctx context.Context, followerID uuid.UUID) ([]ListFollowingRow, error) {
+	rows, err := q.db.Query(ctx, listFollowing, followerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFollowingRow
+	for rows.Next() {
+		var i ListFollowingRow
+		if err := rows.Scan(&i.ID, &i.Nickname, &i.Avatar); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const unfollow = `-- name: Unfollow :exec
 DELETE FROM follows WHERE follower_id = $1 AND followee_id = $2
 `

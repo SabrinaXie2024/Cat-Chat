@@ -87,9 +87,53 @@ export const getCreateReplyMockHandler = (overrideResponse?: Reply | ((info: Par
       })
   }, options)
 }
+
+export const getLikePostMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<{ postId: string }>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.put<{ postId: string }>('*/posts/:postId/like', async (info: Parameters<HttpResponseResolver<{ postId: string }>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
+
+export const getUnlikePostMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<{ postId: string }>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.delete<{ postId: string }>('*/posts/:postId/like', async (info: Parameters<HttpResponseResolver<{ postId: string }>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
+
+export const getFavoritePostMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<{ postId: string }>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.put<{ postId: string }>('*/posts/:postId/favorite', async (info: Parameters<HttpResponseResolver<{ postId: string }>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
+
+export const getUnfavoritePostMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<{ postId: string }>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.delete<{ postId: string }>('*/posts/:postId/favorite', async (info: Parameters<HttpResponseResolver<{ postId: string }>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
 export const getPostsMock = () => [
   getListPostsMockHandler(),
   getCreatePostMockHandler(),
   getListRepliesMockHandler(),
-  getCreateReplyMockHandler()
+  getCreateReplyMockHandler(),
+  getLikePostMockHandler(),
+  getUnlikePostMockHandler(),
+  getFavoritePostMockHandler(),
+  getUnfavoritePostMockHandler()
 ]

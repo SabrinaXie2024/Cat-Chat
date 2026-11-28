@@ -25,20 +25,22 @@ type session struct {
 
 // Memory is an in-process store for tests. Not durable.
 type Memory struct {
-	mu       sync.RWMutex
-	posts    []api.Post // newest last
-	replies  map[string][]api.Reply
-	users    map[string]userRow // by id
-	byEmail  map[string]string  // email -> id
-	sessions map[string]session // token hash -> session
-	images   map[string]string  // image id -> owner id
-	imgDims  map[string][2]int
-	videos   map[string]api.VideoRecord
-	gallery  []api.GalleryEntry // newest last
-	pending  map[string]api.PendingRegistration
-	resets   map[string]api.ResetCode
-	follows  map[[2]string]bool // {follower, followee}
-	now      func() time.Time
+	mu        sync.RWMutex
+	posts     []api.Post // newest last
+	replies   map[string][]api.Reply
+	users     map[string]userRow // by id
+	byEmail   map[string]string  // email -> id
+	sessions  map[string]session // token hash -> session
+	images    map[string]string  // image id -> owner id
+	imgDims   map[string][2]int
+	videos    map[string]api.VideoRecord
+	gallery   []api.GalleryEntry // newest last
+	pending   map[string]api.PendingRegistration
+	resets    map[string]api.ResetCode
+	follows   pairs // {follower, followee}, oldest first
+	likes     pairs // {user, post}
+	favorites pairs // {user, post}
+	now       func() time.Time
 }
 
 var _ api.Store = (*Memory)(nil)
@@ -54,7 +56,6 @@ func NewMemory() *Memory {
 		videos:   map[string]api.VideoRecord{},
 		pending:  map[string]api.PendingRegistration{},
 		resets:   map[string]api.ResetCode{},
-		follows:  map[[2]string]bool{},
 		now:      time.Now,
 	}
 }
@@ -315,12 +316,14 @@ func (m *Memory) checkImages(owner string, ids []string) error {
 
 // --- posts & replies ---
 
-func (m *Memory) ListPosts(context.Context) ([]api.Post, error) {
+func (m *Memory) ListPosts(_ context.Context, viewerID string) ([]api.Post, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	out := slices.Clone(m.posts)
-	slices.Reverse(out)
-	return nonNil(out), nil
+	out := []api.Post{}
+	for _, p := range slices.Backward(m.posts) {
+		out = append(out, m.decorate(p, viewerID))
+	}
+	return out, nil
 }
 
 func (m *Memory) CreatePost(_ context.Context, author api.User, in api.NewPost) (api.Post, error) {

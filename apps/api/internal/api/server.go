@@ -28,7 +28,8 @@ const (
 //
 // Errors: ErrNotFound for unknown/invalid ids, ErrThreadFull, ErrEmailTaken.
 type Store interface {
-	ListPosts(ctx context.Context) ([]Post, error)
+	// viewerID ( when signed out) fills likedByMe / favoritedByMe.
+	ListPosts(ctx context.Context, viewerID string) ([]Post, error)
 	CreatePost(ctx context.Context, author User, in NewPost) (Post, error)
 	ListReplies(ctx context.Context, postID string) ([]Reply, error)
 	CreateReply(ctx context.Context, postID string, author User, in NewReply) (Reply, error)
@@ -52,7 +53,15 @@ type Store interface {
 	// unknown users.
 	UpdateProfile(ctx context.Context, userID string, nickname *string, avatar *Avatar) (User, error)
 	Profile(ctx context.Context, userID, viewerID string) (Profile, error)
-	ListUserPosts(ctx context.Context, userID string) ([]Post, error)
+	ListUserPosts(ctx context.Context, userID, viewerID string) ([]Post, error)
+	ListLikedPosts(ctx context.Context, userID, viewerID string) ([]Post, error)
+	ListFavorites(ctx context.Context, userID string) ([]Post, error)
+	// SetLike / SetFavorite are idempotent; ErrNotFound for unknown posts.
+	SetLike(ctx context.Context, userID, postID string, on bool) error
+	SetFavorite(ctx context.Context, userID, postID string, on bool) error
+	// ErrNotFound for unknown users.
+	ListFollowers(ctx context.Context, userID string) ([]UserSummary, error)
+	ListFollowing(ctx context.Context, userID string) ([]UserSummary, error)
 	Follow(ctx context.Context, followerID, followeeID string) error
 	Unfollow(ctx context.Context, followerID, followeeID string) error
 
@@ -148,7 +157,7 @@ func (s *Server) GetHealth(context.Context, GetHealthRequestObject) (GetHealthRe
 }
 
 func (s *Server) ListPosts(ctx context.Context, _ ListPostsRequestObject) (ListPostsResponseObject, error) {
-	posts, err := s.Store.ListPosts(ctx)
+	posts, err := s.Store.ListPosts(ctx, viewerID(ctx))
 	if err != nil {
 		return nil, err
 	}

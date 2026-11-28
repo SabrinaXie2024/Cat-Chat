@@ -196,11 +196,11 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
 
 ## Profiles & follows
 
-- Avatars are presets only: the 12 values of the `Avatar` enum in the spec
+- Avatars are presets only: the 13 values of the `Avatar` enum in the spec
   (orange, black, white, gray, calico, siamese, tuxedo, tabby, silver,
-  tortie, cream, orange-white). No custom uploads. New users default to
+  tortie, cream, orange-white, lihua 狸花). No custom uploads. New users default to
   `orange`. Adding one touches: the enum, a new migration replacing the
-  `users_avatar_check` CHECK (latest: 00007), a design in `CatAvatar.tsx`
+  `users_avatar_check` CHECK (latest: 00008), a design in `CatAvatar.tsx`
   (`Record<Avatar, …>`, so a missing one fails typecheck), an
   `avatar.<id>` name in all 10 languages, and the list in the store
   conformance test (which checks the CHECK accepts every enum value).
@@ -211,6 +211,18 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
   so renaming updates old posts too (Memory/MSW rewrite them on update).
 - Page: `/users/$userId` (opened from the user menu or any author name/
   avatar); own profile shows an inline edit form instead of Follow.
+- Likes (public) and favorites (private to the owner): `PUT|DELETE
+  /posts/{id}/like|favorite` (idempotent). Every `Post` carries
+  `likeCount`, `likedByMe`, `favoritedByMe` (false when signed out), so
+  every post list takes the viewer; the four post-list SQL queries select
+  identical columns and are converted to `ListPostsRow` (`convertRows`) —
+  keep them in sync. Lists: `GET /users/{id}/likes`, `GET
+  /auth/me/favorites`, `GET /users/{id}/followers|following`
+  (`UserSummary`).
+- Profile tabs (`features/profile/ProfileTabs.tsx`, ARIA tablist with arrow
+  keys): 帖子 / 点赞 / 收藏 (own profile only) / 关注 / 粉丝. Post buttons
+  (`community/Reactions.tsx`) flip optimistically, then refresh every post
+  list and profile query.
 - When an avatar and a name next to it both link to the same profile, the
   avatar link is mouse-only (`tabIndex={-1}`, `aria-hidden`, hover
   `title`), so keyboard/screen-reader users get one link per author.

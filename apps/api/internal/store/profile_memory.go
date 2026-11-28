@@ -46,14 +46,14 @@ func (m *Memory) Profile(_ context.Context, userID, viewerID string) (api.Profil
 	}
 	p := api.Profile{
 		Id: userID, Nickname: row.user.Nickname, Avatar: row.user.Avatar, CreatedAt: row.user.CreatedAt,
-		FollowedByMe: m.follows[[2]string{viewerID, userID}],
+		FollowedByMe: m.follows.has(viewerID, userID),
 	}
 	for _, post := range m.posts {
 		if post.AuthorId == userID {
 			p.PostCount++
 		}
 	}
-	for k := range m.follows {
+	for _, k := range m.follows {
 		if k[1] == userID {
 			p.FollowerCount++
 		}
@@ -64,7 +64,7 @@ func (m *Memory) Profile(_ context.Context, userID, viewerID string) (api.Profil
 	return p, nil
 }
 
-func (m *Memory) ListUserPosts(_ context.Context, userID string) ([]api.Post, error) {
+func (m *Memory) ListUserPosts(_ context.Context, userID, viewerID string) ([]api.Post, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if _, ok := m.users[userID]; !ok {
@@ -73,7 +73,7 @@ func (m *Memory) ListUserPosts(_ context.Context, userID string) ([]api.Post, er
 	out := []api.Post{}
 	for _, p := range slices.Backward(m.posts) {
 		if p.AuthorId == userID {
-			out = append(out, p)
+			out = append(out, m.decorate(p, viewerID))
 		}
 	}
 	return out, nil
@@ -88,7 +88,7 @@ func (m *Memory) Follow(_ context.Context, followerID, followeeID string) error 
 	if _, ok := m.users[followeeID]; !ok {
 		return api.ErrNotFound
 	}
-	m.follows[[2]string{followerID, followeeID}] = true
+	m.follows.add(followerID, followeeID)
 	return nil
 }
 
@@ -98,6 +98,6 @@ func (m *Memory) Unfollow(_ context.Context, followerID, followeeID string) erro
 	if _, ok := m.users[followeeID]; !ok {
 		return api.ErrNotFound
 	}
-	delete(m.follows, [2]string{followerID, followeeID})
+	m.follows.remove(followerID, followeeID)
 	return nil
 }

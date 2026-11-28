@@ -110,19 +110,12 @@ func (p *Postgres) DeleteExpiredSessions(ctx context.Context, now time.Time) (in
 
 // --- posts & replies ---
 
-func (p *Postgres) ListPosts(ctx context.Context) ([]api.Post, error) {
-	rows, err := p.q.ListPosts(ctx)
+func (p *Postgres) ListPosts(ctx context.Context, viewerID string) ([]api.Post, error) {
+	rows, err := p.q.ListPosts(ctx, optID(viewerID))
 	if err != nil {
 		return nil, err
 	}
-	out := make([]api.Post, len(rows))
-	for i, r := range rows {
-		out[i] = api.Post{
-			Id: r.ID.String(), AuthorId: r.AuthorID.String(), Author: r.Author, AuthorAvatar: api.Avatar(r.AuthorAvatar), Content: r.Content, Images: nonNil(r.Images),
-			ReplyCount: int(r.ReplyCount), CreatedAt: r.CreatedAt.UTC(),
-		}
-	}
-	return out, nil
+	return postRows(rows), nil
 }
 
 func (p *Postgres) CreateImage(ctx context.Context, id, ownerID string, width, height, size int) error {

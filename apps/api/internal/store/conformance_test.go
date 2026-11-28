@@ -47,7 +47,7 @@ func TestPostgres(t *testing.T) {
 		// The users.avatar CHECK must accept exactly the API's Avatar enum.
 		all := []api.Avatar{
 			api.Orange, api.Black, api.White, api.Gray, api.Calico, api.Siamese,
-			api.Tuxedo, api.Tabby, api.Silver, api.Tortie, api.Cream, api.OrangeWhite,
+			api.Tuxedo, api.Tabby, api.Silver, api.Tortie, api.Cream, api.OrangeWhite, api.Lihua,
 		}
 		for _, a := range all {
 			if !a.Valid() {
@@ -100,7 +100,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations, password_resets, follows CASCADE`); err != nil {
+	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations, password_resets, follows, likes, favorites CASCADE`); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -206,7 +206,7 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		if u, _ := s.UpdateProfile(ctx, a.Id, nil, &av2); u.Nickname != name || u.Avatar != av2 {
 			t.Fatalf("nil nickname must be kept: %+v", u)
 		}
-		if ps, _ := s.ListPosts(ctx); ps[0].Author != name || ps[0].AuthorAvatar != av2 {
+		if ps, _ := s.ListPosts(ctx, ""); ps[0].Author != name || ps[0].AuthorAvatar != av2 {
 			t.Fatalf("posts show current author: %+v", ps[0])
 		}
 
@@ -247,24 +247,106 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 			t.Fatalf("bad id profile: %v", err)
 		}
 
-		if ps, err := s.ListUserPosts(ctx, b.Id); err != nil || ps == nil || len(ps) != 0 {
+		if ps, err := s.ListUserPosts(ctx, b.Id, ""); err != nil || ps == nil || len(ps) != 0 {
 			t.Fatalf("empty user posts must be []: %#v %v", ps, err)
 		}
 		second, _ := s.CreatePost(ctx, u, api.NewPost{Content: "two"})
 		_, _ = s.CreatePost(ctx, b, api.NewPost{Content: "b's"})
-		ps, err := s.ListUserPosts(ctx, a.Id)
+		ps, err := s.ListUserPosts(ctx, a.Id, "")
 		if err != nil || len(ps) != 2 || ps[0].Id != second.Id || ps[1].Id != post.Id {
 			t.Fatalf("user posts = %+v %v", ps, err)
 		}
-		if _, err := s.ListUserPosts(ctx, missing); !errors.Is(err, api.ErrNotFound) {
+		if _, err := s.ListUserPosts(ctx, missing, ""); !errors.Is(err, api.ErrNotFound) {
 			t.Fatalf("unknown user posts: %v", err)
+		}
+	})
+
+	t.Run("likes, favorites and follow lists", func(t *testing.T) {
+		s := newStore(t)
+		a := seedUser(t, s, "a@b.co")
+		b := seedUser(t, s, "c@d.co")
+		p1, _ := s.CreatePost(ctx, a, api.NewPost{Content: "one"})
+		p2, _ := s.CreatePost(ctx, a, api.NewPost{Content: "two"})
+		if p1.LikeCount != 0 || p1.LikedByMe || p1.FavoritedByMe {
+			t.Fatalf("new post %+v", p1)
+		}
+		missing := "01a2111c-2a68-7371-bce0-5b41e2f69f46"
+		if err := s.SetLike(ctx, b.Id, missing, true); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("like unknown: %v", err)
+		}
+		if err := s.SetFavorite(ctx, b.Id, "bad", true); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("fav bad id: %v", err)
+		}
+		for range 2 { // idempotent
+			if err := s.SetLike(ctx, b.Id, p1.Id, true); err != nil {
+				t.Fatal(err)
+			}
+		}
+		_ = s.SetLike(ctx, a.Id, p1.Id, true)
+		_ = s.SetLike(ctx, b.Id, p2.Id, true) // liked last → listed first
+		_ = s.SetFavorite(ctx, b.Id, p1.Id, true)
+
+		ps, _ := s.ListPosts(ctx, b.Id)
+		byID := map[string]api.Post{}
+		for _, p := range ps {
+			byID[p.Id] = p
+		}
+		if got := byID[p1.Id]; got.LikeCount != 2 || !got.LikedByMe || !got.FavoritedByMe {
+			t.Fatalf("p1 for b = %+v", got)
+		}
+		if anon, _ := s.ListPosts(ctx, ""); anon[1].LikedByMe || anon[1].FavoritedByMe || anon[1].LikeCount != 2 {
+			t.Fatalf("anonymous = %+v", anon[1])
+		}
+		if up, _ := s.ListUserPosts(ctx, a.Id, b.Id); !up[1].LikedByMe {
+			t.Fatalf("user posts carry viewer flags: %+v", up[1])
+		}
+
+		liked, err := s.ListLikedPosts(ctx, b.Id, "")
+		if err != nil || len(liked) != 2 || liked[0].Id != p2.Id || liked[1].Id != p1.Id {
+			t.Fatalf("liked = %+v %v", liked, err)
+		}
+		if _, err := s.ListLikedPosts(ctx, missing, ""); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("liked unknown user: %v", err)
+		}
+		favs, err := s.ListFavorites(ctx, b.Id)
+		if err != nil || len(favs) != 1 || favs[0].Id != p1.Id || !favs[0].FavoritedByMe {
+			t.Fatalf("favorites = %+v %v", favs, err)
+		}
+		if favs, _ := s.ListFavorites(ctx, a.Id); favs == nil || len(favs) != 0 {
+			t.Fatalf("empty favorites must be []: %#v", favs)
+		}
+		_ = s.SetLike(ctx, b.Id, p1.Id, false)
+		_ = s.SetFavorite(ctx, b.Id, p1.Id, false)
+		if liked, _ := s.ListLikedPosts(ctx, b.Id, ""); len(liked) != 1 {
+			t.Fatalf("after unlike = %+v", liked)
+		}
+		if favs, _ := s.ListFavorites(ctx, b.Id); len(favs) != 0 {
+			t.Fatalf("after unfavorite = %+v", favs)
+		}
+
+		c := seedUser(t, s, "e@f.co")
+		_ = s.Follow(ctx, b.Id, a.Id)
+		_ = s.Follow(ctx, c.Id, a.Id)
+		fs, err := s.ListFollowers(ctx, a.Id)
+		if err != nil || len(fs) != 2 || fs[0].Id != c.Id || fs[1].Id != b.Id || fs[0].Avatar != api.Orange {
+			t.Fatalf("followers = %+v %v", fs, err)
+		}
+		fg, err := s.ListFollowing(ctx, b.Id)
+		if err != nil || len(fg) != 1 || fg[0].Id != a.Id {
+			t.Fatalf("following = %+v %v", fg, err)
+		}
+		if fg, _ := s.ListFollowing(ctx, a.Id); fg == nil || len(fg) != 0 {
+			t.Fatalf("empty following must be []: %#v", fg)
+		}
+		if _, err := s.ListFollowers(ctx, missing); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("followers unknown: %v", err)
 		}
 	})
 
 	t.Run("posts newest first, author from user", func(t *testing.T) {
 		s := newStore(t)
 		u := seedUser(t, s, "a@b.co")
-		if ps, err := s.ListPosts(ctx); err != nil || ps == nil || len(ps) != 0 {
+		if ps, err := s.ListPosts(ctx, ""); err != nil || ps == nil || len(ps) != 0 {
 			t.Fatalf("empty list must be [] not nil: %#v %v", ps, err)
 		}
 		first, _ := s.CreatePost(ctx, u, api.NewPost{Content: "first"})
@@ -277,7 +359,7 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		if second.Author != "咪咪" || second.Images[0] != img || first.Images == nil {
 			t.Fatalf("bad post %+v / %+v", second, first)
 		}
-		ps, _ := s.ListPosts(ctx)
+		ps, _ := s.ListPosts(ctx, "")
 		if len(ps) != 2 || ps[0].Id != second.Id || ps[1].Id != first.Id {
 			t.Fatalf("order: %+v", ps)
 		}
@@ -304,7 +386,7 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		if len(rs) != 2 || rs[0].Id != r1.Id || rs[1].Id != r2.Id {
 			t.Fatalf("replies oldest first: %+v", rs)
 		}
-		ps, _ := s.ListPosts(ctx)
+		ps, _ := s.ListPosts(ctx, "")
 		if ps[0].ReplyCount != 2 {
 			t.Fatalf("reply count %d", ps[0].ReplyCount)
 		}
@@ -333,7 +415,7 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 			}
 		}
 		// A rejected reply must not consume a reply slot.
-		if ps, _ := s.ListPosts(ctx); ps[0].ReplyCount != 0 {
+		if ps, _ := s.ListPosts(ctx, ""); ps[0].ReplyCount != 0 {
 			t.Fatalf("reply count = %d after rejected replies", ps[0].ReplyCount)
 		}
 		if _, err := s.CreateReply(ctx, p.Id, u, api.NewReply{Content: "r", Images: []string{mine}}); err != nil {
@@ -488,7 +570,7 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 			t.Fatalf("ok=%d full=%d", ok.Load(), full.Load())
 		}
 		rs, _ := s.ListReplies(ctx, p.Id)
-		ps, _ := s.ListPosts(ctx)
+		ps, _ := s.ListPosts(ctx, "")
 		if len(rs) != api.MaxRepliesPerPost || ps[0].ReplyCount != api.MaxRepliesPerPost {
 			t.Fatalf("stored %d replies, count %d", len(rs), ps[0].ReplyCount)
 		}
