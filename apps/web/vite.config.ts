@@ -8,7 +8,7 @@ export default defineConfig({
   // Router plugin must come before react().
   plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true }), react(), tailwindcss()],
   server: {
-    // Used when MSW is off (`VITE_API=real pnpm dev`): forward to the Go server.
+    // Used when MSW is off (`pnpm dev:web:real` from the repo root): forward to the Go server.
     proxy: { '/api': 'http://localhost:8080' },
   },
   test: {

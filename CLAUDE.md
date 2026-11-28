@@ -15,13 +15,42 @@ community. Product requirements: the original brief is kept in the local `aichat
 packages/api-spec/openapi.yaml   API contract — the single source of truth
 apps/api/                        Go backend (net/http, oapi-codegen strict server)
 apps/web/                        React 19 + Vite + TanStack Router/Query frontend
-scripts/                         repo tooling (GHSA lockfile check)
+scripts/                         repo tooling (GHSA check, dev.mjs env runner)
 ```
 
-Toolchain: Node 24 (`/opt/homebrew/opt/node@24/bin`, keg-only — must be on
-PATH), pnpm 12, Go 1.27, PostgreSQL 18 (`brew services start postgresql@18`;
-binaries in `/opt/homebrew/opt/postgresql@18/bin`), all via Homebrew.
-Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
+## macOS + Windows
+
+The project is developed on both a Mac and a Windows PC. **Every change
+pushed to GitHub must work on both.** In practice:
+
+- npm scripts must run under both sh and cmd.exe: no `VAR=x cmd`, `set -a`,
+  `${VAR:-default}`, `[ ... ]` or `source` in `package.json`. Anything that
+  needs env setup goes through `scripts/dev.mjs` (Node), which loads
+  `apps/api/.env.local` and picks per-platform defaults.
+- Build paths with `path.join` / `filepath.Join`, never hard-coded `/` or
+  `\`; don't assume `/tmp`, Homebrew paths or a Unix socket.
+- Line endings are LF everywhere (`.gitattributes`; Biome and gofmt need it).
+- lefthook runs hooks through sh (Git Bash on Windows), so `lefthook.yml` may
+  use POSIX shell.
+
+Toolchain (same versions on both): Node 24, pnpm 12.23.0, Go 1.27.4,
+PostgreSQL 18, ffmpeg.
+
+- **macOS** (Homebrew): Node 24 at `/opt/homebrew/opt/node@24/bin` (keg-only
+  — must be on PATH); `brew services start postgresql@18` (binaries in
+  `/opt/homebrew/opt/postgresql@18/bin`). Postgres is reached over the Unix
+  socket in `/tmp` with peer auth.
+- **Windows** (winget): `OpenJS.NodeJS.24`, `GoLang.Go`,
+  `PostgreSQL.PostgreSQL.18` (runs as a Windows service), and
+  `Gyan.FFmpeg.Essentials`; pnpm via `npm i -g pnpm@12.23.0`. Postgres is
+  `postgres@localhost:5432`, password in `%APPDATA%\postgresql\pgpass.conf`
+  (`localhost:5432:*:postgres:<password>`), which psql and pgx both read.
+  Use Git Bash or PowerShell.
+
+Local databases: `catchat` (dev) and `catchat_test` (tests, truncated
+freely); create them with `createdb` (add `-h localhost -U postgres` on
+Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
+`apps/api/.env.local`.
 
 ## Commands (run from repo root)
 
@@ -29,9 +58,10 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
 |---|---|
 | `pnpm dev:web` | Vite on :5173, API served by MSW (no backend needed) |
 | `pnpm dev:api` | Go server on :8080 against local `catchat` DB (migrates on boot) |
-| `VITE_API=real pnpm dev:web` | Vite with MSW off, `/api` proxied to :8080 |
+| `pnpm dev:web:real` | Vite with MSW off, `/api` proxied to :8080 |
 | `pnpm gen` | Regenerate Go server + TS client/mocks from the spec |
 | `pnpm test` | Vitest + `go test` (needs Postgres running; uses `catchat_test`) |
+| `pnpm test:api` | Only the Go tests |
 | `pnpm lint` / `pnpm typecheck` / `pnpm build` | |
 | `pnpm audit:ghsa` | Fail if lockfile has any GHSA-g7cv-rxg3-hmpx version |
 
@@ -97,7 +127,8 @@ Local databases: `catchat` (dev) and `catchat_test` (tests, truncated freely).
   stream and chapter metadata, plus a poster frame run through the image
   pipeline; then `POST /gallery {kind:"video", mediaId}`. Media must be the
   admin's own upload (`ErrInvalidMedia`).
-- ffmpeg is a runtime dependency (`brew install ffmpeg`; `FFMPEG` overrides
+- ffmpeg is a runtime dependency (`brew install ffmpeg` / winget
+  `Gyan.FFmpeg.Essentials`; `FFMPEG` overrides
   the path). It's invoked with `-protocol_whitelist file` and an explicit
   demuxer for the sniffed container — keep both when changing args.
 - `GET /api/videos/{id}` is hand-written (`Server.ServeVideo`,
