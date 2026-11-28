@@ -233,4 +233,5 @@ export const de: Messages = {
   'admin.dismissed': 'Meldungen abgelehnt',
   'admin.loading': 'Wird geladen…',
   'admin.reportsLabel': 'Meldungen',
+  'err.deleteNotAllowed': 'Nur der Autor des Beitrags oder des Kommentars kann ihn löschen',
 }

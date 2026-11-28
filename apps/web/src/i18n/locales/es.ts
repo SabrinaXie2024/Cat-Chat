@@ -233,4 +233,5 @@ export const es: Messages = {
   'admin.dismissed': 'Denuncias descartadas',
   'admin.loading': 'Cargando…',
   'admin.reportsLabel': 'Denuncias',
+  'err.deleteNotAllowed': 'Solo el autor de la publicación o del comentario puede eliminarlo',
 }

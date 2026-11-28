@@ -235,4 +235,5 @@ export const fr: Messages = {
   'admin.dismissed': 'Signalements rejetés',
   'admin.loading': 'Chargement…',
   'admin.reportsLabel': 'Signalements',
+  'err.deleteNotAllowed': "Seul l'auteur de la publication ou du commentaire peut le supprimer",
 }

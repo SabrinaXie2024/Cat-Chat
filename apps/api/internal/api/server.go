@@ -33,7 +33,8 @@ type Store interface {
 	CreatePost(ctx context.Context, author User, in NewPost) (Post, error)
 	ListReplies(ctx context.Context, postID string) ([]Reply, error)
 	CreateReply(ctx context.Context, postID string, author User, in NewReply) (Reply, error)
-	// Reply moderation. Delete/pin: ErrForbidden unless actor wrote the post.
+	// Reply moderation. Pin: ErrForbidden unless actor wrote the post.
+	// Delete: the post's author or the reply's author, else ErrForbidden.
 	// ErrNotFound when the reply isn't under that post. Pinning replaces any
 	// other pinned reply on the post. Report: ErrOwnReply for one's own reply;
 	// reporting again overwrites (and reopens) the reporter's report.

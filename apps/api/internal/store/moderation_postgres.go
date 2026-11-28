@@ -37,8 +37,10 @@ func (p *Postgres) DeleteReply(ctx context.Context, postID, replyID, actorID str
 		if err != nil {
 			return err
 		}
-		if err := requirePostAuthor(row, actorID); err != nil {
-			return err
+		if row.ReplyAuthorID.String() != actorID {
+			if err := requirePostAuthor(row, actorID); err != nil {
+				return err
+			}
 		}
 		n, err := q.DeleteReply(ctx, dbq.DeleteReplyParams{ID: rid, PostID: pid})
 		if err != nil {

@@ -18,6 +18,7 @@ const known: [test: (msg: string) => boolean, key: MessageKey][] = [
   [(m) => m.includes('could not read video'), 'err.videoCorrupt'],
   [(m) => m.startsWith('admin only'), 'err.adminOnly'],
   [(m) => m.includes('report your own reply'), 'err.ownReply'],
+  [(m) => m.startsWith("only the post's author or the comment's"), 'err.deleteNotAllowed'],
   [(m) => m.startsWith("only the post's author"), 'err.postAuthorOnly'],
   [(m) => m.includes('JPEG, PNG and WebP'), 'err.imageType'],
   [(m) => m.includes('5 MB') || m.includes('(413)'), 'err.imageSize'],

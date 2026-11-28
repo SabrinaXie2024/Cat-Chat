@@ -619,7 +619,7 @@ paths:
     delete:
       operationId: deleteReply
       tags: [posts]
-      description: Only the post's author may delete replies under it. Frees a reply slot.
+      description: The post's author (any reply under it) or the reply's own author may delete it. Frees a reply slot.
       responses:
         "204": { description: Deleted }
         "401": { $ref: "#/components/responses/Unauthorized" }

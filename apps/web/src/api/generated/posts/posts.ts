@@ -916,7 +916,7 @@ export const getDeleteReplyUrl = (postId: string,
 }
 
 /**
- * Only the post's author may delete replies under it. Frees a reply slot.
+ * The post's author (any reply under it) or the reply's own author may delete it. Frees a reply slot.
  */
 export const deleteReply = async (postId: string,
     replyId: string, options?: Parameters<typeof http>[1]): Promise<deleteReplyResponse> => {
@@ -968,7 +968,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteReplyMutationError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
     export type DeleteReplyMutationVariables = {postId: string;replyId: string}
 
-    /** Only the post's author may delete replies under it. Frees a reply slot. */
+    /** The post's author (any reply under it) or the reply's own author may delete it. Frees a reply slot. */
 export const useDeleteReply = <TError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReply>>, TError,DeleteReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
  , queryClient?: QueryClient): UseMutationResult<

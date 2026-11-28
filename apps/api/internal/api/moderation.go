@@ -19,7 +19,7 @@ func (s *Server) DeleteReply(ctx context.Context, req DeleteReplyRequestObject) 
 	case errors.Is(err, ErrNotFound):
 		return DeleteReply404JSONResponse{NotFoundJSONResponse{Message: "reply not found"}}, nil
 	case errors.Is(err, ErrForbidden):
-		return DeleteReply403JSONResponse{ForbiddenJSONResponse{Message: msgPostAuthorOnly}}, nil
+		return DeleteReply403JSONResponse{ForbiddenJSONResponse{Message: "only the post's author or the comment's author can delete it"}}, nil
 	case err != nil:
 		return nil, err
 	}

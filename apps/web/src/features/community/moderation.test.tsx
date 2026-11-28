@@ -90,18 +90,19 @@ describe('reply moderation', () => {
     expect(await screen.findByRole('button', { name: /回复 2\/10/ })).toBeInTheDocument()
   })
 
-  it('hides pin/delete from everyone else; others can report, but not their own replies', async () => {
+  it("others can only delete their own replies, and report everyone else's", async () => {
     db.sessionUserId = 'demo'
     const user = userEvent.setup()
     renderApp('/community')
     const list = await openThread(user)
     expect(list.queryByRole('button', { name: '置顶' })).not.toBeInTheDocument()
-    expect(list.queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
 
     const [authors, mine] = [
       list.getAllByRole('listitem')[0] as HTMLElement,
       list.getAllByRole('listitem')[1] as HTMLElement,
     ]
+    expect(within(authors).queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
+    expect(within(mine).getByRole('button', { name: '删除' })).toBeInTheDocument()
     expect(within(mine).queryByRole('button', { name: '举报' })).not.toBeInTheDocument()
 
     await user.click(within(authors).getByRole('button', { name: '举报' }))
@@ -112,6 +113,23 @@ describe('reply moderation', () => {
     expect(await screen.findByText('已提交举报，管理员会尽快处理')).toBeInTheDocument()
     expect(db.reports.get(`r3>demo`)).toMatchObject({ reason: 'abuse', note: '说话很难听' })
     expect(within(authors).queryByRole('form')).not.toBeInTheDocument()
+  })
+
+  it('lets a reply author delete their own reply', async () => {
+    db.sessionUserId = 'demo'
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    )
+    const user = userEvent.setup()
+    renderApp('/community')
+    const list = await openThread(user)
+    const mine = list.getAllByRole('listitem')[1] as HTMLElement
+    expect(mine).toHaveTextContent('中间的评论')
+    await user.click(within(mine).getByRole('button', { name: '删除' }))
+    // (sonner keeps toasts from earlier tests around, so allow several)
+    expect((await screen.findAllByText('评论已删除')).length).toBeGreaterThan(0)
+    await waitFor(() => expect(texts(list)).toEqual(['作者自己的评论', '最早的评论']))
   })
 
   it('shows no moderation buttons to visitors', async () => {

@@ -232,4 +232,5 @@ export const ko: Messages = {
   'admin.dismissed': '신고를 기각했어요',
   'admin.loading': '불러오는 중…',
   'admin.reportsLabel': '신고 내역',
+  'err.deleteNotAllowed': '게시물 작성자나 댓글 작성자만 삭제할 수 있어요',
 }

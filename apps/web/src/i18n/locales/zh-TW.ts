@@ -232,4 +232,5 @@ export const zhTW: Messages = {
   'admin.dismissed': '已駁回檢舉',
   'admin.loading': '載入中…',
   'admin.reportsLabel': '檢舉紀錄',
+  'err.deleteNotAllowed': '只有貼文作者或留言作者可以刪除',
 }

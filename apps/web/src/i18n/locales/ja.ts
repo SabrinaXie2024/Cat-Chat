@@ -231,4 +231,5 @@ export const ja: Messages = {
   'admin.dismissed': '通報を却下しました',
   'admin.loading': '読み込み中…',
   'admin.reportsLabel': '通報の内容',
+  'err.deleteNotAllowed': '削除できるのは投稿者かコメントの投稿者だけです',
 }

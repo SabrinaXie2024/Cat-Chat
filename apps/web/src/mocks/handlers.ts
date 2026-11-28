@@ -660,8 +660,12 @@ export const handlers = [
       http.put<P>('*/api/posts/:postId/replies/:replyId/pin', pin(true)),
       http.delete<P>('*/api/posts/:postId/replies/:replyId/pin', pin(false)),
       http.delete<P>('*/api/posts/:postId/replies/:replyId', ({ params }) => {
-        const g = guard(params)
-        if (g instanceof Response) return g
+        const user = currentUser()
+        if (!user) return bad('please sign in', 401)
+        const g = find(params)
+        if (!g) return bad('reply not found', 404)
+        if (g.post.authorId !== user.id && g.reply.authorId !== user.id)
+          return bad("only the post's author or the comment's author can delete it", 403)
         db.replies.set(
           g.post.id,
           g.list.filter((r) => r.id !== g.reply.id),

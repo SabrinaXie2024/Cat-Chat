@@ -29,8 +29,8 @@ const iconButton =
   'grid size-7 place-items-center rounded-full text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 disabled:opacity-50'
 
 /**
- * One reply. The post's author gets pin and delete; any other signed-in
- * user (except the reply's author) gets report.
+ * One reply. The post's author gets pin and delete; the reply's author can
+ * delete it; any other signed-in user gets report.
  */
 export function ReplyItem({ reply: r, post }: { reply: Reply; post: Post }) {
   const { t } = useI18n()
@@ -41,6 +41,8 @@ export function ReplyItem({ reply: r, post }: { reply: Reply; post: Post }) {
   const [reporting, setReporting] = useState(false)
 
   const isPostAuthor = !!me && me.id === post.authorId
+  // Delete: the post's author, or whoever wrote the reply.
+  const canDelete = isPostAuthor || (!!me && me.id === r.authorId)
   const canReport = !!me && me.id !== r.authorId
 
   async function run(action: () => Promise<unknown>, done?: MessageKey, refreshPosts = false) {
@@ -93,38 +95,38 @@ export function ReplyItem({ reply: r, post }: { reply: Reply; post: Post }) {
             </Link>{' '}
             · <TimeAgo iso={r.createdAt} />
           </div>
-          {(isPostAuthor || canReport) && (
+          {(canDelete || canReport) && (
             <div className="-mt-1 -mr-1.5 flex shrink-0 items-center">
               {isPostAuthor && (
-                <>
-                  <button
-                    type="button"
-                    className={iconButton}
-                    disabled={busy}
-                    aria-label={t(r.pinned ? 'reply.unpin' : 'reply.pin')}
-                    title={t(r.pinned ? 'reply.unpin' : 'reply.pin')}
-                    onClick={() => run(() => (r.pinned ? unpinReply : pinReply)(post.id, r.id))}
-                  >
-                    {r.pinned ? (
-                      <PinOff className="size-3.5" aria-hidden />
-                    ) : (
-                      <Pin className="size-3.5" aria-hidden />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className={`${iconButton} hover:bg-red-50 hover:text-red-600`}
-                    disabled={busy}
-                    aria-label={t('reply.delete')}
-                    title={t('reply.delete')}
-                    onClick={() => {
-                      if (!window.confirm(t('reply.deleteConfirm'))) return
-                      void run(() => deleteReply(post.id, r.id), 'reply.deleted', true)
-                    }}
-                  >
-                    <Trash2 className="size-3.5" aria-hidden />
-                  </button>
-                </>
+                <button
+                  type="button"
+                  className={iconButton}
+                  disabled={busy}
+                  aria-label={t(r.pinned ? 'reply.unpin' : 'reply.pin')}
+                  title={t(r.pinned ? 'reply.unpin' : 'reply.pin')}
+                  onClick={() => run(() => (r.pinned ? unpinReply : pinReply)(post.id, r.id))}
+                >
+                  {r.pinned ? (
+                    <PinOff className="size-3.5" aria-hidden />
+                  ) : (
+                    <Pin className="size-3.5" aria-hidden />
+                  )}
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  type="button"
+                  className={`${iconButton} hover:bg-red-50 hover:text-red-600`}
+                  disabled={busy}
+                  aria-label={t('reply.delete')}
+                  title={t('reply.delete')}
+                  onClick={() => {
+                    if (!window.confirm(t('reply.deleteConfirm'))) return
+                    void run(() => deleteReply(post.id, r.id), 'reply.deleted', true)
+                  }}
+                >
+                  <Trash2 className="size-3.5" aria-hidden />
+                </button>
               )}
               {canReport && (
                 <button

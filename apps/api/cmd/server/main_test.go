@@ -961,7 +961,10 @@ func TestReplyModeration(t *testing.T) {
 	anon.mustStatus(401, "PUT", base+"/pin", "")
 	anon.mustStatus(401, "POST", base+"/report", `{"reason":"spam"}`)
 	other.mustStatus(403, "PUT", base+"/pin", "")
-	other.mustStatus(403, "DELETE", base, "")
+	bystander := newClient(t)
+	bystander.srv = owner.srv
+	bystander.signUpAs("bystander@example.com")
+	bystander.mustStatus(403, "DELETE", base, "")
 	other.mustStatus(400, "POST", base+"/report", `{"reason":"spam"}`) // own reply
 
 	owner.mustStatus(204, "PUT", base+"/pin", "")
@@ -975,6 +978,11 @@ func TestReplyModeration(t *testing.T) {
 	owner.mustStatus(404, "POST", "/api/posts/"+post.Id+"/replies/nope/report", `{"reason":"spam"}`)
 	owner.mustStatus(204, "DELETE", base, "")
 	owner.mustStatus(404, "DELETE", base, "")
+
+	// The comment's author may delete their own comment.
+	var mine api.Reply
+	_ = json.Unmarshal([]byte(other.mustStatus(201, "POST", "/api/posts/"+post.Id+"/replies", `{"content":"oops","images":[]}`)), &mine)
+	other.mustStatus(204, "DELETE", "/api/posts/"+post.Id+"/replies/"+mine.Id, "")
 }
 
 func TestAdminReportReview(t *testing.T) {

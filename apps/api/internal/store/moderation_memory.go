@@ -37,7 +37,7 @@ func (m *Memory) DeleteReply(_ context.Context, postID, replyID, actorID string)
 	if err != nil {
 		return err
 	}
-	if m.posts[pi].AuthorId != actorID {
+	if m.posts[pi].AuthorId != actorID && m.replies[postID][ri].AuthorId != actorID {
 		return api.ErrForbidden
 	}
 	m.replies[postID] = slices.Delete(m.replies[postID], ri, ri+1)

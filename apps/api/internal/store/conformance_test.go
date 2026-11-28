@@ -397,8 +397,12 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 			t.Fatalf("report unknown: %v", err)
 		}
 
-		if err := s.DeleteReply(ctx, post.Id, r1.Id, other.Id); !errors.Is(err, api.ErrForbidden) {
-			t.Fatalf("non-author delete: %v", err)
+		bystander := seedUser(t, s, "x@y.co")
+		if err := s.DeleteReply(ctx, post.Id, r1.Id, bystander.Id); !errors.Is(err, api.ErrForbidden) {
+			t.Fatalf("bystander delete: %v", err)
+		}
+		if err := s.DeleteReply(ctx, post.Id, r3.Id, other.Id); !errors.Is(err, api.ErrForbidden) {
+			t.Fatalf("deleting someone else's reply on someone else's post: %v", err)
 		}
 		if err := s.DeleteReply(ctx, post.Id, r1.Id, owner.Id); err != nil {
 			t.Fatal(err)
@@ -413,6 +417,11 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		}
 
 		// Admin review queue.
+		// The reply's own author may delete it too.
+		own, _ := s.CreateReply(ctx, post.Id, other, api.NewReply{Content: "oops"})
+		if err := s.DeleteReply(ctx, post.Id, own.Id, other.Id); err != nil {
+			t.Fatalf("reply author delete: %v", err)
+		}
 		third := seedUser(t, s, "g@h.co")
 		_ = s.ReportReply(ctx, post.Id, r2.Id, owner.Id, api.Spam, "")
 		_ = s.ReportReply(ctx, post.Id, r2.Id, third.Id, api.Other, "note")

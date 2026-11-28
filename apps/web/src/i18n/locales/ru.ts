@@ -233,4 +233,5 @@ export const ru: Messages = {
   'admin.dismissed': 'Жалобы отклонены',
   'admin.loading': 'Загрузка…',
   'admin.reportsLabel': 'Жалобы',
+  'err.deleteNotAllowed': 'Удалить может только автор поста или автор комментария',
 }

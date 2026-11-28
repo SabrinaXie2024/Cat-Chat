@@ -234,6 +234,7 @@ export const zh = {
   'admin.dismissed': '已驳回举报',
   'admin.loading': '加载中…',
   'admin.reportsLabel': '举报记录',
+  'err.deleteNotAllowed': '只有帖子作者或评论作者可以删除',
 } as const
 
 export type MessageKey = keyof typeof zh
@@ -471,4 +472,5 @@ export const en: Messages = {
   'admin.dismissed': 'Reports dismissed',
   'admin.loading': 'Loading…',
   'admin.reportsLabel': 'Reports',
+  'err.deleteNotAllowed': "Only the post's author or the comment's author can delete it",
 }
