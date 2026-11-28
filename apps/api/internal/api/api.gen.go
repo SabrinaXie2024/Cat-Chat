@@ -120,6 +120,30 @@ func (e NewGalleryItemKind) Valid() bool {
 	}
 }
 
+// Defines values for ReportReason.
+const (
+	Abuse         ReportReason = "abuse"
+	Inappropriate ReportReason = "inappropriate"
+	Other         ReportReason = "other"
+	Spam          ReportReason = "spam"
+)
+
+// Valid indicates whether the value is a known member of the ReportReason enum.
+func (e ReportReason) Valid() bool {
+	switch e {
+	case Abuse:
+		return true
+	case Inappropriate:
+		return true
+	case Other:
+		return true
+	case Spam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
 // The users.avatar CHECK constraint repeats this list (latest:
 // migration 00007).
@@ -217,6 +241,13 @@ type NewReply struct {
 	Images  []ImageId `json:"images"`
 }
 
+// NewReport defines model for NewReport.
+type NewReport struct {
+	// Note Optional details
+	Note   *string      `json:"note,omitempty"`
+	Reason ReportReason `json:"reason"`
+}
+
 // PasswordResetCompleteRequest defines model for PasswordResetCompleteRequest.
 type PasswordResetCompleteRequest struct {
 	Code        string `json:"code"`
@@ -305,8 +336,14 @@ type Reply struct {
 	CreatedAt    time.Time  `json:"createdAt"`
 	Id           string     `json:"id"`
 	Images       []ImageUrl `json:"images"`
-	PostId       string     `json:"postId"`
+
+	// Pinned Pinned by the post's author (listed first)
+	Pinned bool   `json:"pinned"`
+	PostId string `json:"postId"`
 }
+
+// ReportReason defines model for ReportReason.
+type ReportReason string
 
 // User defines model for User.
 type User struct {
@@ -413,6 +450,9 @@ type CreatePostJSONRequestBody = NewPost
 // CreateReplyJSONRequestBody defines body for CreateReply for application/json ContentType.
 type CreateReplyJSONRequestBody = NewReply
 
+// ReportReplyJSONRequestBody defines body for ReportReply for application/json ContentType.
+type ReportReplyJSONRequestBody = NewReport
+
 // UploadVideoMultipartRequestBody defines body for UploadVideo for multipart/form-data ContentType.
 type UploadVideoMultipartRequestBody UploadVideoMultipartBody
 
@@ -490,6 +530,18 @@ type ServerInterface interface {
 
 	// (POST /posts/{postId}/replies)
 	CreateReply(w http.ResponseWriter, r *http.Request, postId string)
+
+	// (DELETE /posts/{postId}/replies/{replyId})
+	DeleteReply(w http.ResponseWriter, r *http.Request, postId string, replyId string)
+
+	// (DELETE /posts/{postId}/replies/{replyId}/pin)
+	UnpinReply(w http.ResponseWriter, r *http.Request, postId string, replyId string)
+
+	// (PUT /posts/{postId}/replies/{replyId}/pin)
+	PinReply(w http.ResponseWriter, r *http.Request, postId string, replyId string)
+
+	// (POST /posts/{postId}/replies/{replyId}/report)
+	ReportReply(w http.ResponseWriter, r *http.Request, postId string, replyId string)
 
 	// (GET /users/{userId})
 	GetProfile(w http.ResponseWriter, r *http.Request, userId string)
@@ -957,6 +1009,146 @@ func (siw *ServerInterfaceWrapper) CreateReply(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteReply operation middleware
+func (siw *ServerInterfaceWrapper) DeleteReply(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "postId" -------------
+	var postId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "postId", r.PathValue("postId"), &postId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "replyId" -------------
+	var replyId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "replyId", r.PathValue("replyId"), &replyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteReply(w, r, postId, replyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnpinReply operation middleware
+func (siw *ServerInterfaceWrapper) UnpinReply(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "postId" -------------
+	var postId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "postId", r.PathValue("postId"), &postId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "replyId" -------------
+	var replyId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "replyId", r.PathValue("replyId"), &replyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnpinReply(w, r, postId, replyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PinReply operation middleware
+func (siw *ServerInterfaceWrapper) PinReply(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "postId" -------------
+	var postId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "postId", r.PathValue("postId"), &postId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "replyId" -------------
+	var replyId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "replyId", r.PathValue("replyId"), &replyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PinReply(w, r, postId, replyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReportReply operation middleware
+func (siw *ServerInterfaceWrapper) ReportReply(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "postId" -------------
+	var postId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "postId", r.PathValue("postId"), &postId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "postId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "replyId" -------------
+	var replyId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "replyId", r.PathValue("replyId"), &replyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReportReply(w, r, postId, replyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetProfile(w http.ResponseWriter, r *http.Request) {
 
@@ -1305,6 +1497,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/me/favorites", wrapper.ListMyFavorites)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/users/{userId}/followers", wrapper.ListFollowers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/users/{userId}/following", wrapper.ListFollowing)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/posts/{postId}/replies/{replyId}", wrapper.DeleteReply)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/posts/{postId}/replies/{replyId}/pin", wrapper.UnpinReply)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/posts/{postId}/replies/{replyId}/pin", wrapper.PinReply)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/posts/{postId}/replies/{replyId}/report", wrapper.ReportReply)
 
 	return m
 }
@@ -2510,6 +2706,243 @@ func (response CreateReply409JSONResponse) VisitCreateReplyResponse(w http.Respo
 	return err
 }
 
+type DeleteReplyRequestObject struct {
+	PostId  string `json:"postId"`
+	ReplyId string `json:"replyId"`
+}
+
+type DeleteReplyResponseObject interface {
+	VisitDeleteReplyResponse(w http.ResponseWriter) error
+}
+
+type DeleteReply204Response struct {
+}
+
+func (response DeleteReply204Response) VisitDeleteReplyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteReply401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteReply401JSONResponse) VisitDeleteReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReply403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteReply403JSONResponse) VisitDeleteReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.ForbiddenJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteReply404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteReply404JSONResponse) VisitDeleteReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnpinReplyRequestObject struct {
+	PostId  string `json:"postId"`
+	ReplyId string `json:"replyId"`
+}
+
+type UnpinReplyResponseObject interface {
+	VisitUnpinReplyResponse(w http.ResponseWriter) error
+}
+
+type UnpinReply204Response struct {
+}
+
+func (response UnpinReply204Response) VisitUnpinReplyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnpinReply401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnpinReply401JSONResponse) VisitUnpinReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnpinReply403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UnpinReply403JSONResponse) VisitUnpinReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.ForbiddenJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnpinReply404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnpinReply404JSONResponse) VisitUnpinReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinReplyRequestObject struct {
+	PostId  string `json:"postId"`
+	ReplyId string `json:"replyId"`
+}
+
+type PinReplyResponseObject interface {
+	VisitPinReplyResponse(w http.ResponseWriter) error
+}
+
+type PinReply204Response struct {
+}
+
+func (response PinReply204Response) VisitPinReplyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PinReply401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PinReply401JSONResponse) VisitPinReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinReply403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PinReply403JSONResponse) VisitPinReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.ForbiddenJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinReply404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PinReply404JSONResponse) VisitPinReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportReplyRequestObject struct {
+	PostId  string `json:"postId"`
+	ReplyId string `json:"replyId"`
+	Body    *ReportReplyJSONRequestBody
+}
+
+type ReportReplyResponseObject interface {
+	VisitReportReplyResponse(w http.ResponseWriter) error
+}
+
+type ReportReply204Response struct {
+}
+
+func (response ReportReply204Response) VisitReportReplyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ReportReply400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReportReply400JSONResponse) VisitReportReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportReply401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReportReply401JSONResponse) VisitReportReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReportReply404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReportReply404JSONResponse) VisitReportReplyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetProfileRequestObject struct {
 	UserId string `json:"userId"`
 }
@@ -2944,6 +3377,18 @@ type StrictServerInterface interface {
 
 	// (POST /posts/{postId}/replies)
 	CreateReply(ctx context.Context, request CreateReplyRequestObject) (CreateReplyResponseObject, error)
+
+	// (DELETE /posts/{postId}/replies/{replyId})
+	DeleteReply(ctx context.Context, request DeleteReplyRequestObject) (DeleteReplyResponseObject, error)
+
+	// (DELETE /posts/{postId}/replies/{replyId}/pin)
+	UnpinReply(ctx context.Context, request UnpinReplyRequestObject) (UnpinReplyResponseObject, error)
+
+	// (PUT /posts/{postId}/replies/{replyId}/pin)
+	PinReply(ctx context.Context, request PinReplyRequestObject) (PinReplyResponseObject, error)
+
+	// (POST /posts/{postId}/replies/{replyId}/report)
+	ReportReply(ctx context.Context, request ReportReplyRequestObject) (ReportReplyResponseObject, error)
 
 	// (GET /users/{userId})
 	GetProfile(ctx context.Context, request GetProfileRequestObject) (GetProfileResponseObject, error)
@@ -3674,6 +4119,121 @@ func (sh *strictHandler) CreateReply(w http.ResponseWriter, r *http.Request, pos
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateReplyResponseObject); ok {
 		if err := validResponse.VisitCreateReplyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteReply operation middleware
+func (sh *strictHandler) DeleteReply(w http.ResponseWriter, r *http.Request, postId string, replyId string) {
+	var request DeleteReplyRequestObject
+
+	request.PostId = postId
+	request.ReplyId = replyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.DeleteReply(ctx, request.(DeleteReplyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteReply")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteReplyResponseObject); ok {
+		if err := validResponse.VisitDeleteReplyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnpinReply operation middleware
+func (sh *strictHandler) UnpinReply(w http.ResponseWriter, r *http.Request, postId string, replyId string) {
+	var request UnpinReplyRequestObject
+
+	request.PostId = postId
+	request.ReplyId = replyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.UnpinReply(ctx, request.(UnpinReplyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnpinReply")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnpinReplyResponseObject); ok {
+		if err := validResponse.VisitUnpinReplyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PinReply operation middleware
+func (sh *strictHandler) PinReply(w http.ResponseWriter, r *http.Request, postId string, replyId string) {
+	var request PinReplyRequestObject
+
+	request.PostId = postId
+	request.ReplyId = replyId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.PinReply(ctx, request.(PinReplyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PinReply")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PinReplyResponseObject); ok {
+		if err := validResponse.VisitPinReplyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReportReply operation middleware
+func (sh *strictHandler) ReportReply(w http.ResponseWriter, r *http.Request, postId string, replyId string) {
+	var request ReportReplyRequestObject
+
+	request.PostId = postId
+	request.ReplyId = replyId
+
+	var body ReportReplyJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ReportReply(ctx, request.(ReportReplyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReportReply")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReportReplyResponseObject); ok {
+		if err := validResponse.VisitReportReplyResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

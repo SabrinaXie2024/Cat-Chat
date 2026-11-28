@@ -26,6 +26,7 @@ import type {
 import type {
   NewPost,
   NewReply,
+  NewReport,
   Post,
   Reply
 } from '../model';
@@ -127,6 +128,46 @@ export const getUnfavoritePostMockHandler = (overrideResponse?: void | ((info: P
       })
   }, options)
 }
+
+export const getDeleteReplyMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<{ postId: string; replyId: string }>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.delete<{ postId: string; replyId: string }>('*/posts/:postId/replies/:replyId', async (info: Parameters<HttpResponseResolver<{ postId: string; replyId: string }>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
+
+export const getPinReplyMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<{ postId: string; replyId: string }>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.put<{ postId: string; replyId: string }>('*/posts/:postId/replies/:replyId/pin', async (info: Parameters<HttpResponseResolver<{ postId: string; replyId: string }>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
+
+export const getUnpinReplyMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<{ postId: string; replyId: string }>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.delete<{ postId: string; replyId: string }>('*/posts/:postId/replies/:replyId/pin', async (info: Parameters<HttpResponseResolver<{ postId: string; replyId: string }>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
+
+export const getReportReplyMockHandler = (overrideResponse?: void | ((info: Parameters<HttpResponseResolver<{ postId: string; replyId: string }, NewReport>>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.post<{ postId: string; replyId: string }, NewReport>('*/posts/:postId/replies/:replyId/report', async (info: Parameters<HttpResponseResolver<{ postId: string; replyId: string }, NewReport>>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 204
+      })
+  }, options)
+}
 export const getPostsMock = () => [
   getListPostsMockHandler(),
   getCreatePostMockHandler(),
@@ -135,5 +176,9 @@ export const getPostsMock = () => [
   getLikePostMockHandler(),
   getUnlikePostMockHandler(),
   getFavoritePostMockHandler(),
-  getUnfavoritePostMockHandler()
+  getUnfavoritePostMockHandler(),
+  getDeleteReplyMockHandler(),
+  getPinReplyMockHandler(),
+  getUnpinReplyMockHandler(),
+  getReportReplyMockHandler()
 ]

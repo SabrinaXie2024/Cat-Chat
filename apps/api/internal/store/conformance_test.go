@@ -100,7 +100,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations, password_resets, follows, likes, favorites CASCADE`); err != nil {
+	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations, password_resets, follows, likes, favorites, reply_reports CASCADE`); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -340,6 +340,76 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		}
 		if _, err := s.ListFollowers(ctx, missing); !errors.Is(err, api.ErrNotFound) {
 			t.Fatalf("followers unknown: %v", err)
+		}
+	})
+
+	t.Run("reply moderation: pin, delete, report", func(t *testing.T) {
+		s := newStore(t)
+		owner := seedUser(t, s, "a@b.co")
+		other := seedUser(t, s, "c@d.co")
+		post, _ := s.CreatePost(ctx, owner, api.NewPost{Content: "p"})
+		r1, _ := s.CreateReply(ctx, post.Id, other, api.NewReply{Content: "r1"})
+		r2, _ := s.CreateReply(ctx, post.Id, other, api.NewReply{Content: "r2"})
+		r3, _ := s.CreateReply(ctx, post.Id, owner, api.NewReply{Content: "r3"})
+		missing := "01a2111c-2a68-7371-bce0-5b41e2f69f46"
+
+		if err := s.SetReplyPinned(ctx, post.Id, r2.Id, other.Id, true); !errors.Is(err, api.ErrForbidden) {
+			t.Fatalf("non-author pin: %v", err)
+		}
+		if err := s.SetReplyPinned(ctx, post.Id, missing, owner.Id, true); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("pin unknown: %v", err)
+		}
+		other2, _ := s.CreatePost(ctx, other, api.NewPost{Content: "x"})
+		if err := s.SetReplyPinned(ctx, other2.Id, r2.Id, other.Id, true); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("reply under a different post: %v", err)
+		}
+		if err := s.SetReplyPinned(ctx, post.Id, r2.Id, owner.Id, true); err != nil {
+			t.Fatal(err)
+		}
+		rs, _ := s.ListReplies(ctx, post.Id)
+		if rs[0].Id != r2.Id || !rs[0].Pinned || rs[1].Id != r1.Id || rs[2].Id != r3.Id {
+			t.Fatalf("pinned first, then oldest: %+v", rs)
+		}
+		// Pinning another replaces it.
+		if err := s.SetReplyPinned(ctx, post.Id, r3.Id, owner.Id, true); err != nil {
+			t.Fatal(err)
+		}
+		rs, _ = s.ListReplies(ctx, post.Id)
+		if rs[0].Id != r3.Id || rs[1].Pinned || rs[2].Pinned {
+			t.Fatalf("one pinned reply: %+v", rs)
+		}
+		if err := s.SetReplyPinned(ctx, post.Id, r3.Id, owner.Id, false); err != nil {
+			t.Fatal(err)
+		}
+		if rs, _ = s.ListReplies(ctx, post.Id); rs[0].Id != r1.Id || rs[2].Pinned {
+			t.Fatalf("after unpin: %+v", rs)
+		}
+
+		if err := s.ReportReply(ctx, post.Id, r3.Id, owner.Id, api.Spam, ""); !errors.Is(err, api.ErrOwnReply) {
+			t.Fatalf("report own: %v", err)
+		}
+		for range 2 { // re-reporting updates
+			if err := s.ReportReply(ctx, post.Id, r1.Id, owner.Id, api.Abuse, "rude"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := s.ReportReply(ctx, post.Id, missing, owner.Id, api.Spam, ""); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("report unknown: %v", err)
+		}
+
+		if err := s.DeleteReply(ctx, post.Id, r1.Id, other.Id); !errors.Is(err, api.ErrForbidden) {
+			t.Fatalf("non-author delete: %v", err)
+		}
+		if err := s.DeleteReply(ctx, post.Id, r1.Id, owner.Id); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.DeleteReply(ctx, post.Id, r1.Id, owner.Id); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("delete twice: %v", err)
+		}
+		rs, _ = s.ListReplies(ctx, post.Id)
+		ps, _ := s.ListUserPosts(ctx, owner.Id, "")
+		if len(rs) != 2 || ps[0].ReplyCount != 2 {
+			t.Fatalf("delete frees a slot: %d replies, count %d", len(rs), ps[0].ReplyCount)
 		}
 	})
 

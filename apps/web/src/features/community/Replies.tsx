@@ -13,7 +13,6 @@ import {
   useListReplies,
 } from '../../api/generated/posts/posts'
 import { errorMessage } from '../../api/http'
-import { CatAvatar } from '../../components/CatAvatar'
 import { buttonClass } from '../../components/ui'
 import { useFieldError, useI18n } from '../../i18n/I18nProvider'
 import { serverErrorKey, useServerError } from '../../i18n/serverErrors'
@@ -24,16 +23,21 @@ import {
   REPLY_MAX_IMAGES,
 } from '../../lib/limits'
 import { useCurrentUser } from '../auth/useCurrentUser'
-import { ImageGrid } from '../images/ImageGrid'
 import { ImagePicker } from '../images/ImagePicker'
-import { TimeAgo } from './TimeAgo'
+import { ReplyItem } from './ReplyItem'
 
 /** Reply thread shown under a post card. Mounted only while expanded. */
 export function Replies({ post }: { post: Post }) {
   // `http` throws on non-2xx, so resolved data is always the 200 body.
   // API returns oldest first (stable for clients); show newest first.
   const { data: replies, error } = useListReplies(post.id, {
-    query: { select: (res) => [...(res.data as Reply[])].reverse() },
+    // The pinned reply stays on top.
+    query: {
+      select: (res) => {
+        const all = res.data as Reply[]
+        return [...all.filter((r) => r.pinned), ...all.filter((r) => !r.pinned).reverse()]
+      },
+    },
   })
   const { t } = useI18n()
   const { data: user } = useCurrentUser()
@@ -68,23 +72,7 @@ export function Replies({ post }: { post: Post }) {
       ) : (
         <ol className="space-y-2" aria-label={t('replies.list')}>
           {replies.map((r) => (
-            <li key={r.id} className="flex gap-2.5 text-sm">
-              <CatAvatar avatar={r.authorAvatar} size="sm" />
-              <div className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 ring-1 ring-stone-100">
-                <div className="mb-0.5 text-xs text-stone-500">
-                  <Link
-                    to="/users/$userId"
-                    params={{ userId: r.authorId }}
-                    className="font-medium text-stone-700 hover:text-brand-700"
-                  >
-                    {r.author}
-                  </Link>{' '}
-                  · <TimeAgo iso={r.createdAt} />
-                </div>
-                <p className="whitespace-pre-wrap break-words">{r.content}</p>
-                <ImageGrid urls={r.images} compact />
-              </div>
-            </li>
+            <ReplyItem key={r.id} reply={r} post={post} />
           ))}
         </ol>
       )}

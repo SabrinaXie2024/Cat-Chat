@@ -14,4 +14,8 @@ var (
 	ErrInvalidMedia = errors.New("invalid media reference")
 	// ErrSelfFollow: users can't follow themselves.
 	ErrSelfFollow = errors.New("cannot follow yourself")
+	// ErrForbidden: signed in but not allowed (e.g. not the post's author).
+	ErrForbidden = errors.New("forbidden")
+	// ErrOwnReply: users can't report their own reply.
+	ErrOwnReply = errors.New("cannot report your own reply")
 )

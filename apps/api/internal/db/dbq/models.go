@@ -85,6 +85,17 @@ type Reply struct {
 	Content   string
 	Images    []string
 	CreatedAt time.Time
+	Pinned    bool
+}
+
+type ReplyReport struct {
+	ID         uuid.UUID
+	ReplyID    uuid.UUID
+	ReporterID uuid.UUID
+	Reason     string
+	Note       string
+	Status     string
+	CreatedAt  time.Time
 }
 
 type Session struct {

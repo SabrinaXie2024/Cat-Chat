@@ -18,11 +18,11 @@ RETURNING id, content, images, reply_count, created_at;
 SELECT EXISTS (SELECT 1 FROM posts WHERE id = $1);
 
 -- name: ListReplies :many
-SELECT r.id, r.post_id, r.author_id, u.nickname AS author, u.avatar AS author_avatar, r.content, r.images, r.created_at
+SELECT r.id, r.post_id, r.author_id, u.nickname AS author, u.avatar AS author_avatar, r.content, r.images, r.pinned, r.created_at
 FROM replies r
 JOIN users u ON u.id = r.author_id
 WHERE r.post_id = $1
-ORDER BY r.created_at, r.id;
+ORDER BY r.pinned DESC, r.created_at, r.id;
 
 -- Atomically claims one of the post's reply slots. Zero rows means the post
 -- is missing or full; concurrent repliers can't push past the limit.
@@ -34,7 +34,7 @@ WHERE id = $1 AND reply_count < @max_replies::int;
 -- name: CreateReply :one
 INSERT INTO replies (post_id, author_id, content, images)
 VALUES ($1, $2, $3, $4)
-RETURNING id, post_id, content, images, created_at;
+RETURNING id, post_id, content, images, pinned, created_at;
 
 -- name: ListUserPosts :many
 SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at,
@@ -82,3 +82,28 @@ INSERT INTO favorites (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;
 
 -- name: Unfavorite :exec
 DELETE FROM favorites WHERE user_id = $1 AND post_id = $2;
+
+-- Reply plus its post's author, for moderation checks.
+-- name: ReplyForModeration :one
+SELECT r.author_id AS reply_author_id, p.author_id AS post_author_id
+FROM replies r
+JOIN posts p ON p.id = r.post_id
+WHERE r.id = $1 AND r.post_id = $2;
+
+-- name: DeleteReply :execrows
+DELETE FROM replies WHERE id = $1 AND post_id = $2;
+
+-- name: ReleaseReplySlot :exec
+UPDATE posts SET reply_count = reply_count - 1 WHERE id = $1 AND reply_count > 0;
+
+-- name: UnpinReplies :exec
+UPDATE replies SET pinned = false WHERE post_id = $1 AND pinned;
+
+-- name: SetReplyPinned :exec
+UPDATE replies SET pinned = $3 WHERE id = $1 AND post_id = $2;
+
+-- name: UpsertReplyReport :exec
+INSERT INTO reply_reports (reply_id, reporter_id, reason, note)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (reply_id, reporter_id)
+DO UPDATE SET reason = EXCLUDED.reason, note = EXCLUDED.note, status = 'open', created_at = now();

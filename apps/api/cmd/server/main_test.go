@@ -943,3 +943,36 @@ func TestLikesAndFavorites(t *testing.T) {
 	anon.mustStatus(200, "GET", "/api/users/"+me.Id+"/followers", "")
 	anon.mustStatus(404, "GET", "/api/users/nope/following", "")
 }
+
+func TestReplyModeration(t *testing.T) {
+	owner := newClient(t)
+	owner.signUp()
+	var post api.Post
+	_ = json.Unmarshal([]byte(owner.mustStatus(201, "POST", "/api/posts", `{"content":"hi","images":[]}`)), &post)
+	other := newClient(t)
+	other.srv = owner.srv
+	other.signUpAs("other@example.com")
+	var reply api.Reply
+	_ = json.Unmarshal([]byte(other.mustStatus(201, "POST", "/api/posts/"+post.Id+"/replies", `{"content":"yo","images":[]}`)), &reply)
+	base := "/api/posts/" + post.Id + "/replies/" + reply.Id
+
+	anon := newClient(t)
+	anon.srv = owner.srv
+	anon.mustStatus(401, "PUT", base+"/pin", "")
+	anon.mustStatus(401, "POST", base+"/report", `{"reason":"spam"}`)
+	other.mustStatus(403, "PUT", base+"/pin", "")
+	other.mustStatus(403, "DELETE", base, "")
+	other.mustStatus(400, "POST", base+"/report", `{"reason":"spam"}`) // own reply
+
+	owner.mustStatus(204, "PUT", base+"/pin", "")
+	if body := anon.mustStatus(200, "GET", "/api/posts/"+post.Id+"/replies", ""); !strings.Contains(body, `"pinned":true`) {
+		t.Fatalf("pinned: %s", body)
+	}
+	owner.mustStatus(204, "DELETE", base+"/pin", "")
+	owner.mustStatus(400, "POST", base+"/report", `{"reason":"nope"}`)
+	owner.mustStatus(400, "POST", base+"/report", `{"reason":"other","note":"`+strings.Repeat("猫", 201)+`"}`)
+	owner.mustStatus(204, "POST", base+"/report", `{"reason":"other","note":"`+strings.Repeat("猫", 200)+`"}`)
+	owner.mustStatus(404, "POST", "/api/posts/"+post.Id+"/replies/nope/report", `{"reason":"spam"}`)
+	owner.mustStatus(204, "DELETE", base, "")
+	owner.mustStatus(404, "DELETE", base, "")
+}

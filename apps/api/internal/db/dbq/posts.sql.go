@@ -69,7 +69,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (CreateP
 const createReply = `-- name: CreateReply :one
 INSERT INTO replies (post_id, author_id, content, images)
 VALUES ($1, $2, $3, $4)
-RETURNING id, post_id, content, images, created_at
+RETURNING id, post_id, content, images, pinned, created_at
 `
 
 type CreateReplyParams struct {
@@ -84,6 +84,7 @@ type CreateReplyRow struct {
 	PostID    uuid.UUID
 	Content   string
 	Images    []string
+	Pinned    bool
 	CreatedAt time.Time
 }
 
@@ -100,9 +101,27 @@ func (q *Queries) CreateReply(ctx context.Context, arg CreateReplyParams) (Creat
 		&i.PostID,
 		&i.Content,
 		&i.Images,
+		&i.Pinned,
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const deleteReply = `-- name: DeleteReply :execrows
+DELETE FROM replies WHERE id = $1 AND post_id = $2
+`
+
+type DeleteReplyParams struct {
+	ID     uuid.UUID
+	PostID uuid.UUID
+}
+
+func (q *Queries) DeleteReply(ctx context.Context, arg DeleteReplyParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteReply, arg.ID, arg.PostID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const favorite = `-- name: Favorite :exec
@@ -320,11 +339,11 @@ func (q *Queries) ListPosts(ctx context.Context, viewer *uuid.UUID) ([]ListPosts
 }
 
 const listReplies = `-- name: ListReplies :many
-SELECT r.id, r.post_id, r.author_id, u.nickname AS author, u.avatar AS author_avatar, r.content, r.images, r.created_at
+SELECT r.id, r.post_id, r.author_id, u.nickname AS author, u.avatar AS author_avatar, r.content, r.images, r.pinned, r.created_at
 FROM replies r
 JOIN users u ON u.id = r.author_id
 WHERE r.post_id = $1
-ORDER BY r.created_at, r.id
+ORDER BY r.pinned DESC, r.created_at, r.id
 `
 
 type ListRepliesRow struct {
@@ -335,6 +354,7 @@ type ListRepliesRow struct {
 	AuthorAvatar string
 	Content      string
 	Images       []string
+	Pinned       bool
 	CreatedAt    time.Time
 }
 
@@ -355,6 +375,7 @@ func (q *Queries) ListReplies(ctx context.Context, postID uuid.UUID) ([]ListRepl
 			&i.AuthorAvatar,
 			&i.Content,
 			&i.Images,
+			&i.Pinned,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -441,6 +462,55 @@ func (q *Queries) PostExists(ctx context.Context, id uuid.UUID) (bool, error) {
 	return exists, err
 }
 
+const releaseReplySlot = `-- name: ReleaseReplySlot :exec
+UPDATE posts SET reply_count = reply_count - 1 WHERE id = $1 AND reply_count > 0
+`
+
+func (q *Queries) ReleaseReplySlot(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, releaseReplySlot, id)
+	return err
+}
+
+const replyForModeration = `-- name: ReplyForModeration :one
+SELECT r.author_id AS reply_author_id, p.author_id AS post_author_id
+FROM replies r
+JOIN posts p ON p.id = r.post_id
+WHERE r.id = $1 AND r.post_id = $2
+`
+
+type ReplyForModerationParams struct {
+	ID     uuid.UUID
+	PostID uuid.UUID
+}
+
+type ReplyForModerationRow struct {
+	ReplyAuthorID uuid.UUID
+	PostAuthorID  uuid.UUID
+}
+
+// Reply plus its post's author, for moderation checks.
+func (q *Queries) ReplyForModeration(ctx context.Context, arg ReplyForModerationParams) (ReplyForModerationRow, error) {
+	row := q.db.QueryRow(ctx, replyForModeration, arg.ID, arg.PostID)
+	var i ReplyForModerationRow
+	err := row.Scan(&i.ReplyAuthorID, &i.PostAuthorID)
+	return i, err
+}
+
+const setReplyPinned = `-- name: SetReplyPinned :exec
+UPDATE replies SET pinned = $3 WHERE id = $1 AND post_id = $2
+`
+
+type SetReplyPinnedParams struct {
+	ID     uuid.UUID
+	PostID uuid.UUID
+	Pinned bool
+}
+
+func (q *Queries) SetReplyPinned(ctx context.Context, arg SetReplyPinnedParams) error {
+	_, err := q.db.Exec(ctx, setReplyPinned, arg.ID, arg.PostID, arg.Pinned)
+	return err
+}
+
 const unfavorite = `-- name: Unfavorite :exec
 DELETE FROM favorites WHERE user_id = $1 AND post_id = $2
 `
@@ -466,5 +536,38 @@ type UnlikeParams struct {
 
 func (q *Queries) Unlike(ctx context.Context, arg UnlikeParams) error {
 	_, err := q.db.Exec(ctx, unlike, arg.UserID, arg.PostID)
+	return err
+}
+
+const unpinReplies = `-- name: UnpinReplies :exec
+UPDATE replies SET pinned = false WHERE post_id = $1 AND pinned
+`
+
+func (q *Queries) UnpinReplies(ctx context.Context, postID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, unpinReplies, postID)
+	return err
+}
+
+const upsertReplyReport = `-- name: UpsertReplyReport :exec
+INSERT INTO reply_reports (reply_id, reporter_id, reason, note)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (reply_id, reporter_id)
+DO UPDATE SET reason = EXCLUDED.reason, note = EXCLUDED.note, status = 'open', created_at = now()
+`
+
+type UpsertReplyReportParams struct {
+	ReplyID    uuid.UUID
+	ReporterID uuid.UUID
+	Reason     string
+	Note       string
+}
+
+func (q *Queries) UpsertReplyReport(ctx context.Context, arg UpsertReplyReportParams) error {
+	_, err := q.db.Exec(ctx, upsertReplyReport,
+		arg.ReplyID,
+		arg.ReporterID,
+		arg.Reason,
+		arg.Note,
+	)
 	return err
 }

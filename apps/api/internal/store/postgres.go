@@ -202,7 +202,7 @@ func (p *Postgres) ListReplies(ctx context.Context, postID string) ([]api.Reply,
 	for i, r := range rows {
 		out[i] = api.Reply{
 			Id: r.ID.String(), PostId: r.PostID.String(), AuthorId: r.AuthorID.String(), Author: r.Author, AuthorAvatar: api.Avatar(r.AuthorAvatar), Content: r.Content,
-			Images: nonNil(r.Images), CreatedAt: r.CreatedAt.UTC(),
+			Images: nonNil(r.Images), Pinned: r.Pinned, CreatedAt: r.CreatedAt.UTC(),
 		}
 	}
 	return out, nil

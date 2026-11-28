@@ -7,6 +7,7 @@ import {
   type NewGalleryItem,
   type NewPost,
   type NewReply,
+  type NewReport,
   type PasswordResetCompleteRequest,
   type PasswordResetStartRequest,
   type Post,
@@ -52,6 +53,8 @@ type Db = {
   /** `${userId}>${postId}` */
   likes: Set<string>
   favorites: Set<string>
+  /** Reply reports by `${replyId}>${reporterId}`. */
+  reports: Map<string, NewReport>
   /** Forgot-password codes, by email (also for unknown emails, like the server). */
   resets: Map<string, { code: string; attempts: number; sentAt: number; expiresAt: number }>
   /** Sign-ups awaiting their code, by email. */
@@ -89,6 +92,7 @@ export const db: Db = {
   follows: new Set(),
   likes: new Set(),
   favorites: new Set(),
+  reports: new Map(),
   pending: new Map(),
   resets: new Map(),
 }
@@ -117,6 +121,7 @@ export function resetDb(seed: Post[] = defaultSeed()) {
   db.follows = new Set()
   db.likes = new Set()
   db.favorites = new Set()
+  db.reports = new Map()
   db.sessionUserId = null
   db.images = new Map()
   db.videos = new Map()
@@ -473,7 +478,9 @@ export const handlers = [
 
   http.get<{ postId: string }>('*/api/posts/:postId/replies', ({ params }) => {
     if (!db.posts.some((p) => p.id === params.postId)) return bad('post not found', 404)
-    return HttpResponse.json(db.replies.get(params.postId) ?? [])
+    const list = db.replies.get(params.postId) ?? []
+    // Pinned first, then oldest first — like the server.
+    return HttpResponse.json([...list.filter((r) => r.pinned), ...list.filter((r) => !r.pinned)])
   }),
 
   http.post<{ postId: string }, NewReply>(
@@ -503,6 +510,7 @@ export const handlers = [
         authorAvatar: user.avatar,
         content: body.content,
         images,
+        pinned: false,
         createdAt: new Date().toISOString(),
       }
       db.replies.set(post.id, [...list, reply])
@@ -619,4 +627,63 @@ export const handlers = [
       )
     }),
   ),
+  // Reply moderation: the post's author may pin/delete; anyone but the
+  // reply's author may report.
+  ...(() => {
+    type P = { postId: string; replyId: string }
+    const find = (params: P) => {
+      const post = db.posts.find((p) => p.id === params.postId)
+      const list = db.replies.get(params.postId) ?? []
+      const reply = list.find((r) => r.id === params.replyId)
+      return post && reply ? { post, list, reply } : null
+    }
+    const guard = (params: P) => {
+      const user = currentUser()
+      if (!user) return bad('please sign in', 401)
+      const found = find(params)
+      if (!found) return bad('reply not found', 404)
+      if (found.post.authorId !== user.id) return bad("only the post's author can do that", 403)
+      return found
+    }
+    const pin =
+      (on: boolean) =>
+      ({ params }: { params: P }) => {
+        const g = guard(params)
+        if (g instanceof Response) return g
+        if (on) for (const r of g.list) r.pinned = false
+        g.reply.pinned = on
+        return new HttpResponse(null, { status: 204 })
+      }
+    return [
+      http.put<P>('*/api/posts/:postId/replies/:replyId/pin', pin(true)),
+      http.delete<P>('*/api/posts/:postId/replies/:replyId/pin', pin(false)),
+      http.delete<P>('*/api/posts/:postId/replies/:replyId', ({ params }) => {
+        const g = guard(params)
+        if (g instanceof Response) return g
+        db.replies.set(
+          g.post.id,
+          g.list.filter((r) => r.id !== g.reply.id),
+        )
+        g.post.replyCount--
+        return new HttpResponse(null, { status: 204 })
+      }),
+      http.post<P, NewReport>(
+        '*/api/posts/:postId/replies/:replyId/report',
+        async ({ params, request }) => {
+          const user = currentUser()
+          if (!user) return bad('please sign in', 401)
+          const found = find(params)
+          if (!found) return bad('reply not found', 404)
+          if (found.reply.authorId === user.id) return bad("you can't report your own reply")
+          const body = await request.json()
+          if (!['spam', 'abuse', 'inappropriate', 'other'].includes(body.reason))
+            return bad('unknown report reason')
+          const note = (body.note ?? '').trim()
+          if (charCount(note) > 200) return bad('report note must be at most 200 characters')
+          db.reports.set(`${found.reply.id}>${user.id}`, { reason: body.reason, note })
+          return new HttpResponse(null, { status: 204 })
+        },
+      ),
+    ]
+  })(),
 ]

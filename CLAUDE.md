@@ -241,6 +241,16 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
 - HTTP goes through `apps/web/src/api/http.ts` (ky). Non-2xx throws; use
   `errorMessage(err)` for user-facing text.
 - User content is rendered as text, never `dangerouslySetInnerHTML`.
+- Reply moderation (`community/ReplyItem.tsx`, `api/moderation.go`): the
+  **post's author** may pin (`PUT|DELETE …/replies/{id}/pin`, one pinned
+  reply per post — partial unique index) and delete (`DELETE
+  …/replies/{id}`, frees a reply slot); others get 403 and don't see the
+  buttons. Any signed-in user except the reply's author may report
+  (`POST …/replies/{id}/report`, reason spam/abuse/inappropriate/other +
+  note ≤ 200): one row per (reply, reporter) in `reply_reports`
+  (status open/resolved/dismissed), re-reporting overwrites and reopens.
+  The admin review queue is not built yet. Pinned replies list first (API
+  and UI).
 - Replies render inline under each post card (`Replies.tsx`, fetched only
   while expanded): reply box on top, newest reply first (API stays oldest
   first; the UI reverses). After a reply or a 409, both the thread and the post list

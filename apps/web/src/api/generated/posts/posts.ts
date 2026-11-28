@@ -35,8 +35,10 @@ import type {
 import type {
   BadRequestResponse,
   Error,
+  ForbiddenResponse,
   NewPost,
   NewReply,
+  NewReport,
   NotFoundResponse,
   Post,
   Reply,
@@ -874,4 +876,417 @@ export const useUnfavoritePost = <TError = UnauthorizedResponse | NotFoundRespon
         TContext
       > => {
       return useMutation(getUnfavoritePostMutationOptions(options), queryClient);
+    }
+    export type deleteReplyResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteReplyResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type deleteReplyResponse403 = {
+  data: ForbiddenResponse
+  status: 403
+}
+
+export type deleteReplyResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type deleteReplyResponseSuccess = (deleteReplyResponse204) & {
+  headers: Headers;
+};
+export type deleteReplyResponseError = (deleteReplyResponse401 | deleteReplyResponse403 | deleteReplyResponse404) & {
+  headers: Headers;
+};
+
+export type deleteReplyResponse = (deleteReplyResponseSuccess | deleteReplyResponseError)
+
+export const getDeleteReplyUrl = (postId: string,
+    replyId: string,) => {
+
+
+
+
+  return `/posts/${postId}/replies/${replyId}`
+}
+
+/**
+ * Only the post's author may delete replies under it. Frees a reply slot.
+ */
+export const deleteReply = async (postId: string,
+    replyId: string, options?: Parameters<typeof http>[1]): Promise<deleteReplyResponse> => {
+
+  return http<deleteReplyResponse>(getDeleteReplyUrl(postId,replyId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteReplyMutationKey = () => ['deleteReply'] as const;
+
+export const getDeleteReplyMutationOptions = <TError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReply>>, TError,DeleteReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteReply>>, TError,DeleteReplyMutationVariables, TContext> => {
+
+const mutationKey = getDeleteReplyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteReply>>, DeleteReplyMutationVariables> = (props) => {
+          const {postId,replyId} = props ?? {};
+
+          return  deleteReply(postId,replyId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteReplyMutationResult = NonNullable<Awaited<ReturnType<typeof deleteReply>>>
+
+    export type DeleteReplyMutationError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+    export type DeleteReplyMutationVariables = {postId: string;replyId: string}
+
+    /** Only the post's author may delete replies under it. Frees a reply slot. */
+export const useDeleteReply = <TError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReply>>, TError,DeleteReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteReply>>,
+        TError,
+        DeleteReplyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteReplyMutationOptions(options), queryClient);
+    }
+    export type pinReplyResponse204 = {
+  data: void
+  status: 204
+}
+
+export type pinReplyResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type pinReplyResponse403 = {
+  data: ForbiddenResponse
+  status: 403
+}
+
+export type pinReplyResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type pinReplyResponseSuccess = (pinReplyResponse204) & {
+  headers: Headers;
+};
+export type pinReplyResponseError = (pinReplyResponse401 | pinReplyResponse403 | pinReplyResponse404) & {
+  headers: Headers;
+};
+
+export type pinReplyResponse = (pinReplyResponseSuccess | pinReplyResponseError)
+
+export const getPinReplyUrl = (postId: string,
+    replyId: string,) => {
+
+
+
+
+  return `/posts/${postId}/replies/${replyId}/pin`
+}
+
+/**
+ * Post author only. At most one pinned reply per post; pinning another replaces it.
+ */
+export const pinReply = async (postId: string,
+    replyId: string, options?: Parameters<typeof http>[1]): Promise<pinReplyResponse> => {
+
+  return http<pinReplyResponse>(getPinReplyUrl(postId,replyId),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+
+export const getPinReplyMutationKey = () => ['pinReply'] as const;
+
+export const getPinReplyMutationOptions = <TError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pinReply>>, TError,PinReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof pinReply>>, TError,PinReplyMutationVariables, TContext> => {
+
+const mutationKey = getPinReplyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof pinReply>>, PinReplyMutationVariables> = (props) => {
+          const {postId,replyId} = props ?? {};
+
+          return  pinReply(postId,replyId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PinReplyMutationResult = NonNullable<Awaited<ReturnType<typeof pinReply>>>
+
+    export type PinReplyMutationError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+    export type PinReplyMutationVariables = {postId: string;replyId: string}
+
+    /** Post author only. At most one pinned reply per post; pinning another replaces it. */
+export const usePinReply = <TError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof pinReply>>, TError,PinReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof pinReply>>,
+        TError,
+        PinReplyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPinReplyMutationOptions(options), queryClient);
+    }
+    export type unpinReplyResponse204 = {
+  data: void
+  status: 204
+}
+
+export type unpinReplyResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type unpinReplyResponse403 = {
+  data: ForbiddenResponse
+  status: 403
+}
+
+export type unpinReplyResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type unpinReplyResponseSuccess = (unpinReplyResponse204) & {
+  headers: Headers;
+};
+export type unpinReplyResponseError = (unpinReplyResponse401 | unpinReplyResponse403 | unpinReplyResponse404) & {
+  headers: Headers;
+};
+
+export type unpinReplyResponse = (unpinReplyResponseSuccess | unpinReplyResponseError)
+
+export const getUnpinReplyUrl = (postId: string,
+    replyId: string,) => {
+
+
+
+
+  return `/posts/${postId}/replies/${replyId}/pin`
+}
+
+/**
+ * Post author only. Idempotent.
+ */
+export const unpinReply = async (postId: string,
+    replyId: string, options?: Parameters<typeof http>[1]): Promise<unpinReplyResponse> => {
+
+  return http<unpinReplyResponse>(getUnpinReplyUrl(postId,replyId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnpinReplyMutationKey = () => ['unpinReply'] as const;
+
+export const getUnpinReplyMutationOptions = <TError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unpinReply>>, TError,UnpinReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof unpinReply>>, TError,UnpinReplyMutationVariables, TContext> => {
+
+const mutationKey = getUnpinReplyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unpinReply>>, UnpinReplyMutationVariables> = (props) => {
+          const {postId,replyId} = props ?? {};
+
+          return  unpinReply(postId,replyId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnpinReplyMutationResult = NonNullable<Awaited<ReturnType<typeof unpinReply>>>
+
+    export type UnpinReplyMutationError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+    export type UnpinReplyMutationVariables = {postId: string;replyId: string}
+
+    /** Post author only. Idempotent. */
+export const useUnpinReply = <TError = UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unpinReply>>, TError,UnpinReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unpinReply>>,
+        TError,
+        UnpinReplyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUnpinReplyMutationOptions(options), queryClient);
+    }
+    export type reportReplyResponse204 = {
+  data: void
+  status: 204
+}
+
+export type reportReplyResponse400 = {
+  data: BadRequestResponse
+  status: 400
+}
+
+export type reportReplyResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type reportReplyResponse404 = {
+  data: NotFoundResponse
+  status: 404
+}
+
+export type reportReplyResponseSuccess = (reportReplyResponse204) & {
+  headers: Headers;
+};
+export type reportReplyResponseError = (reportReplyResponse400 | reportReplyResponse401 | reportReplyResponse404) & {
+  headers: Headers;
+};
+
+export type reportReplyResponse = (reportReplyResponseSuccess | reportReplyResponseError)
+
+export const getReportReplyUrl = (postId: string,
+    replyId: string,) => {
+
+
+
+
+  return `/posts/${postId}/replies/${replyId}/report`
+}
+
+/**
+ * Any signed-in user except the reply's author. Reports queue for the
+ * site admins. Reporting the same reply again updates your report.
+ */
+export const reportReply = async (postId: string,
+    replyId: string,
+    newReport: NewReport, options?: Parameters<typeof http>[1]): Promise<reportReplyResponse> => {
+
+  return http<reportReplyResponse>(getReportReplyUrl(postId,replyId),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(newReport)
+  }
+);}
+
+
+
+
+
+export const getReportReplyMutationKey = () => ['reportReply'] as const;
+
+export const getReportReplyMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportReply>>, TError,ReportReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportReply>>, TError,ReportReplyMutationVariables, TContext> => {
+
+const mutationKey = getReportReplyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportReply>>, ReportReplyMutationVariables> = (props) => {
+          const {postId,replyId,data} = props ?? {};
+
+          return  reportReply(postId,replyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportReplyMutationResult = NonNullable<Awaited<ReturnType<typeof reportReply>>>
+    export type ReportReplyMutationBody = NewReport
+    export type ReportReplyMutationError = BadRequestResponse | UnauthorizedResponse | NotFoundResponse
+    export type ReportReplyMutationVariables = {postId: string;replyId: string;data: NewReport}
+
+    /**
+ * Any signed-in user except the reply's author. Reports queue for the
+ * site admins. Reporting the same reply again updates your report.
+ */
+export const useReportReply = <TError = BadRequestResponse | UnauthorizedResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportReply>>, TError,ReportReplyMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reportReply>>,
+        TError,
+        ReportReplyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportReplyMutationOptions(options), queryClient);
     }

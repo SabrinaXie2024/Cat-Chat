@@ -416,7 +416,7 @@ paths:
       security: []
       responses:
         "200":
-          description: Oldest first
+          description: Pinned reply first, then oldest first
           content:
             application/json:
               schema:
@@ -612,6 +612,61 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/UserSummary" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /posts/{postId}/replies/{replyId}:
+    parameters:
+      - { name: postId, in: path, required: true, schema: { type: string } }
+      - { name: replyId, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: deleteReply
+      tags: [posts]
+      description: Only the post's author may delete replies under it. Frees a reply slot.
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /posts/{postId}/replies/{replyId}/pin:
+    parameters:
+      - { name: postId, in: path, required: true, schema: { type: string } }
+      - { name: replyId, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: pinReply
+      tags: [posts]
+      description: Post author only. At most one pinned reply per post; pinning another replaces it.
+      responses:
+        "204": { description: Pinned }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: unpinReply
+      tags: [posts]
+      description: Post author only. Idempotent.
+      responses:
+        "204": { description: Unpinned }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /posts/{postId}/replies/{replyId}/report:
+    parameters:
+      - { name: postId, in: path, required: true, schema: { type: string } }
+      - { name: replyId, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: reportReply
+      tags: [posts]
+      description: |
+        Any signed-in user except the reply's author. Reports queue for the
+        site admins. Reporting the same reply again updates your report.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewReport" }
+      responses:
+        "204": { description: Reported }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     sessionCookie:
@@ -647,6 +702,15 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    ReportReason:
+      type: string
+      enum: [spam, abuse, inappropriate, other]
+    NewReport:
+      type: object
+      required: [reason]
+      properties:
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        note: { type: string, maxLength: 200, description: "Optional details" }
     UserSummary:
       type: object
       required: [id, nickname, avatar]
@@ -839,7 +903,7 @@ components:
           items: { $ref: "#/components/schemas/ImageId" }
     Reply:
       type: object
-      required: [id, authorId, authorAvatar, postId, author, content, images, createdAt]
+      required: [id, authorId, authorAvatar, postId, author, content, images, pinned, createdAt]
       properties:
         id: { type: string }
         postId: { type: string }
@@ -851,4 +915,5 @@ components:
           type: array
           maxItems: 3
           items: { $ref: "#/components/schemas/ImageUrl" }
+        pinned: { type: boolean, description: "Pinned by the post's author (listed first)" }
         createdAt: { type: string, format: date-time }

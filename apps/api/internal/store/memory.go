@@ -37,9 +37,10 @@ type Memory struct {
 	gallery   []api.GalleryEntry // newest last
 	pending   map[string]api.PendingRegistration
 	resets    map[string]api.ResetCode
-	follows   pairs // {follower, followee}, oldest first
-	likes     pairs // {user, post}
-	favorites pairs // {user, post}
+	follows   pairs                   // {follower, followee}, oldest first
+	likes     pairs                   // {user, post}
+	favorites pairs                   // {user, post}
+	reports   map[[2]string]memReport // {reply, reporter}
 	now       func() time.Time
 }
 
@@ -56,6 +57,7 @@ func NewMemory() *Memory {
 		videos:   map[string]api.VideoRecord{},
 		pending:  map[string]api.PendingRegistration{},
 		resets:   map[string]api.ResetCode{},
+		reports:  map[[2]string]memReport{},
 		now:      time.Now,
 	}
 }
@@ -351,7 +353,18 @@ func (m *Memory) ListReplies(_ context.Context, postID string) ([]api.Reply, err
 	if m.findPost(postID) < 0 {
 		return nil, api.ErrNotFound
 	}
-	return slices.Clone(nonNil(m.replies[postID])), nil
+	out := slices.Clone(nonNil(m.replies[postID]))
+	// Pinned first, then oldest first (the stable sort keeps insertion order).
+	slices.SortStableFunc(out, func(a, b api.Reply) int {
+		switch {
+		case a.Pinned == b.Pinned:
+			return 0
+		case a.Pinned:
+			return -1
+		}
+		return 1
+	})
+	return out, nil
 }
 
 func (m *Memory) CreateReply(_ context.Context, postID string, author api.User, in api.NewReply) (api.Reply, error) {

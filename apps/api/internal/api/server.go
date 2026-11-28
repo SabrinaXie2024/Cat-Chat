@@ -33,6 +33,13 @@ type Store interface {
 	CreatePost(ctx context.Context, author User, in NewPost) (Post, error)
 	ListReplies(ctx context.Context, postID string) ([]Reply, error)
 	CreateReply(ctx context.Context, postID string, author User, in NewReply) (Reply, error)
+	// Reply moderation. Delete/pin: ErrForbidden unless actor wrote the post.
+	// ErrNotFound when the reply isn't under that post. Pinning replaces any
+	// other pinned reply on the post. Report: ErrOwnReply for one's own reply;
+	// reporting again overwrites (and reopens) the reporter's report.
+	DeleteReply(ctx context.Context, postID, replyID, actorID string) error
+	SetReplyPinned(ctx context.Context, postID, replyID, actorID string, pinned bool) error
+	ReportReply(ctx context.Context, postID, replyID, reporterID string, reason ReportReason, note string) error
 	// CreatePost/CreateReply return ErrInvalidImages unless every image id
 	// exists and belongs to the author.
 	CreateImage(ctx context.Context, id, ownerID string, width, height, size int) error

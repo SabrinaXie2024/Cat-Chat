@@ -26,5 +26,7 @@ export interface Reply {
   content: string;
   /** @maxItems 3 */
   images: ImageUrl[];
+  /** Pinned by the post's author (listed first) */
+  pinned: boolean;
   createdAt: string;
 }
