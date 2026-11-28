@@ -37,6 +37,7 @@ type Memory struct {
 	gallery  []api.GalleryEntry // newest last
 	pending  map[string]api.PendingRegistration
 	resets   map[string]api.ResetCode
+	follows  map[[2]string]bool // {follower, followee}
 	now      func() time.Time
 }
 
@@ -53,6 +54,7 @@ func NewMemory() *Memory {
 		videos:   map[string]api.VideoRecord{},
 		pending:  map[string]api.PendingRegistration{},
 		resets:   map[string]api.ResetCode{},
+		follows:  map[[2]string]bool{},
 		now:      time.Now,
 	}
 }
@@ -71,7 +73,7 @@ func (m *Memory) CreateUser(_ context.Context, email, nickname, hash string) (ap
 	if _, taken := m.byEmail[email]; taken {
 		return api.User{}, api.ErrEmailTaken
 	}
-	u := api.User{Id: newID(), Email: email, Nickname: nickname, CreatedAt: m.now().UTC()}
+	u := api.User{Id: newID(), Email: email, Nickname: nickname, Avatar: api.Orange, CreatedAt: m.now().UTC()}
 	m.users[u.Id] = userRow{user: u, hash: hash}
 	m.byEmail[email] = u.Id
 	return u, nil
@@ -328,11 +330,13 @@ func (m *Memory) CreatePost(_ context.Context, author api.User, in api.NewPost) 
 		return api.Post{}, err
 	}
 	p := api.Post{
-		Id:        newID(),
-		Author:    author.Nickname,
-		Content:   in.Content,
-		Images:    nonNil(in.Images),
-		CreatedAt: m.now().UTC(),
+		Id:           newID(),
+		AuthorId:     author.Id,
+		Author:       author.Nickname,
+		AuthorAvatar: author.Avatar,
+		Content:      in.Content,
+		Images:       nonNil(in.Images),
+		CreatedAt:    m.now().UTC(),
 	}
 	m.posts = append(m.posts, p)
 	return p, nil
@@ -361,12 +365,14 @@ func (m *Memory) CreateReply(_ context.Context, postID string, author api.User, 
 		return api.Reply{}, api.ErrThreadFull
 	}
 	r := api.Reply{
-		Id:        newID(),
-		PostId:    postID,
-		Author:    author.Nickname,
-		Content:   in.Content,
-		Images:    nonNil(in.Images),
-		CreatedAt: m.now().UTC(),
+		Id:           newID(),
+		PostId:       postID,
+		AuthorId:     author.Id,
+		Author:       author.Nickname,
+		AuthorAvatar: author.Avatar,
+		Content:      in.Content,
+		Images:       nonNil(in.Images),
+		CreatedAt:    m.now().UTC(),
 	}
 	m.replies[postID] = append(m.replies[postID], r)
 	m.posts[i].ReplyCount++

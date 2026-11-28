@@ -84,7 +84,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations, password_resets CASCADE`); err != nil {
+	if _, err := pool.Exec(context.Background(), `TRUNCATE users, sessions, posts, replies, images, videos, gallery_items, pending_registrations, password_resets, follows CASCADE`); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -167,6 +167,81 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		}
 		if err := s.ChangePassword(ctx, "01a2111c-2a68-7371-bce0-5b41e2f69f46", "h"); !errors.Is(err, api.ErrNotFound) {
 			t.Fatalf("unknown user: %v", err)
+		}
+	})
+
+	t.Run("profiles and follows", func(t *testing.T) {
+		s := newStore(t)
+		a := seedUser(t, s, "a@b.co")
+		b := seedUser(t, s, "c@d.co")
+		if a.Avatar != api.Orange {
+			t.Fatalf("default avatar = %q", a.Avatar)
+		}
+		post, _ := s.CreatePost(ctx, a, api.NewPost{Content: "hi"})
+		if post.AuthorId != a.Id || post.AuthorAvatar != api.Orange {
+			t.Fatalf("post author fields %+v", post)
+		}
+		name, av := "新名字", api.Calico
+		u, err := s.UpdateProfile(ctx, a.Id, &name, &av)
+		if err != nil || u.Nickname != name || u.Avatar != av || u.Email != "a@b.co" {
+			t.Fatalf("UpdateProfile = %+v %v", u, err)
+		}
+		av2 := api.Black
+		if u, _ := s.UpdateProfile(ctx, a.Id, nil, &av2); u.Nickname != name || u.Avatar != av2 {
+			t.Fatalf("nil nickname must be kept: %+v", u)
+		}
+		if ps, _ := s.ListPosts(ctx); ps[0].Author != name || ps[0].AuthorAvatar != av2 {
+			t.Fatalf("posts show current author: %+v", ps[0])
+		}
+
+		if err := s.Follow(ctx, a.Id, a.Id); !errors.Is(err, api.ErrSelfFollow) {
+			t.Fatalf("self follow: %v", err)
+		}
+		missing := "01a2111c-2a68-7371-bce0-5b41e2f69f46"
+		if err := s.Follow(ctx, b.Id, missing); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("follow unknown: %v", err)
+		}
+		for range 2 { // idempotent
+			if err := s.Follow(ctx, b.Id, a.Id); err != nil {
+				t.Fatal(err)
+			}
+		}
+		p, err := s.Profile(ctx, a.Id, b.Id)
+		if err != nil || p.FollowerCount != 1 || p.FollowingCount != 0 || p.PostCount != 1 || !p.FollowedByMe || p.Avatar != av2 {
+			t.Fatalf("profile = %+v %v", p, err)
+		}
+		if p, _ := s.Profile(ctx, a.Id, ""); p.FollowedByMe {
+			t.Fatal("signed-out viewer can't follow")
+		}
+		if p, _ := s.Profile(ctx, b.Id, a.Id); p.FollowingCount != 1 || p.FollowedByMe {
+			t.Fatalf("b profile = %+v", p)
+		}
+		for range 2 {
+			if err := s.Unfollow(ctx, b.Id, a.Id); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if p, _ := s.Profile(ctx, a.Id, b.Id); p.FollowerCount != 0 || p.FollowedByMe {
+			t.Fatalf("after unfollow = %+v", p)
+		}
+		if _, err := s.Profile(ctx, missing, ""); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("unknown profile: %v", err)
+		}
+		if _, err := s.Profile(ctx, "not-a-uuid", ""); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("bad id profile: %v", err)
+		}
+
+		if ps, err := s.ListUserPosts(ctx, b.Id); err != nil || ps == nil || len(ps) != 0 {
+			t.Fatalf("empty user posts must be []: %#v %v", ps, err)
+		}
+		second, _ := s.CreatePost(ctx, u, api.NewPost{Content: "two"})
+		_, _ = s.CreatePost(ctx, b, api.NewPost{Content: "b's"})
+		ps, err := s.ListUserPosts(ctx, a.Id)
+		if err != nil || len(ps) != 2 || ps[0].Id != second.Id || ps[1].Id != post.Id {
+			t.Fatalf("user posts = %+v %v", ps, err)
+		}
+		if _, err := s.ListUserPosts(ctx, missing); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("unknown user posts: %v", err)
 		}
 	})
 

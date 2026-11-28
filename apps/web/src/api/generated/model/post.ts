@@ -13,11 +13,14 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { Avatar } from './avatar';
 import type { ImageUrl } from './imageUrl';
 
 export interface Post {
   id: string;
   author: string;
+  authorId: string;
+  authorAvatar: Avatar;
   /** @maxLength 500 */
   content: string;
   /** @maxItems 5 */

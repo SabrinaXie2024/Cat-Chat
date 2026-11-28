@@ -46,6 +46,16 @@ type Store interface {
 
 	CreateUser(ctx context.Context, email, nickname, passwordHash string) (User, error)
 
+	// Profiles & follows. Nil fields in UpdateProfile are left unchanged.
+	// Profile's viewerID may be "" (signed out). Follow returns ErrSelfFollow
+	// for oneself; Follow/Unfollow are idempotent and return ErrNotFound for
+	// unknown users.
+	UpdateProfile(ctx context.Context, userID string, nickname *string, avatar *Avatar) (User, error)
+	Profile(ctx context.Context, userID, viewerID string) (Profile, error)
+	ListUserPosts(ctx context.Context, userID string) ([]Post, error)
+	Follow(ctx context.Context, followerID, followeeID string) error
+	Unfollow(ctx context.Context, followerID, followeeID string) error
+
 	// Sign-up verification. CompleteRegistration creates the user and
 	// deletes the pending row atomically (ErrEmailTaken if registered since).
 	PendingRegistration(ctx context.Context, email string) (PendingRegistration, error)

@@ -54,7 +54,7 @@ func (p *Postgres) CreateUser(ctx context.Context, email, nickname, hash string)
 	if err != nil {
 		return api.User{}, err
 	}
-	return api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, CreatedAt: r.CreatedAt.UTC()}, nil
+	return api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, Avatar: api.Avatar(r.Avatar), CreatedAt: r.CreatedAt.UTC()}, nil
 }
 
 func (p *Postgres) UserByEmail(ctx context.Context, email string) (api.User, string, error) {
@@ -62,7 +62,7 @@ func (p *Postgres) UserByEmail(ctx context.Context, email string) (api.User, str
 	if err != nil {
 		return api.User{}, "", notFound(err)
 	}
-	return api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, CreatedAt: r.CreatedAt.UTC()}, r.PasswordHash, nil
+	return api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, Avatar: api.Avatar(r.Avatar), CreatedAt: r.CreatedAt.UTC()}, r.PasswordHash, nil
 }
 
 func (p *Postgres) CreateSession(ctx context.Context, tokenHash, userID string, expires time.Time) error {
@@ -78,7 +78,7 @@ func (p *Postgres) UserBySession(ctx context.Context, tokenHash string, now time
 	if err != nil {
 		return api.User{}, notFound(err)
 	}
-	return api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, CreatedAt: r.CreatedAt.UTC()}, nil
+	return api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, Avatar: api.Avatar(r.Avatar), CreatedAt: r.CreatedAt.UTC()}, nil
 }
 
 func (p *Postgres) DeleteSession(ctx context.Context, tokenHash string) error {
@@ -118,7 +118,7 @@ func (p *Postgres) ListPosts(ctx context.Context) ([]api.Post, error) {
 	out := make([]api.Post, len(rows))
 	for i, r := range rows {
 		out[i] = api.Post{
-			Id: r.ID.String(), Author: r.Author, Content: r.Content, Images: nonNil(r.Images),
+			Id: r.ID.String(), AuthorId: r.AuthorID.String(), Author: r.Author, AuthorAvatar: api.Avatar(r.AuthorAvatar), Content: r.Content, Images: nonNil(r.Images),
 			ReplyCount: int(r.ReplyCount), CreatedAt: r.CreatedAt.UTC(),
 		}
 	}
@@ -179,7 +179,7 @@ func (p *Postgres) CreatePost(ctx context.Context, author api.User, in api.NewPo
 			return err
 		}
 		out = api.Post{
-			Id: r.ID.String(), Author: author.Nickname, Content: r.Content, Images: nonNil(r.Images),
+			Id: r.ID.String(), AuthorId: author.Id, Author: author.Nickname, AuthorAvatar: author.Avatar, Content: r.Content, Images: nonNil(r.Images),
 			ReplyCount: int(r.ReplyCount), CreatedAt: r.CreatedAt.UTC(),
 		}
 		return nil
@@ -208,7 +208,7 @@ func (p *Postgres) ListReplies(ctx context.Context, postID string) ([]api.Reply,
 	out := make([]api.Reply, len(rows))
 	for i, r := range rows {
 		out[i] = api.Reply{
-			Id: r.ID.String(), PostId: r.PostID.String(), Author: r.Author, Content: r.Content,
+			Id: r.ID.String(), PostId: r.PostID.String(), AuthorId: r.AuthorID.String(), Author: r.Author, AuthorAvatar: api.Avatar(r.AuthorAvatar), Content: r.Content,
 			Images: nonNil(r.Images), CreatedAt: r.CreatedAt.UTC(),
 		}
 	}
@@ -249,7 +249,7 @@ func (p *Postgres) CreateReply(ctx context.Context, postID string, author api.Us
 			return err
 		}
 		out = api.Reply{
-			Id: r.ID.String(), PostId: r.PostID.String(), Author: author.Nickname, Content: r.Content,
+			Id: r.ID.String(), PostId: r.PostID.String(), AuthorId: author.Id, Author: author.Nickname, AuthorAvatar: author.Avatar, Content: r.Content,
 			Images: nonNil(r.Images), CreatedAt: r.CreatedAt.UTC(),
 		}
 		return nil

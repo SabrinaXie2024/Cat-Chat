@@ -13,7 +13,8 @@ import {
   useListReplies,
 } from '../../api/generated/posts/posts'
 import { errorMessage } from '../../api/http'
-import { Avatar, buttonClass } from '../../components/ui'
+import { CatAvatar } from '../../components/CatAvatar'
+import { buttonClass } from '../../components/ui'
 import { useFieldError, useI18n } from '../../i18n/I18nProvider'
 import { serverErrorKey, useServerError } from '../../i18n/serverErrors'
 import {
@@ -68,10 +69,17 @@ export function Replies({ post }: { post: Post }) {
         <ol className="space-y-2" aria-label={t('replies.list')}>
           {replies.map((r) => (
             <li key={r.id} className="flex gap-2.5 text-sm">
-              <Avatar name={r.author} size="sm" />
+              <CatAvatar avatar={r.authorAvatar} size="sm" />
               <div className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 ring-1 ring-stone-100">
                 <div className="mb-0.5 text-xs text-stone-500">
-                  {r.author} · <TimeAgo iso={r.createdAt} />
+                  <Link
+                    to="/users/$userId"
+                    params={{ userId: r.authorId }}
+                    className="font-medium text-stone-700 hover:text-brand-700"
+                  >
+                    {r.author}
+                  </Link>{' '}
+                  · <TimeAgo iso={r.createdAt} />
                 </div>
                 <p className="whitespace-pre-wrap break-words">{r.content}</p>
                 <ImageGrid urls={r.images} compact />

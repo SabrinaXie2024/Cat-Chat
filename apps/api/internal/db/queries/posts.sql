@@ -1,5 +1,5 @@
 -- name: ListPosts :many
-SELECT p.id, u.nickname AS author, p.content, p.images, p.reply_count, p.created_at
+SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at
 FROM posts p
 JOIN users u ON u.id = p.author_id
 ORDER BY p.created_at DESC, p.id DESC
@@ -14,7 +14,7 @@ RETURNING id, content, images, reply_count, created_at;
 SELECT EXISTS (SELECT 1 FROM posts WHERE id = $1);
 
 -- name: ListReplies :many
-SELECT r.id, r.post_id, u.nickname AS author, r.content, r.images, r.created_at
+SELECT r.id, r.post_id, r.author_id, u.nickname AS author, u.avatar AS author_avatar, r.content, r.images, r.created_at
 FROM replies r
 JOIN users u ON u.id = r.author_id
 WHERE r.post_id = $1
@@ -31,3 +31,11 @@ WHERE id = $1 AND reply_count < @max_replies::int;
 INSERT INTO replies (post_id, author_id, content, images)
 VALUES ($1, $2, $3, $4)
 RETURNING id, post_id, content, images, created_at;
+
+-- name: ListUserPosts :many
+SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at
+FROM posts p
+JOIN users u ON u.id = p.author_id
+WHERE p.author_id = $1
+ORDER BY p.created_at DESC, p.id DESC
+LIMIT 100;

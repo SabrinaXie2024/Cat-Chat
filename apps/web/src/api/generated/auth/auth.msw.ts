@@ -28,6 +28,7 @@ import type {
   LoginRequest,
   PasswordResetCompleteRequest,
   PasswordResetStartRequest,
+  ProfileUpdate,
   RegisterRequest,
   User,
   VerificationSent,
@@ -40,10 +41,11 @@ import {
   getLoginResponseMock,
   getStartPasswordResetResponseMock,
   getStartRegistrationResponseMock,
+  getUpdateProfileResponseMock,
   getVerifyRegistrationResponseMock
 } from './auth.faker';
 
-export { getStartRegistrationResponseMock, getVerifyRegistrationResponseMock, getStartPasswordResetResponseMock, getCompletePasswordResetResponseMock, getLoginResponseMock, getGetMeResponseMock } from './auth.faker';
+export { getStartRegistrationResponseMock, getVerifyRegistrationResponseMock, getStartPasswordResetResponseMock, getCompletePasswordResetResponseMock, getLoginResponseMock, getGetMeResponseMock, getUpdateProfileResponseMock } from './auth.faker';
 
 
 export const getStartRegistrationMockHandler = (overrideResponse?: VerificationSent | ((info: Parameters<HttpResponseResolver<PathParams, RegisterRequest>>[0]) => Promise<VerificationSent> | VerificationSent), options?: RequestHandlerOptions) => {
@@ -137,6 +139,18 @@ export const getGetMeMockHandler = (overrideResponse?: User | ((info: Parameters
       })
   }, options)
 }
+
+export const getUpdateProfileMockHandler = (overrideResponse?: User | ((info: Parameters<HttpResponseResolver<PathParams, ProfileUpdate>>[0]) => Promise<User> | User), options?: RequestHandlerOptions) => {
+  return http.patch<PathParams, ProfileUpdate>('*/auth/me/profile', async (info: Parameters<HttpResponseResolver<PathParams, ProfileUpdate>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getUpdateProfileResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
 export const getAuthMock = () => [
   getStartRegistrationMockHandler(),
   getVerifyRegistrationMockHandler(),
@@ -145,5 +159,6 @@ export const getAuthMock = () => [
   getLoginMockHandler(),
   getLogoutMockHandler(),
   getChangePasswordMockHandler(),
-  getGetMeMockHandler()
+  getGetMeMockHandler(),
+  getUpdateProfileMockHandler()
 ]

@@ -1,18 +1,21 @@
 import { HttpResponse, http } from 'msw'
-import type {
-  ChangePasswordRequest,
-  GalleryItem,
-  LoginRequest,
-  NewGalleryItem,
-  NewPost,
-  NewReply,
-  PasswordResetCompleteRequest,
-  PasswordResetStartRequest,
-  Post,
-  RegisterRequest,
-  Reply,
-  User,
-  VerifyRegistrationRequest,
+import {
+  Avatar,
+  type ChangePasswordRequest,
+  type GalleryItem,
+  type LoginRequest,
+  type NewGalleryItem,
+  type NewPost,
+  type NewReply,
+  type PasswordResetCompleteRequest,
+  type PasswordResetStartRequest,
+  type Post,
+  type Profile,
+  type ProfileUpdate,
+  type RegisterRequest,
+  type Reply,
+  type User,
+  type VerifyRegistrationRequest,
 } from '../api/generated/model'
 import { getGetHealthMockHandler } from '../api/generated/system/system.msw'
 import {
@@ -44,6 +47,8 @@ type Db = {
   images: Map<string, { ownerId: string; blob: Blob }>
   videos: Map<string, { ownerId: string; blob: Blob; posterId: string }>
   gallery: GalleryItem[] // newest first
+  /** `${followerId}>${followeeId}` */
+  follows: Set<string>
   /** Forgot-password codes, by email (also for unknown emails, like the server). */
   resets: Map<string, { code: string; attempts: number; sentAt: number; expiresAt: number }>
   /** Sign-ups awaiting their code, by email. */
@@ -78,6 +83,7 @@ export const db: Db = {
   images: new Map(),
   videos: new Map(),
   gallery: [],
+  follows: new Set(),
   pending: new Map(),
   resets: new Map(),
 }
@@ -85,7 +91,25 @@ export const db: Db = {
 export function resetDb(seed: Post[] = defaultSeed()) {
   db.posts = structuredClone(seed)
   db.replies = new Map()
-  db.users = [{ id: 'demo', createdAt: new Date(0).toISOString(), isAdmin: true, ...DEMO_USER }]
+  db.users = [
+    {
+      id: 'demo',
+      createdAt: new Date(0).toISOString(),
+      isAdmin: true,
+      avatar: Avatar.orange,
+      ...DEMO_USER,
+    },
+    {
+      id: SEED_AUTHOR_ID,
+      email: 'juzi@meowsphere.dev',
+      nickname: '橘子妈',
+      password: crypto.randomUUID(),
+      isAdmin: false,
+      avatar: Avatar.calico,
+      createdAt: new Date(0).toISOString(),
+    },
+  ]
+  db.follows = new Set()
   db.sessionUserId = null
   db.images = new Map()
   db.videos = new Map()
@@ -106,11 +130,16 @@ function resolveImages(ids: string[], ownerId: string): string[] | null {
 const currentUser = () => db.users.find((u) => u.id === db.sessionUserId)
 const publicUser = ({ password: _, ...u }: MockUser): User => u
 
+/** Author of the default seed post (a real mock user, so its profile works). */
+export const SEED_AUTHOR_ID = 'seed-user'
+
 function defaultSeed(): Post[] {
   return [
     {
       id: 'seed-1',
+      authorId: SEED_AUTHOR_ID,
       author: '橘子妈',
+      authorAvatar: Avatar.calico,
       content: '今天橘子又把杯子推下桌了 🙃',
       images: [],
       replyCount: 0,
@@ -186,6 +215,7 @@ export const handlers = [
       nickname: p.nickname,
       password: p.password,
       isAdmin: false,
+      avatar: Avatar.orange,
       createdAt: new Date().toISOString(),
     }
     db.users.push(user)
@@ -393,7 +423,9 @@ export const handlers = [
     if (!images) return bad('images must be your own uploads')
     const post: Post = {
       id: id(),
+      authorId: user.id,
       author: user.nickname,
+      authorAvatar: user.avatar,
       content: body.content,
       images,
       replyCount: 0,
@@ -430,7 +462,9 @@ export const handlers = [
       const reply: Reply = {
         id: id(),
         postId: post.id,
+        authorId: user.id,
         author: user.nickname,
+        authorAvatar: user.avatar,
         content: body.content,
         images,
         createdAt: new Date().toISOString(),
@@ -440,4 +474,67 @@ export const handlers = [
       return HttpResponse.json(reply, { status: 201 })
     },
   ),
+  http.patch<never, ProfileUpdate>('*/api/auth/me/profile', async ({ request }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    const body = await request.json()
+    if (body.nickname !== undefined) {
+      const n = body.nickname.trim()
+      if (charCount(n) < 1 || charCount(n) > 20) return bad('nickname must be 1–20 characters')
+      user.nickname = n
+    }
+    if (body.avatar !== undefined) {
+      if (!Object.values(Avatar).includes(body.avatar)) return bad('unknown avatar')
+      user.avatar = body.avatar
+    }
+    // Posts and replies show the author's current name/avatar (server joins).
+    const sync = (x: Post | Reply) => {
+      if (x.authorId === user.id) {
+        x.author = user.nickname
+        x.authorAvatar = user.avatar
+      }
+    }
+    db.posts.forEach(sync)
+    for (const list of db.replies.values()) list.forEach(sync)
+    return HttpResponse.json(publicUser(user))
+  }),
+
+  http.get<{ userId: string }>('*/api/users/:userId', ({ params }) => {
+    const u = db.users.find((x) => x.id === params.userId)
+    if (!u) return bad('user not found', 404)
+    const follows = [...db.follows].map((k) => k.split('>'))
+    const profile: Profile = {
+      id: u.id,
+      nickname: u.nickname,
+      avatar: u.avatar,
+      createdAt: u.createdAt,
+      postCount: db.posts.filter((p) => p.authorId === u.id).length,
+      followerCount: follows.filter(([, b]) => b === u.id).length,
+      followingCount: follows.filter(([a]) => a === u.id).length,
+      followedByMe: db.follows.has(`${db.sessionUserId}>${u.id}`),
+    }
+    return HttpResponse.json(profile)
+  }),
+
+  http.get<{ userId: string }>('*/api/users/:userId/posts', ({ params }) => {
+    if (!db.users.some((x) => x.id === params.userId)) return bad('user not found', 404)
+    return HttpResponse.json(db.posts.filter((p) => p.authorId === params.userId))
+  }),
+
+  http.put<{ userId: string }>('*/api/users/:userId/follow', ({ params }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    if (user.id === params.userId) return bad("you can't follow yourself")
+    if (!db.users.some((x) => x.id === params.userId)) return bad('user not found', 404)
+    db.follows.add(`${user.id}>${params.userId}`)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.delete<{ userId: string }>('*/api/users/:userId/follow', ({ params }) => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    if (!db.users.some((x) => x.id === params.userId)) return bad('user not found', 404)
+    db.follows.delete(`${user.id}>${params.userId}`)
+    return new HttpResponse(null, { status: 204 })
+  }),
 ]

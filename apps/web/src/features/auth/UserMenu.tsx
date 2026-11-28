@@ -1,6 +1,8 @@
 import { Link, useLocation } from '@tanstack/react-router'
-import { ChevronDown, LogOut, Settings } from 'lucide-react'
+import { ChevronDown, LogOut, Settings, UserRound } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
+import type { User } from '../../api/generated/model'
+import { CatAvatar } from '../../components/CatAvatar'
 import { useI18n } from '../../i18n/I18nProvider'
 import { safeRedirect, useCurrentUser, useSignOut } from './useCurrentUser'
 
@@ -25,13 +27,13 @@ export function UserMenu() {
       </div>
     )
   }
-  return <AccountDropdown nickname={user.nickname} />
+  return <AccountDropdown user={user} />
 }
 
 const itemClass =
   'flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none'
 
-function AccountDropdown({ nickname }: { nickname: string }) {
+function AccountDropdown({ user }: { user: User }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -73,9 +75,10 @@ function AccountDropdown({ nickname }: { nickname: string }) {
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
+        className="flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-sm text-stone-700 hover:bg-stone-100"
       >
-        {nickname}
+        <CatAvatar avatar={user.avatar} size="sm" />
+        <span className="max-w-28 truncate">{user.nickname}</span>
         <ChevronDown
           className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
           aria-hidden
@@ -88,6 +91,15 @@ function AccountDropdown({ nickname }: { nickname: string }) {
           aria-label={t('menu.label')}
           className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-xl border border-stone-100 bg-white py-1.5 shadow-lift"
         >
+          <Link
+            to="/users/$userId"
+            params={{ userId: user.id }}
+            role="menuitem"
+            className={itemClass}
+          >
+            <UserRound className="size-4" aria-hidden />
+            {t('menu.profile')}
+          </Link>
           <Link to="/settings" role="menuitem" className={itemClass}>
             <Settings className="size-4" aria-hidden />
             {t('menu.settings')}

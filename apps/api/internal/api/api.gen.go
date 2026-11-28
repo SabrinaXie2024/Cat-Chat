@@ -18,6 +18,42 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for Avatar.
+const (
+	Black   Avatar = "black"
+	Calico  Avatar = "calico"
+	Gray    Avatar = "gray"
+	Orange  Avatar = "orange"
+	Siamese Avatar = "siamese"
+	Tabby   Avatar = "tabby"
+	Tuxedo  Avatar = "tuxedo"
+	White   Avatar = "white"
+)
+
+// Valid indicates whether the value is a known member of the Avatar enum.
+func (e Avatar) Valid() bool {
+	switch e {
+	case Black:
+		return true
+	case Calico:
+		return true
+	case Gray:
+		return true
+	case Orange:
+		return true
+	case Siamese:
+		return true
+	case Tabby:
+		return true
+	case Tuxedo:
+		return true
+	case White:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GalleryItemKind.
 const (
 	GalleryItemKindPhoto GalleryItemKind = "photo"
@@ -68,6 +104,9 @@ func (e NewGalleryItemKind) Valid() bool {
 		return false
 	}
 }
+
+// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+type Avatar string
 
 // ChangePasswordRequest defines model for ChangePasswordRequest.
 type ChangePasswordRequest struct {
@@ -175,12 +214,38 @@ type PasswordResetStartRequest struct {
 
 // Post defines model for Post.
 type Post struct {
-	Author     string     `json:"author"`
-	Content    string     `json:"content"`
-	CreatedAt  time.Time  `json:"createdAt"`
-	Id         string     `json:"id"`
-	Images     []ImageUrl `json:"images"`
-	ReplyCount int        `json:"replyCount"`
+	Author string `json:"author"`
+
+	// AuthorAvatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	AuthorAvatar Avatar     `json:"authorAvatar"`
+	AuthorId     string     `json:"authorId"`
+	Content      string     `json:"content"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	Id           string     `json:"id"`
+	Images       []ImageUrl `json:"images"`
+	ReplyCount   int        `json:"replyCount"`
+}
+
+// Profile defines model for Profile.
+type Profile struct {
+	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	Avatar    Avatar    `json:"avatar"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// FollowedByMe false when signed out
+	FollowedByMe   bool   `json:"followedByMe"`
+	FollowerCount  int    `json:"followerCount"`
+	FollowingCount int    `json:"followingCount"`
+	Id             string `json:"id"`
+	Nickname       string `json:"nickname"`
+	PostCount      int    `json:"postCount"`
+}
+
+// ProfileUpdate defines model for ProfileUpdate.
+type ProfileUpdate struct {
+	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	Avatar   *Avatar `json:"avatar,omitempty"`
+	Nickname *string `json:"nickname,omitempty"`
 }
 
 // RateLimited defines model for RateLimited.
@@ -199,16 +264,22 @@ type RegisterRequest struct {
 
 // Reply defines model for Reply.
 type Reply struct {
-	Author    string     `json:"author"`
-	Content   string     `json:"content"`
-	CreatedAt time.Time  `json:"createdAt"`
-	Id        string     `json:"id"`
-	Images    []ImageUrl `json:"images"`
-	PostId    string     `json:"postId"`
+	Author string `json:"author"`
+
+	// AuthorAvatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	AuthorAvatar Avatar     `json:"authorAvatar"`
+	AuthorId     string     `json:"authorId"`
+	Content      string     `json:"content"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	Id           string     `json:"id"`
+	Images       []ImageUrl `json:"images"`
+	PostId       string     `json:"postId"`
 }
 
 // User defines model for User.
 type User struct {
+	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
+	Avatar    Avatar    `json:"avatar"`
 	CreatedAt time.Time `json:"createdAt"`
 	Email     string    `json:"email"`
 	Id        string    `json:"id"`
@@ -268,6 +339,9 @@ type UploadVideoMultipartBody struct {
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
+// UpdateProfileJSONRequestBody defines body for UpdateProfile for application/json ContentType.
+type UpdateProfileJSONRequestBody = ProfileUpdate
+
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
@@ -309,6 +383,9 @@ type ServerInterface interface {
 
 	// (GET /auth/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+
+	// (PATCH /auth/me/profile)
+	UpdateProfile(w http.ResponseWriter, r *http.Request)
 
 	// (POST /auth/password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
@@ -354,6 +431,18 @@ type ServerInterface interface {
 
 	// (POST /posts/{postId}/replies)
 	CreateReply(w http.ResponseWriter, r *http.Request, postId string)
+
+	// (GET /users/{userId})
+	GetProfile(w http.ResponseWriter, r *http.Request, userId string)
+
+	// (DELETE /users/{userId}/follow)
+	UnfollowUser(w http.ResponseWriter, r *http.Request, userId string)
+
+	// (PUT /users/{userId}/follow)
+	FollowUser(w http.ResponseWriter, r *http.Request, userId string)
+
+	// (GET /users/{userId}/posts)
+	ListUserPosts(w http.ResponseWriter, r *http.Request, userId string)
 
 	// (POST /videos)
 	UploadVideo(w http.ResponseWriter, r *http.Request)
@@ -401,6 +490,20 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProfile operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProfile(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -668,6 +771,110 @@ func (siw *ServerInterfaceWrapper) CreateReply(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetProfile operation middleware
+func (siw *ServerInterfaceWrapper) GetProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProfile(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnfollowUser operation middleware
+func (siw *ServerInterfaceWrapper) UnfollowUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnfollowUser(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FollowUser operation middleware
+func (siw *ServerInterfaceWrapper) FollowUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FollowUser(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListUserPosts operation middleware
+func (siw *ServerInterfaceWrapper) ListUserPosts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUserPosts(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UploadVideo operation middleware
 func (siw *ServerInterfaceWrapper) UploadVideo(w http.ResponseWriter, r *http.Request) {
 
@@ -821,6 +1028,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/posts", wrapper.CreatePost)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/posts/{postId}/replies", wrapper.ListReplies)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/posts/{postId}/replies", wrapper.CreateReply)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/auth/me/profile", wrapper.UpdateProfile)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/users/{userId}", wrapper.GetProfile)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/users/{userId}/posts", wrapper.ListUserPosts)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/users/{userId}/follow", wrapper.UnfollowUser)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/users/{userId}/follow", wrapper.FollowUser)
 
 	return m
 }
@@ -952,6 +1164,56 @@ func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) e
 type GetMe401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response GetMe401JSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProfileRequestObject struct {
+	Body *UpdateProfileJSONRequestBody
+}
+
+type UpdateProfileResponseObject interface {
+	VisitUpdateProfileResponse(w http.ResponseWriter) error
+}
+
+type UpdateProfile200JSONResponse User
+
+func (response UpdateProfile200JSONResponse) VisitUpdateProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProfile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateProfile400JSONResponse) VisitUpdateProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProfile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateProfile401JSONResponse) VisitUpdateProfileResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
@@ -1765,6 +2027,180 @@ func (response CreateReply409JSONResponse) VisitCreateReplyResponse(w http.Respo
 	return err
 }
 
+type GetProfileRequestObject struct {
+	UserId string `json:"userId"`
+}
+
+type GetProfileResponseObject interface {
+	VisitGetProfileResponse(w http.ResponseWriter) error
+}
+
+type GetProfile200JSONResponse Profile
+
+func (response GetProfile200JSONResponse) VisitGetProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetProfile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetProfile404JSONResponse) VisitGetProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnfollowUserRequestObject struct {
+	UserId string `json:"userId"`
+}
+
+type UnfollowUserResponseObject interface {
+	VisitUnfollowUserResponse(w http.ResponseWriter) error
+}
+
+type UnfollowUser204Response struct {
+}
+
+func (response UnfollowUser204Response) VisitUnfollowUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnfollowUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnfollowUser401JSONResponse) VisitUnfollowUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnfollowUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnfollowUser404JSONResponse) VisitUnfollowUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowUserRequestObject struct {
+	UserId string `json:"userId"`
+}
+
+type FollowUserResponseObject interface {
+	VisitFollowUserResponse(w http.ResponseWriter) error
+}
+
+type FollowUser204Response struct {
+}
+
+func (response FollowUser204Response) VisitFollowUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type FollowUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response FollowUser400JSONResponse) VisitFollowUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response FollowUser401JSONResponse) VisitFollowUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response FollowUser404JSONResponse) VisitFollowUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUserPostsRequestObject struct {
+	UserId string `json:"userId"`
+}
+
+type ListUserPostsResponseObject interface {
+	VisitListUserPostsResponse(w http.ResponseWriter) error
+}
+
+type ListUserPosts200JSONResponse []Post
+
+func (response ListUserPosts200JSONResponse) VisitListUserPostsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUserPosts404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListUserPosts404JSONResponse) VisitListUserPostsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UploadVideoRequestObject struct {
 	Body *multipart.Reader
 }
@@ -1855,6 +2291,9 @@ type StrictServerInterface interface {
 	// (GET /auth/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
 
+	// (PATCH /auth/me/profile)
+	UpdateProfile(ctx context.Context, request UpdateProfileRequestObject) (UpdateProfileResponseObject, error)
+
 	// (POST /auth/password)
 	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
 
@@ -1899,6 +2338,18 @@ type StrictServerInterface interface {
 
 	// (POST /posts/{postId}/replies)
 	CreateReply(ctx context.Context, request CreateReplyRequestObject) (CreateReplyResponseObject, error)
+
+	// (GET /users/{userId})
+	GetProfile(ctx context.Context, request GetProfileRequestObject) (GetProfileResponseObject, error)
+
+	// (DELETE /users/{userId}/follow)
+	UnfollowUser(ctx context.Context, request UnfollowUserRequestObject) (UnfollowUserResponseObject, error)
+
+	// (PUT /users/{userId}/follow)
+	FollowUser(ctx context.Context, request FollowUserRequestObject) (FollowUserResponseObject, error)
+
+	// (GET /users/{userId}/posts)
+	ListUserPosts(ctx context.Context, request ListUserPostsRequestObject) (ListUserPostsResponseObject, error)
 
 	// (POST /videos)
 	UploadVideo(ctx context.Context, request UploadVideoRequestObject) (UploadVideoResponseObject, error)
@@ -2018,6 +2469,37 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMeResponseObject); ok {
 		if err := validResponse.VisitGetMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProfile operation middleware
+func (sh *strictHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	var request UpdateProfileRequestObject
+
+	var body UpdateProfileJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.UpdateProfile(ctx, request.(UpdateProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProfileResponseObject); ok {
+		if err := validResponse.VisitUpdateProfileResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2449,6 +2931,110 @@ func (sh *strictHandler) CreateReply(w http.ResponseWriter, r *http.Request, pos
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateReplyResponseObject); ok {
 		if err := validResponse.VisitCreateReplyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProfile operation middleware
+func (sh *strictHandler) GetProfile(w http.ResponseWriter, r *http.Request, userId string) {
+	var request GetProfileRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.GetProfile(ctx, request.(GetProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProfileResponseObject); ok {
+		if err := validResponse.VisitGetProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnfollowUser operation middleware
+func (sh *strictHandler) UnfollowUser(w http.ResponseWriter, r *http.Request, userId string) {
+	var request UnfollowUserRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.UnfollowUser(ctx, request.(UnfollowUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnfollowUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnfollowUserResponseObject); ok {
+		if err := validResponse.VisitUnfollowUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FollowUser operation middleware
+func (sh *strictHandler) FollowUser(w http.ResponseWriter, r *http.Request, userId string) {
+	var request FollowUserRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.FollowUser(ctx, request.(FollowUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FollowUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FollowUserResponseObject); ok {
+		if err := validResponse.VisitFollowUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListUserPosts operation middleware
+func (sh *strictHandler) ListUserPosts(w http.ResponseWriter, r *http.Request, userId string) {
+	var request ListUserPostsRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ListUserPosts(ctx, request.(ListUserPostsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUserPosts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListUserPostsResponseObject); ok {
+		if err := validResponse.VisitListUserPostsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

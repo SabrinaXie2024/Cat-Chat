@@ -10,6 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type Follow struct {
+	FollowerID uuid.UUID
+	FolloweeID uuid.UUID
+	CreatedAt  time.Time
+}
+
 type GalleryItem struct {
 	ID        uuid.UUID
 	Kind      string
@@ -82,6 +88,7 @@ type User struct {
 	Nickname     string
 	PasswordHash string
 	CreatedAt    time.Time
+	Avatar       string
 }
 
 type Video struct {

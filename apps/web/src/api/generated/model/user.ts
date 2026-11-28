@@ -13,9 +13,11 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { Avatar } from './avatar';
 
 export interface User {
   id: string;
+  avatar: Avatar;
   /** Site owner; may manage the gallery. Set via ADMIN_EMAILS. */
   isAdmin: boolean;
   email: string;

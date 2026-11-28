@@ -98,31 +98,6 @@ export const buttonClass = {
 export const inputClass =
   'w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-900 placeholder:text-stone-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100'
 
-/** First visible character as a coloured avatar (no profile photos yet). */
-export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) {
-  const palette = [
-    'bg-orange-100 text-orange-700',
-    'bg-amber-100 text-amber-700',
-    'bg-rose-100 text-rose-700',
-    'bg-lime-100 text-lime-700',
-    'bg-sky-100 text-sky-700',
-    'bg-violet-100 text-violet-700',
-  ]
-  let h = 0
-  for (const ch of name) h = (h * 31 + (ch.codePointAt(0) ?? 0)) >>> 0
-  const initial = [...name.trim()][0]?.toUpperCase() ?? '?'
-  return (
-    <span
-      className={`grid shrink-0 place-items-center rounded-full font-semibold ${palette[h % palette.length]} ${
-        size === 'sm' ? 'size-7 text-xs' : 'size-10 text-base'
-      }`}
-      aria-hidden
-    >
-      {initial}
-    </span>
-  )
-}
-
 /** Friendly empty state. */
 export function EmptyState({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (

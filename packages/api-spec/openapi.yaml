@@ -445,6 +445,74 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+  /auth/me/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      description: Change your own nickname and/or avatar.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfileUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /users/{userId}:
+    parameters:
+      - { name: userId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getProfile
+      tags: [users]
+      security: []
+      responses:
+        "200":
+          description: Public profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /users/{userId}/posts:
+    parameters:
+      - { name: userId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listUserPosts
+      tags: [users]
+      security: []
+      responses:
+        "200":
+          description: The user's posts, newest first (max 100)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Post" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /users/{userId}/follow:
+    parameters:
+      - { name: userId, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: followUser
+      tags: [users]
+      description: Idempotent.
+      responses:
+        "204": { description: Following }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: unfollowUser
+      tags: [users]
+      description: Idempotent.
+      responses:
+        "204": { description: Not following }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     sessionCookie:
@@ -480,6 +548,27 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    Avatar:
+      type: string
+      description: One of the site's preset cat avatars (custom uploads aren't allowed).
+      enum: [orange, black, white, gray, calico, siamese, tuxedo, tabby]
+    ProfileUpdate:
+      type: object
+      properties:
+        nickname: { type: string, minLength: 1, maxLength: 20 }
+        avatar: { $ref: "#/components/schemas/Avatar" }
+    Profile:
+      type: object
+      required: [id, nickname, avatar, createdAt, postCount, followerCount, followingCount, followedByMe]
+      properties:
+        id: { type: string }
+        nickname: { type: string }
+        avatar: { $ref: "#/components/schemas/Avatar" }
+        createdAt: { type: string, format: date-time }
+        postCount: { type: integer }
+        followerCount: { type: integer }
+        followingCount: { type: integer }
+        followedByMe: { type: boolean, description: "false when signed out" }
     Health:
       type: object
       required: [status]
@@ -492,9 +581,10 @@ components:
         message: { type: string }
     User:
       type: object
-      required: [id, email, nickname, isAdmin, createdAt]
+      required: [id, email, nickname, avatar, isAdmin, createdAt]
       properties:
         id: { type: string }
+        avatar: { $ref: "#/components/schemas/Avatar" }
         isAdmin:
           type: boolean
           description: Site owner; may manage the gallery. Set via ADMIN_EMAILS.
@@ -613,10 +703,12 @@ components:
           items: { $ref: "#/components/schemas/ImageId" }
     Post:
       type: object
-      required: [id, author, content, images, replyCount, createdAt]
+      required: [id, authorId, authorAvatar, author, content, images, replyCount, createdAt]
       properties:
         id: { type: string }
         author: { type: string }
+        authorId: { type: string }
+        authorAvatar: { $ref: "#/components/schemas/Avatar" }
         content: { type: string, maxLength: 500 }
         images:
           type: array
@@ -635,11 +727,13 @@ components:
           items: { $ref: "#/components/schemas/ImageId" }
     Reply:
       type: object
-      required: [id, postId, author, content, images, createdAt]
+      required: [id, authorId, authorAvatar, postId, author, content, images, createdAt]
       properties:
         id: { type: string }
         postId: { type: string }
         author: { type: string }
+        authorId: { type: string }
+        authorAvatar: { $ref: "#/components/schemas/Avatar" }
         content: { type: string, maxLength: 100 }
         images:
           type: array

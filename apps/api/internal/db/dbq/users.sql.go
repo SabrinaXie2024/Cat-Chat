@@ -31,7 +31,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, nickname, password_hash)
 VALUES ($1, $2, $3)
-RETURNING id, email, nickname, created_at
+RETURNING id, email, nickname, avatar, created_at
 `
 
 type CreateUserParams struct {
@@ -44,6 +44,7 @@ type CreateUserRow struct {
 	ID        uuid.UUID
 	Email     string
 	Nickname  string
+	Avatar    string
 	CreatedAt time.Time
 }
 
@@ -54,6 +55,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.ID,
 		&i.Email,
 		&i.Nickname,
+		&i.Avatar,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -89,6 +91,77 @@ func (q *Queries) DeleteUserSessions(ctx context.Context, userID uuid.UUID) erro
 	return err
 }
 
+const follow = `-- name: Follow :exec
+INSERT INTO follows (follower_id, followee_id) VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type FollowParams struct {
+	FollowerID uuid.UUID
+	FolloweeID uuid.UUID
+}
+
+func (q *Queries) Follow(ctx context.Context, arg FollowParams) error {
+	_, err := q.db.Exec(ctx, follow, arg.FollowerID, arg.FolloweeID)
+	return err
+}
+
+const getProfile = `-- name: GetProfile :one
+SELECT u.id, u.nickname, u.avatar, u.created_at,
+       (SELECT count(*) FROM posts p WHERE p.author_id = u.id)::int AS post_count,
+       (SELECT count(*) FROM follows f WHERE f.followee_id = u.id)::int AS follower_count,
+       (SELECT count(*) FROM follows f WHERE f.follower_id = u.id)::int AS following_count,
+       EXISTS (SELECT 1 FROM follows f WHERE f.followee_id = u.id AND f.follower_id = $2::uuid) AS followed_by_me
+FROM users u
+WHERE u.id = $1
+`
+
+type GetProfileParams struct {
+	ID     uuid.UUID
+	Viewer *uuid.UUID
+}
+
+type GetProfileRow struct {
+	ID             uuid.UUID
+	Nickname       string
+	Avatar         string
+	CreatedAt      time.Time
+	PostCount      int32
+	FollowerCount  int32
+	FollowingCount int32
+	FollowedByMe   bool
+}
+
+func (q *Queries) GetProfile(ctx context.Context, arg GetProfileParams) (GetProfileRow, error) {
+	row := q.db.QueryRow(ctx, getProfile, arg.ID, arg.Viewer)
+	var i GetProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.Nickname,
+		&i.Avatar,
+		&i.CreatedAt,
+		&i.PostCount,
+		&i.FollowerCount,
+		&i.FollowingCount,
+		&i.FollowedByMe,
+	)
+	return i, err
+}
+
+const unfollow = `-- name: Unfollow :exec
+DELETE FROM follows WHERE follower_id = $1 AND followee_id = $2
+`
+
+type UnfollowParams struct {
+	FollowerID uuid.UUID
+	FolloweeID uuid.UUID
+}
+
+func (q *Queries) Unfollow(ctx context.Context, arg UnfollowParams) error {
+	_, err := q.db.Exec(ctx, unfollow, arg.FollowerID, arg.FolloweeID)
+	return err
+}
+
 const updatePasswordHash = `-- name: UpdatePasswordHash :execrows
 UPDATE users SET password_hash = $2 WHERE id = $1
 `
@@ -106,8 +179,43 @@ func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHash
 	return result.RowsAffected(), nil
 }
 
+const updateProfile = `-- name: UpdateProfile :one
+UPDATE users
+SET nickname = coalesce($2, nickname),
+    avatar   = coalesce($3, avatar)
+WHERE id = $1
+RETURNING id, email, nickname, avatar, created_at
+`
+
+type UpdateProfileParams struct {
+	ID       uuid.UUID
+	Nickname *string
+	Avatar   *string
+}
+
+type UpdateProfileRow struct {
+	ID        uuid.UUID
+	Email     string
+	Nickname  string
+	Avatar    string
+	CreatedAt time.Time
+}
+
+func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (UpdateProfileRow, error) {
+	row := q.db.QueryRow(ctx, updateProfile, arg.ID, arg.Nickname, arg.Avatar)
+	var i UpdateProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Nickname,
+		&i.Avatar,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const userByEmail = `-- name: UserByEmail :one
-SELECT id, email, nickname, created_at, password_hash
+SELECT id, email, nickname, avatar, created_at, password_hash
 FROM users
 WHERE email = $1
 `
@@ -116,6 +224,7 @@ type UserByEmailRow struct {
 	ID           uuid.UUID
 	Email        string
 	Nickname     string
+	Avatar       string
 	CreatedAt    time.Time
 	PasswordHash string
 }
@@ -127,6 +236,7 @@ func (q *Queries) UserByEmail(ctx context.Context, email string) (UserByEmailRow
 		&i.ID,
 		&i.Email,
 		&i.Nickname,
+		&i.Avatar,
 		&i.CreatedAt,
 		&i.PasswordHash,
 	)
@@ -134,7 +244,7 @@ func (q *Queries) UserByEmail(ctx context.Context, email string) (UserByEmailRow
 }
 
 const userBySession = `-- name: UserBySession :one
-SELECT u.id, u.email, u.nickname, u.created_at
+SELECT u.id, u.email, u.nickname, u.avatar, u.created_at
 FROM sessions s
 JOIN users u ON u.id = s.user_id
 WHERE s.token_hash = $1 AND s.expires_at > $2::timestamptz
@@ -149,6 +259,7 @@ type UserBySessionRow struct {
 	ID        uuid.UUID
 	Email     string
 	Nickname  string
+	Avatar    string
 	CreatedAt time.Time
 }
 
@@ -159,7 +270,19 @@ func (q *Queries) UserBySession(ctx context.Context, arg UserBySessionParams) (U
 		&i.ID,
 		&i.Email,
 		&i.Nickname,
+		&i.Avatar,
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const userExists = `-- name: UserExists :one
+SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)
+`
+
+func (q *Queries) UserExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, userExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

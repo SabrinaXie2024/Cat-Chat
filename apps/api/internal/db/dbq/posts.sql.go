@@ -106,7 +106,7 @@ func (q *Queries) CreateReply(ctx context.Context, arg CreateReplyParams) (Creat
 }
 
 const listPosts = `-- name: ListPosts :many
-SELECT p.id, u.nickname AS author, p.content, p.images, p.reply_count, p.created_at
+SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at
 FROM posts p
 JOIN users u ON u.id = p.author_id
 ORDER BY p.created_at DESC, p.id DESC
@@ -114,12 +114,14 @@ LIMIT 100
 `
 
 type ListPostsRow struct {
-	ID         uuid.UUID
-	Author     string
-	Content    string
-	Images     []string
-	ReplyCount int32
-	CreatedAt  time.Time
+	ID           uuid.UUID
+	AuthorID     uuid.UUID
+	Author       string
+	AuthorAvatar string
+	Content      string
+	Images       []string
+	ReplyCount   int32
+	CreatedAt    time.Time
 }
 
 func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
@@ -133,7 +135,9 @@ func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
 		var i ListPostsRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.AuthorID,
 			&i.Author,
+			&i.AuthorAvatar,
 			&i.Content,
 			&i.Images,
 			&i.ReplyCount,
@@ -150,7 +154,7 @@ func (q *Queries) ListPosts(ctx context.Context) ([]ListPostsRow, error) {
 }
 
 const listReplies = `-- name: ListReplies :many
-SELECT r.id, r.post_id, u.nickname AS author, r.content, r.images, r.created_at
+SELECT r.id, r.post_id, r.author_id, u.nickname AS author, u.avatar AS author_avatar, r.content, r.images, r.created_at
 FROM replies r
 JOIN users u ON u.id = r.author_id
 WHERE r.post_id = $1
@@ -158,12 +162,14 @@ ORDER BY r.created_at, r.id
 `
 
 type ListRepliesRow struct {
-	ID        uuid.UUID
-	PostID    uuid.UUID
-	Author    string
-	Content   string
-	Images    []string
-	CreatedAt time.Time
+	ID           uuid.UUID
+	PostID       uuid.UUID
+	AuthorID     uuid.UUID
+	Author       string
+	AuthorAvatar string
+	Content      string
+	Images       []string
+	CreatedAt    time.Time
 }
 
 func (q *Queries) ListReplies(ctx context.Context, postID uuid.UUID) ([]ListRepliesRow, error) {
@@ -178,9 +184,60 @@ func (q *Queries) ListReplies(ctx context.Context, postID uuid.UUID) ([]ListRepl
 		if err := rows.Scan(
 			&i.ID,
 			&i.PostID,
+			&i.AuthorID,
 			&i.Author,
+			&i.AuthorAvatar,
 			&i.Content,
 			&i.Images,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserPosts = `-- name: ListUserPosts :many
+SELECT p.id, p.author_id, u.nickname AS author, u.avatar AS author_avatar, p.content, p.images, p.reply_count, p.created_at
+FROM posts p
+JOIN users u ON u.id = p.author_id
+WHERE p.author_id = $1
+ORDER BY p.created_at DESC, p.id DESC
+LIMIT 100
+`
+
+type ListUserPostsRow struct {
+	ID           uuid.UUID
+	AuthorID     uuid.UUID
+	Author       string
+	AuthorAvatar string
+	Content      string
+	Images       []string
+	ReplyCount   int32
+	CreatedAt    time.Time
+}
+
+func (q *Queries) ListUserPosts(ctx context.Context, authorID uuid.UUID) ([]ListUserPostsRow, error) {
+	rows, err := q.db.Query(ctx, listUserPosts, authorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserPostsRow
+	for rows.Next() {
+		var i ListUserPostsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AuthorID,
+			&i.Author,
+			&i.AuthorAvatar,
+			&i.Content,
+			&i.Images,
+			&i.ReplyCount,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

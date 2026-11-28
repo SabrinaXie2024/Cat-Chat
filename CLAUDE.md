@@ -187,11 +187,25 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
   callout *markers* only; `routes/guide.tsx` maps them to lucide icons.
 - Building blocks in `src/components/ui.tsx`: `PageHero` (every page starts
   with one), `Card`, `buttonClass.{primary,secondary,ghost,link}`,
-  `inputClass`, `Avatar` (initial + stable colour), `EmptyState`. Use these
+  `inputClass`, `EmptyState`. Avatars: `components/CatAvatar.tsx` (inline
+  SVG cat faces, one per `Avatar` enum value). Use these
   instead of one-off classes so pages stay consistent.
 - Shell (`routes/__root.tsx`): sticky blurred header with pill nav, footer;
   content max width `max-w-5xl` (reading pages narrower, e.g. community
   `max-w-3xl`).
+
+## Profiles & follows
+
+- Avatars are presets only: the `Avatar` enum in the spec (orange, black,
+  white, gray, calico, siamese, tuxedo, tabby), mirrored by a CHECK in
+  migration 00006. No custom uploads. New users default to `orange`.
+- `PATCH /auth/me/profile` (nickname/avatar), `GET /users/{id}` (public:
+  counts + `followedByMe`), `GET /users/{id}/posts`, `PUT|DELETE
+  /users/{id}/follow` (idempotent; self-follow → 400).
+- Posts/replies carry `authorId` + `authorAvatar`, joined live from `users`,
+  so renaming updates old posts too (Memory/MSW rewrite them on update).
+- Page: `/users/$userId` (opened from the user menu or any author name/
+  avatar); own profile shows an inline edit form instead of Follow.
 
 ## Conventions
 

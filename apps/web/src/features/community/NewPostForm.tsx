@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { getListPostsQueryKey, useCreatePost } from '../../api/generated/posts/posts'
-import { Avatar, buttonClass } from '../../components/ui'
+import { CatAvatar } from '../../components/CatAvatar'
+import { buttonClass } from '../../components/ui'
 import { useFieldError, useI18n } from '../../i18n/I18nProvider'
 import { useServerError } from '../../i18n/serverErrors'
 import { charCount, POST_MAX_CHARS, POST_MAX_IMAGES } from '../../lib/limits'
@@ -51,7 +52,7 @@ export function NewPostForm() {
       className="space-y-3 rounded-2xl bg-white p-4 shadow-card ring-1 ring-stone-100 sm:p-5"
     >
       <div className="flex gap-3">
-        {me && <Avatar name={me.nickname} />}
+        {me && <CatAvatar avatar={me.avatar} />}
         <div className="min-w-0 flex-1">
           <label htmlFor="content" className="sr-only">
             {t('post.label')}

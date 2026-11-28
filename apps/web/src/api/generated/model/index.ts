@@ -14,6 +14,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './avatar';
 export * from './badRequestResponse';
 export * from './changePasswordRequest';
 export * from './codeRejected';
@@ -35,6 +36,8 @@ export * from './notFoundResponse';
 export * from './passwordResetCompleteRequest';
 export * from './passwordResetStartRequest';
 export * from './post';
+export * from './profile';
+export * from './profileUpdate';
 export * from './rateLimited';
 export * from './registerRequest';
 export * from './reply';

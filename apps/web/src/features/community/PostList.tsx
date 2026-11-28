@@ -1,9 +1,11 @@
+import { Link } from '@tanstack/react-router'
 import { MessageCircle, PawPrint } from 'lucide-react'
 import { useState } from 'react'
 import type { Post } from '../../api/generated/model'
 import { useListPosts } from '../../api/generated/posts/posts'
 import { errorMessage } from '../../api/http'
-import { Avatar, EmptyState } from '../../components/ui'
+import { CatAvatar } from '../../components/CatAvatar'
+import { EmptyState } from '../../components/ui'
 import { useI18n } from '../../i18n/I18nProvider'
 import { MAX_REPLIES_PER_POST } from '../../lib/limits'
 import { ImageGrid } from '../images/ImageGrid'
@@ -28,7 +30,7 @@ export function PostList() {
   )
 }
 
-function PostCard({ post }: { post: Post }) {
+export function PostCard({ post }: { post: Post }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const repliesId = `replies-${post.id}`
@@ -39,9 +41,22 @@ function PostCard({ post }: { post: Post }) {
       aria-label={t('post.cardLabel', { author: post.author })}
     >
       <div className="mb-3 flex items-center gap-3">
-        <Avatar name={post.author} />
+        <Link
+          to="/users/$userId"
+          params={{ userId: post.authorId }}
+          aria-label={t('profile.viewProfile', { name: post.author })}
+          className="rounded-full"
+        >
+          <CatAvatar avatar={post.authorAvatar} />
+        </Link>
         <div className="min-w-0 leading-tight">
-          <p className="truncate font-medium text-stone-900">{post.author}</p>
+          <Link
+            to="/users/$userId"
+            params={{ userId: post.authorId }}
+            className="block truncate font-medium text-stone-900 hover:text-brand-700"
+          >
+            {post.author}
+          </Link>
           <p className="text-xs text-stone-400">
             <TimeAgo iso={post.createdAt} />
           </p>

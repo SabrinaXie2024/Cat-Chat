@@ -70,6 +70,7 @@ describe('gallery (visitor)', () => {
       nickname: '路人',
       password: 'password123',
       isAdmin: false,
+      avatar: 'orange',
       createdAt: new Date().toISOString(),
     })
     db.sessionUserId = 'u2'

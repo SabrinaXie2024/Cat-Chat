@@ -40,7 +40,7 @@ describe('auth', () => {
 
     expect(await screen.findByText('6 位验证码已发送到 new@cat.dev')).toBeInTheDocument()
     expect(screen.getByText(/验证码 [45]:\d\d 后过期/)).toBeInTheDocument()
-    expect(db.users).toHaveLength(1) // no account until verified
+    expect(db.users.some((u) => u.email === 'new@cat.dev')).toBe(false) // no account until verified
     const code = db.pending.get('new@cat.dev')?.code ?? ''
     const box = screen.getByLabelText('验证码')
     expect(box).toHaveAttribute('autocomplete', 'one-time-code')
@@ -70,7 +70,7 @@ describe('auth', () => {
     await user.type(box, real === '000000' ? '111111' : '000000')
     await user.click(screen.getByRole('button', { name: '验证并注册' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('验证码错误，还可以再试 4 次')
-    expect(db.users).toHaveLength(1)
+    expect(db.users.some((u) => u.email === 'new@cat.dev')).toBe(false)
   })
 
   it('only accepts digits, and asks for all 6', async () => {
@@ -107,7 +107,7 @@ describe('auth', () => {
     await user.click(screen.getByRole('button', { name: '发送验证码' }))
     expect(await screen.findByText('密码至少 8 位')).toBeInTheDocument()
     expect(screen.getByText('两次输入的密码不一致')).toBeInTheDocument()
-    expect(db.users).toHaveLength(1) // only the demo user
+    expect(db.pending.size).toBe(0) // nothing sent
   })
 
   it('reports an already-registered email', async () => {
@@ -150,7 +150,7 @@ describe('account menu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     await openMenu(user)
     const items = within(screen.getByRole('menu')).getAllByRole('menuitem')
-    expect(items.map((i) => i.textContent)).toEqual(['设置', '退出登录'])
+    expect(items.map((i) => i.textContent)).toEqual(['个人主页', '设置', '退出登录'])
   })
 
   it('closes on Escape (focus back on the button) and on outside click', async () => {

@@ -12,4 +12,6 @@ var (
 	ErrInvalidImages = errors.New("invalid image reference")
 	// ErrInvalidMedia: gallery media doesn't exist or wasn't uploaded by the admin.
 	ErrInvalidMedia = errors.New("invalid media reference")
+	// ErrSelfFollow: users can't follow themselves.
+	ErrSelfFollow = errors.New("cannot follow yourself")
 )

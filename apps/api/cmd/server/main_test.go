@@ -867,3 +867,42 @@ func TestFixedCodeIsUsedWhenSet(t *testing.T) {
 	c.mustStatus(202, "POST", "/api/auth/password-reset/start", `{"email":"f@cat.dev"}`)
 	c.mustStatus(200, "POST", "/api/auth/password-reset/complete", `{"email":"f@cat.dev","code":"123456","newPassword":"newpassword1"}`)
 }
+
+func TestProfileAndFollow(t *testing.T) {
+	c := newClient(t)
+	c.mustStatus(401, "PATCH", "/api/auth/me/profile", `{"avatar":"calico"}`)
+	c.signUp()
+	var me api.User
+	_ = json.Unmarshal([]byte(c.mustStatus(200, "GET", "/api/auth/me", "")), &me)
+	if me.Avatar != api.Orange {
+		t.Fatalf("default avatar %q", me.Avatar)
+	}
+	c.mustStatus(400, "PATCH", "/api/auth/me/profile", `{"avatar":"https://evil.example/x.png"}`)
+	c.mustStatus(400, "PATCH", "/api/auth/me/profile", `{"nickname":"   "}`)
+	c.mustStatus(400, "PATCH", "/api/auth/me/profile", `{"nickname":"`+strings.Repeat("猫", 21)+`"}`)
+	body := c.mustStatus(200, "PATCH", "/api/auth/me/profile", `{"nickname":" 小橘 ","avatar":"calico"}`)
+	if !strings.Contains(body, `"nickname":"小橘"`) || !strings.Contains(body, `"avatar":"calico"`) {
+		t.Fatalf("update: %s", body)
+	}
+	c.mustStatus(201, "POST", "/api/posts", `{"content":"hello","images":[]}`)
+
+	other := newClient(t)
+	other.srv = c.srv
+	other.mustStatus(200, "GET", "/api/users/"+me.Id, "") // public
+	other.mustStatus(404, "GET", "/api/users/nope", "")
+	other.mustStatus(401, "PUT", "/api/users/"+me.Id+"/follow", "")
+	other.signUpAs("other@example.com")
+	other.mustStatus(204, "PUT", "/api/users/"+me.Id+"/follow", "")
+	var p api.Profile
+	_ = json.Unmarshal([]byte(other.mustStatus(200, "GET", "/api/users/"+me.Id, "")), &p)
+	if p.FollowerCount != 1 || !p.FollowedByMe || p.PostCount != 1 || p.Nickname != "小橘" {
+		t.Fatalf("profile %+v", p)
+	}
+	posts := other.mustStatus(200, "GET", "/api/users/"+me.Id+"/posts", "")
+	if !strings.Contains(posts, `"authorAvatar":"calico"`) || !strings.Contains(posts, `"authorId":"`+me.Id+`"`) {
+		t.Fatalf("posts: %s", posts)
+	}
+	c.mustStatus(400, "PUT", "/api/users/"+me.Id+"/follow", "")
+	other.mustStatus(204, "DELETE", "/api/users/"+me.Id+"/follow", "")
+	other.mustStatus(404, "PUT", "/api/users/nope/follow", "")
+}

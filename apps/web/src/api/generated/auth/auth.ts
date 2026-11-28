@@ -40,6 +40,7 @@ import type {
   LoginRequest,
   PasswordResetCompleteRequest,
   PasswordResetStartRequest,
+  ProfileUpdate,
   RateLimited,
   RegisterRequest,
   UnauthorizedResponse,
@@ -893,3 +894,98 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Una
 
 
 
+export type updateProfileResponse200 = {
+  data: User
+  status: 200
+}
+
+export type updateProfileResponse400 = {
+  data: BadRequestResponse
+  status: 400
+}
+
+export type updateProfileResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type updateProfileResponseSuccess = (updateProfileResponse200) & {
+  headers: Headers;
+};
+export type updateProfileResponseError = (updateProfileResponse400 | updateProfileResponse401) & {
+  headers: Headers;
+};
+
+export type updateProfileResponse = (updateProfileResponseSuccess | updateProfileResponseError)
+
+export const getUpdateProfileUrl = () => {
+
+
+
+
+  return `/auth/me/profile`
+}
+
+/**
+ * Change your own nickname and/or avatar.
+ */
+export const updateProfile = async (profileUpdate: ProfileUpdate, options?: Parameters<typeof http>[1]): Promise<updateProfileResponse> => {
+
+  return http<updateProfileResponse>(getUpdateProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(profileUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateProfileMutationKey = () => ['updateProfile'] as const;
+
+export const getUpdateProfileMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProfile>>, TError,UpdateProfileMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProfile>>, TError,UpdateProfileMutationVariables, TContext> => {
+
+const mutationKey = getUpdateProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProfile>>, UpdateProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateProfile>>>
+    export type UpdateProfileMutationBody = ProfileUpdate
+    export type UpdateProfileMutationError = BadRequestResponse | UnauthorizedResponse
+    export type UpdateProfileMutationVariables = {data: ProfileUpdate}
+
+    /** Change your own nickname and/or avatar. */
+export const useUpdateProfile = <TError = BadRequestResponse | UnauthorizedResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProfile>>, TError,UpdateProfileMutationVariables, TContext>, request?: SecondParameter<typeof http>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateProfile>>,
+        TError,
+        UpdateProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateProfileMutationOptions(options), queryClient);
+    }

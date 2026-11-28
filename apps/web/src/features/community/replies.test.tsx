@@ -27,7 +27,9 @@ function seedReplies(n: number) {
   const replies: Reply[] = Array.from({ length: n }, (_, i) => ({
     id: `r${i}`,
     postId: SEED_POST,
+    authorId: 'demo',
     author: '路人',
+    authorAvatar: 'gray',
     content: `第 ${i + 1} 条回复`,
     images: [],
     createdAt: new Date(Date.now() - (n - i) * 60_000).toISOString(),
