@@ -667,6 +667,41 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /admin/reports:
+    get:
+      operationId: listReports
+      tags: [admin]
+      description: Admin only. Open reply reports, grouped by reply, oldest report first.
+      responses:
+        "200":
+          description: Open reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ReportedReply" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/reports/{replyId}:
+    parameters:
+      - { name: replyId, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: resolveReports
+      tags: [admin]
+      description: |
+        Admin only. `delete` removes the reply (and with it its reports);
+        `dismiss` keeps it and closes its open reports.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportResolution" }
+      responses:
+        "204": { description: Resolved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 components:
   securitySchemes:
     sessionCookie:
@@ -702,6 +737,29 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    ReportResolution:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [delete, dismiss] }
+    ReportEntry:
+      type: object
+      required: [reason, note, reporter, createdAt]
+      properties:
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        note: { type: string }
+        reporter: { $ref: "#/components/schemas/UserSummary" }
+        createdAt: { type: string, format: date-time }
+    ReportedReply:
+      type: object
+      required: [reply, postId, postExcerpt, reports]
+      properties:
+        reply: { $ref: "#/components/schemas/Reply" }
+        postId: { type: string }
+        postExcerpt: { type: string, description: "First 80 characters of the post" }
+        reports:
+          type: array
+          items: { $ref: "#/components/schemas/ReportEntry" }
     ReportReason:
       type: string
       enum: [spam, abuse, inappropriate, other]

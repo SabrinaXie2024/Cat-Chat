@@ -144,6 +144,24 @@ func (e ReportReason) Valid() bool {
 	}
 }
 
+// Defines values for ReportResolutionAction.
+const (
+	Delete  ReportResolutionAction = "delete"
+	Dismiss ReportResolutionAction = "dismiss"
+)
+
+// Valid indicates whether the value is a known member of the ReportResolutionAction enum.
+func (e ReportResolutionAction) Valid() bool {
+	switch e {
+	case Delete:
+		return true
+	case Dismiss:
+		return true
+	default:
+		return false
+	}
+}
+
 // Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
 // The users.avatar CHECK constraint repeats this list (latest:
 // migration 00007).
@@ -342,8 +360,33 @@ type Reply struct {
 	PostId string `json:"postId"`
 }
 
+// ReportEntry defines model for ReportEntry.
+type ReportEntry struct {
+	CreatedAt time.Time    `json:"createdAt"`
+	Note      string       `json:"note"`
+	Reason    ReportReason `json:"reason"`
+	Reporter  UserSummary  `json:"reporter"`
+}
+
 // ReportReason defines model for ReportReason.
 type ReportReason string
+
+// ReportResolution defines model for ReportResolution.
+type ReportResolution struct {
+	Action ReportResolutionAction `json:"action"`
+}
+
+// ReportResolutionAction defines model for ReportResolution.Action.
+type ReportResolutionAction string
+
+// ReportedReply defines model for ReportedReply.
+type ReportedReply struct {
+	// PostExcerpt First 80 characters of the post
+	PostExcerpt string        `json:"postExcerpt"`
+	PostId      string        `json:"postId"`
+	Reply       Reply         `json:"reply"`
+	Reports     []ReportEntry `json:"reports"`
+}
 
 // User defines model for User.
 type User struct {
@@ -417,6 +460,9 @@ type UploadVideoMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// ResolveReportsJSONRequestBody defines body for ResolveReports for application/json ContentType.
+type ResolveReportsJSONRequestBody = ReportResolution
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -458,6 +504,12 @@ type UploadVideoMultipartRequestBody UploadVideoMultipartBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+
+	// (GET /admin/reports)
+	ListReports(w http.ResponseWriter, r *http.Request)
+
+	// (POST /admin/reports/{replyId})
+	ResolveReports(w http.ResponseWriter, r *http.Request, replyId string)
 
 	// (POST /auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
@@ -576,6 +628,46 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListReports operation middleware
+func (siw *ServerInterfaceWrapper) ListReports(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReports(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveReports operation middleware
+func (siw *ServerInterfaceWrapper) ResolveReports(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "replyId" -------------
+	var replyId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "replyId", r.PathValue("replyId"), &replyId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "replyId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveReports(w, r, replyId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // Login operation middleware
 func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
@@ -1501,6 +1593,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/posts/{postId}/replies/{replyId}/pin", wrapper.UnpinReply)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/posts/{postId}/replies/{replyId}/pin", wrapper.PinReply)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/posts/{postId}/replies/{replyId}/report", wrapper.ReportReply)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/admin/reports", wrapper.ListReports)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/admin/reports/{replyId}", wrapper.ResolveReports)
 
 	return m
 }
@@ -1512,6 +1606,128 @@ type ForbiddenJSONResponse Error
 type NotFoundJSONResponse Error
 
 type UnauthorizedJSONResponse Error
+
+type ListReportsRequestObject struct {
+}
+
+type ListReportsResponseObject interface {
+	VisitListReportsResponse(w http.ResponseWriter) error
+}
+
+type ListReports200JSONResponse []ReportedReply
+
+func (response ListReports200JSONResponse) VisitListReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReports401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListReports401JSONResponse) VisitListReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReports403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListReports403JSONResponse) VisitListReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.ForbiddenJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveReportsRequestObject struct {
+	ReplyId string `json:"replyId"`
+	Body    *ResolveReportsJSONRequestBody
+}
+
+type ResolveReportsResponseObject interface {
+	VisitResolveReportsResponse(w http.ResponseWriter) error
+}
+
+type ResolveReports204Response struct {
+}
+
+func (response ResolveReports204Response) VisitResolveReportsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ResolveReports400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ResolveReports400JSONResponse) VisitResolveReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.BadRequestJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveReports401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ResolveReports401JSONResponse) VisitResolveReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.UnauthorizedJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveReports403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ResolveReports403JSONResponse) VisitResolveReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.ForbiddenJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveReports404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ResolveReports404JSONResponse) VisitResolveReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response.NotFoundJSONResponse); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type LoginRequestObject struct {
 	Body *LoginJSONRequestBody
@@ -3306,6 +3522,12 @@ func (response UploadVideo413JSONResponse) VisitUploadVideoResponse(w http.Respo
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
+	// (GET /admin/reports)
+	ListReports(ctx context.Context, request ListReportsRequestObject) (ListReportsResponseObject, error)
+
+	// (POST /admin/reports/{replyId})
+	ResolveReports(ctx context.Context, request ResolveReportsRequestObject) (ResolveReportsResponseObject, error)
+
 	// (POST /auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
 
@@ -3455,6 +3677,63 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListReports operation middleware
+func (sh *strictHandler) ListReports(w http.ResponseWriter, r *http.Request) {
+	var request ListReportsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ListReports(ctx, request.(ListReportsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListReports")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListReportsResponseObject); ok {
+		if err := validResponse.VisitListReportsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResolveReports operation middleware
+func (sh *strictHandler) ResolveReports(w http.ResponseWriter, r *http.Request, replyId string) {
+	var request ResolveReportsRequestObject
+
+	request.ReplyId = replyId
+
+	var body ResolveReportsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.ResolveReports(ctx, request.(ResolveReportsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResolveReports")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResolveReportsResponseObject); ok {
+		if err := validResponse.VisitResolveReportsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // Login operation middleware

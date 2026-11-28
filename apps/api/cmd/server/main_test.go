@@ -976,3 +976,50 @@ func TestReplyModeration(t *testing.T) {
 	owner.mustStatus(204, "DELETE", base, "")
 	owner.mustStatus(404, "DELETE", base, "")
 }
+
+func TestAdminReportReview(t *testing.T) {
+	owner := newClient(t)
+	owner.signUp()
+	var post api.Post
+	_ = json.Unmarshal([]byte(owner.mustStatus(201, "POST", "/api/posts", `{"content":"帖子正文","images":[]}`)), &post)
+	troll := newClient(t)
+	troll.srv = owner.srv
+	troll.signUpAs("troll@example.com")
+	var r1, r2 api.Reply
+	_ = json.Unmarshal([]byte(troll.mustStatus(201, "POST", "/api/posts/"+post.Id+"/replies", `{"content":"bad","images":[]}`)), &r1)
+	_ = json.Unmarshal([]byte(troll.mustStatus(201, "POST", "/api/posts/"+post.Id+"/replies", `{"content":"meh","images":[]}`)), &r2)
+	owner.mustStatus(204, "POST", "/api/posts/"+post.Id+"/replies/"+r1.Id+"/report", `{"reason":"abuse","note":"rude"}`)
+	owner.mustStatus(204, "POST", "/api/posts/"+post.Id+"/replies/"+r2.Id+"/report", `{"reason":"spam"}`)
+
+	owner.mustStatus(403, "GET", "/api/admin/reports", "")
+	owner.mustStatus(403, "POST", "/api/admin/reports/"+r1.Id, `{"action":"delete"}`)
+	anon := newClient(t)
+	anon.srv = owner.srv
+	anon.mustStatus(401, "GET", "/api/admin/reports", "")
+
+	admin := newClient(t)
+	admin.srv = owner.srv
+	admin.signUpAs("admin@cat.dev")
+	admin.mustStatus(204, "POST", "/api/posts/"+post.Id+"/replies/"+r1.Id+"/report", `{"reason":"other"}`)
+	var queue []api.ReportedReply
+	_ = json.Unmarshal([]byte(admin.mustStatus(200, "GET", "/api/admin/reports", "")), &queue)
+	if len(queue) != 2 || queue[0].Reply.Id != r1.Id || len(queue[0].Reports) != 2 || queue[0].PostExcerpt != "帖子正文" ||
+		queue[0].Reports[0].Reporter.Nickname != "咪咪" || queue[0].Reports[0].Note != "rude" {
+		t.Fatalf("queue: %+v", queue)
+	}
+	admin.mustStatus(400, "POST", "/api/admin/reports/"+r1.Id, `{"action":"ban"}`)
+	admin.mustStatus(404, "POST", "/api/admin/reports/nope", `{"action":"dismiss"}`)
+	admin.mustStatus(204, "POST", "/api/admin/reports/"+r2.Id, `{"action":"dismiss"}`)
+	admin.mustStatus(204, "POST", "/api/admin/reports/"+r1.Id, `{"action":"delete"}`)
+	if body := admin.mustStatus(200, "GET", "/api/admin/reports", ""); strings.TrimSpace(body) != "[]" {
+		t.Fatalf("queue after review: %s", body)
+	}
+	if body := anon.mustStatus(200, "GET", "/api/posts/"+post.Id+"/replies", ""); strings.Contains(body, r1.Id) || !strings.Contains(body, r2.Id) {
+		t.Fatalf("replies after review: %s", body)
+	}
+	// Reopened when someone reports a dismissed reply again.
+	owner.mustStatus(204, "POST", "/api/posts/"+post.Id+"/replies/"+r2.Id+"/report", `{"reason":"spam"}`)
+	if body := admin.mustStatus(200, "GET", "/api/admin/reports", ""); !strings.Contains(body, r2.Id) {
+		t.Fatalf("re-report reopens: %s", body)
+	}
+}

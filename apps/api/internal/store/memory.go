@@ -41,6 +41,7 @@ type Memory struct {
 	likes     pairs                   // {user, post}
 	favorites pairs                   // {user, post}
 	reports   map[[2]string]memReport // {reply, reporter}
+	reportSeq int
 	now       func() time.Time
 }
 

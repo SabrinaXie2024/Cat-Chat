@@ -40,6 +40,13 @@ type Store interface {
 	DeleteReply(ctx context.Context, postID, replyID, actorID string) error
 	SetReplyPinned(ctx context.Context, postID, replyID, actorID string, pinned bool) error
 	ReportReply(ctx context.Context, postID, replyID, reporterID string, reason ReportReason, note string) error
+	// Admin review. ListOpenReports groups open reports by reply (oldest
+	// report first; images are ids). AdminDeleteReply deletes any reply
+	// (its reports go with it); DismissReports closes a reply's open reports.
+	// Both return ErrNotFound for unknown replies.
+	ListOpenReports(ctx context.Context) ([]ReportedReply, error)
+	AdminDeleteReply(ctx context.Context, replyID string) error
+	DismissReports(ctx context.Context, replyID string) error
 	// CreatePost/CreateReply return ErrInvalidImages unless every image id
 	// exists and belongs to the author.
 	CreateImage(ctx context.Context, id, ownerID string, width, height, size int) error

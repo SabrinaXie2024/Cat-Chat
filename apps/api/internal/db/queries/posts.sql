@@ -107,3 +107,25 @@ INSERT INTO reply_reports (reply_id, reporter_id, reason, note)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (reply_id, reporter_id)
 DO UPDATE SET reason = EXCLUDED.reason, note = EXCLUDED.note, status = 'open', created_at = now();
+
+-- One row per open report; the store groups them by reply.
+-- name: ListOpenReports :many
+SELECT r.id AS reply_id, r.post_id, r.author_id, ru.nickname AS author, ru.avatar AS author_avatar,
+       r.content, r.images, r.pinned, r.created_at AS reply_created_at,
+       left(p.content, 80) AS post_excerpt,
+       rr.reason, rr.note, rr.created_at AS report_created_at,
+       rep.id AS reporter_id, rep.nickname AS reporter, rep.avatar AS reporter_avatar
+FROM reply_reports rr
+JOIN replies r ON r.id = rr.reply_id
+JOIN posts p ON p.id = r.post_id
+JOIN users ru ON ru.id = r.author_id
+JOIN users rep ON rep.id = rr.reporter_id
+WHERE rr.status = 'open'
+ORDER BY rr.created_at, rr.id
+LIMIT 500;
+
+-- name: ReplyPost :one
+SELECT post_id FROM replies WHERE id = $1;
+
+-- name: DismissReports :execrows
+UPDATE reply_reports SET status = 'dismissed' WHERE reply_id = $1 AND status = 'open';

@@ -124,6 +124,18 @@ func (q *Queries) DeleteReply(ctx context.Context, arg DeleteReplyParams) (int64
 	return result.RowsAffected(), nil
 }
 
+const dismissReports = `-- name: DismissReports :execrows
+UPDATE reply_reports SET status = 'dismissed' WHERE reply_id = $1 AND status = 'open'
+`
+
+func (q *Queries) DismissReports(ctx context.Context, replyID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, dismissReports, replyID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const favorite = `-- name: Favorite :exec
 INSERT INTO favorites (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
 `
@@ -269,6 +281,79 @@ func (q *Queries) ListLikedPosts(ctx context.Context, arg ListLikedPostsParams) 
 			&i.LikeCount,
 			&i.LikedByMe,
 			&i.FavoritedByMe,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOpenReports = `-- name: ListOpenReports :many
+SELECT r.id AS reply_id, r.post_id, r.author_id, ru.nickname AS author, ru.avatar AS author_avatar,
+       r.content, r.images, r.pinned, r.created_at AS reply_created_at,
+       left(p.content, 80) AS post_excerpt,
+       rr.reason, rr.note, rr.created_at AS report_created_at,
+       rep.id AS reporter_id, rep.nickname AS reporter, rep.avatar AS reporter_avatar
+FROM reply_reports rr
+JOIN replies r ON r.id = rr.reply_id
+JOIN posts p ON p.id = r.post_id
+JOIN users ru ON ru.id = r.author_id
+JOIN users rep ON rep.id = rr.reporter_id
+WHERE rr.status = 'open'
+ORDER BY rr.created_at, rr.id
+LIMIT 500
+`
+
+type ListOpenReportsRow struct {
+	ReplyID         uuid.UUID
+	PostID          uuid.UUID
+	AuthorID        uuid.UUID
+	Author          string
+	AuthorAvatar    string
+	Content         string
+	Images          []string
+	Pinned          bool
+	ReplyCreatedAt  time.Time
+	PostExcerpt     string
+	Reason          string
+	Note            string
+	ReportCreatedAt time.Time
+	ReporterID      uuid.UUID
+	Reporter        string
+	ReporterAvatar  string
+}
+
+// One row per open report; the store groups them by reply.
+func (q *Queries) ListOpenReports(ctx context.Context) ([]ListOpenReportsRow, error) {
+	rows, err := q.db.Query(ctx, listOpenReports)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOpenReportsRow
+	for rows.Next() {
+		var i ListOpenReportsRow
+		if err := rows.Scan(
+			&i.ReplyID,
+			&i.PostID,
+			&i.AuthorID,
+			&i.Author,
+			&i.AuthorAvatar,
+			&i.Content,
+			&i.Images,
+			&i.Pinned,
+			&i.ReplyCreatedAt,
+			&i.PostExcerpt,
+			&i.Reason,
+			&i.Note,
+			&i.ReportCreatedAt,
+			&i.ReporterID,
+			&i.Reporter,
+			&i.ReporterAvatar,
 		); err != nil {
 			return nil, err
 		}
@@ -494,6 +579,17 @@ func (q *Queries) ReplyForModeration(ctx context.Context, arg ReplyForModeration
 	var i ReplyForModerationRow
 	err := row.Scan(&i.ReplyAuthorID, &i.PostAuthorID)
 	return i, err
+}
+
+const replyPost = `-- name: ReplyPost :one
+SELECT post_id FROM replies WHERE id = $1
+`
+
+func (q *Queries) ReplyPost(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, replyPost, id)
+	var post_id uuid.UUID
+	err := row.Scan(&post_id)
+	return post_id, err
 }
 
 const setReplyPinned = `-- name: SetReplyPinned :exec

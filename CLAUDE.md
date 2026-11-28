@@ -249,8 +249,13 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
   (`POST …/replies/{id}/report`, reason spam/abuse/inappropriate/other +
   note ≤ 200): one row per (reply, reporter) in `reply_reports`
   (status open/resolved/dismissed), re-reporting overwrites and reopens.
-  The admin review queue is not built yet. Pinned replies list first (API
-  and UI).
+  Pinned replies list first (API and UI).
+- Admin review (`/admin`, menu item 举报审核 for admins only;
+  `api/admin.go`): `GET /admin/reports` lists open reports grouped by
+  reply (oldest first) with a post excerpt; `POST /admin/reports/{replyId}
+  {action: delete|dismiss}` deletes the reply (any post; frees the slot;
+  its reports cascade away) or marks its open reports dismissed. Admin =
+  `ADMIN_EMAILS`, same as the gallery; non-admins get 403.
 - Replies render inline under each post card (`Replies.tsx`, fetched only
   while expanded): reply box on top, newest reply first (API stays oldest
   first; the UI reverses). After a reply or a 409, both the thread and the post list

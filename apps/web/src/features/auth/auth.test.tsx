@@ -150,7 +150,8 @@ describe('account menu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     await openMenu(user)
     const items = within(screen.getByRole('menu')).getAllByRole('menuitem')
-    expect(items.map((i) => i.textContent)).toEqual(['个人主页', '设置', '退出登录'])
+    // The demo account is an admin, so it also sees the review page.
+    expect(items.map((i) => i.textContent)).toEqual(['个人主页', '举报审核', '设置', '退出登录'])
   })
 
   it('closes on Escape (focus back on the button) and on outside click', async () => {

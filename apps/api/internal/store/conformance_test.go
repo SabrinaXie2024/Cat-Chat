@@ -411,6 +411,36 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		if len(rs) != 2 || ps[0].ReplyCount != 2 {
 			t.Fatalf("delete frees a slot: %d replies, count %d", len(rs), ps[0].ReplyCount)
 		}
+
+		// Admin review queue.
+		third := seedUser(t, s, "g@h.co")
+		_ = s.ReportReply(ctx, post.Id, r2.Id, owner.Id, api.Spam, "")
+		_ = s.ReportReply(ctx, post.Id, r2.Id, third.Id, api.Other, "note")
+		_ = s.ReportReply(ctx, post.Id, r3.Id, third.Id, api.Abuse, "")
+		q, err := s.ListOpenReports(ctx)
+		if err != nil || len(q) != 2 || q[0].Reply.Id != r2.Id || len(q[0].Reports) != 2 ||
+			q[0].Reports[1].Reporter.Id != third.Id || q[0].Reports[1].Note != "note" || q[1].Reply.Id != r3.Id ||
+			q[0].PostId != post.Id || q[0].PostExcerpt != "p" {
+			t.Fatalf("queue = %+v %v", q, err)
+		}
+		if err := s.DismissReports(ctx, r2.Id); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.AdminDeleteReply(ctx, r3.Id); err != nil {
+			t.Fatal(err)
+		}
+		if q, _ := s.ListOpenReports(ctx); len(q) != 0 {
+			t.Fatalf("queue after review = %+v", q)
+		}
+		if err := s.AdminDeleteReply(ctx, r3.Id); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("admin delete twice: %v", err)
+		}
+		if err := s.DismissReports(ctx, missing); !errors.Is(err, api.ErrNotFound) {
+			t.Fatalf("dismiss unknown: %v", err)
+		}
+		if ps, _ := s.ListUserPosts(ctx, owner.Id, ""); ps[0].ReplyCount != 1 {
+			t.Fatalf("admin delete frees a slot: %d", ps[0].ReplyCount)
+		}
 	})
 
 	t.Run("posts newest first, author from user", func(t *testing.T) {

@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router'
-import { ChevronDown, LogOut, Settings, UserRound } from 'lucide-react'
+import { ChevronDown, LogOut, Settings, ShieldCheck, UserRound } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { User } from '../../api/generated/model'
 import { CatAvatar } from '../../components/CatAvatar'
@@ -89,7 +89,7 @@ function AccountDropdown({ user }: { user: User }) {
           id={menuId}
           role="menu"
           aria-label={t('menu.label')}
-          className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-xl border border-stone-100 bg-white py-1.5 shadow-lift"
+          className="absolute right-0 z-10 mt-1 w-max min-w-36 overflow-hidden rounded-xl border border-stone-100 bg-white py-1.5 shadow-lift"
         >
           <Link
             to="/users/$userId"
@@ -100,6 +100,12 @@ function AccountDropdown({ user }: { user: User }) {
             <UserRound className="size-4" aria-hidden />
             {t('menu.profile')}
           </Link>
+          {user.isAdmin && (
+            <Link to="/admin" role="menuitem" className={itemClass}>
+              <ShieldCheck className="size-4" aria-hidden />
+              {t('menu.admin')}
+            </Link>
+          )}
           <Link to="/settings" role="menuitem" className={itemClass}>
             <Settings className="size-4" aria-hidden />
             {t('menu.settings')}

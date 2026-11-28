@@ -110,7 +110,7 @@ describe('reply moderation', () => {
     await user.type(within(form).getByPlaceholderText(/补充说明/), '  说话很难听 ')
     await user.click(within(form).getByRole('button', { name: '提交举报' }))
     expect(await screen.findByText('已提交举报，管理员会尽快处理')).toBeInTheDocument()
-    expect(db.reports.get(`r3>demo`)).toEqual({ reason: 'abuse', note: '说话很难听' })
+    expect(db.reports.get(`r3>demo`)).toMatchObject({ reason: 'abuse', note: '说话很难听' })
     expect(within(authors).queryByRole('form')).not.toBeInTheDocument()
   })
 

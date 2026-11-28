@@ -15,6 +15,8 @@ import {
   type ProfileUpdate,
   type RegisterRequest,
   type Reply,
+  type ReportedReply,
+  type ReportResolution,
   type User,
   type VerifyRegistrationRequest,
 } from '../api/generated/model'
@@ -54,7 +56,7 @@ type Db = {
   likes: Set<string>
   favorites: Set<string>
   /** Reply reports by `${replyId}>${reporterId}`. */
-  reports: Map<string, NewReport>
+  reports: Map<string, NewReport & { status: 'open' | 'dismissed'; createdAt: string }>
   /** Forgot-password codes, by email (also for unknown emails, like the server). */
   resets: Map<string, { code: string; attempts: number; sentAt: number; expiresAt: number }>
   /** Sign-ups awaiting their code, by email. */
@@ -680,10 +682,76 @@ export const handlers = [
             return bad('unknown report reason')
           const note = (body.note ?? '').trim()
           if (charCount(note) > 200) return bad('report note must be at most 200 characters')
-          db.reports.set(`${found.reply.id}>${user.id}`, { reason: body.reason, note })
+          // Re-reporting moves the report to the back of the queue (Map order).
+          db.reports.delete(`${found.reply.id}>${user.id}`)
+          db.reports.set(`${found.reply.id}>${user.id}`, {
+            reason: body.reason,
+            note,
+            status: 'open',
+            createdAt: new Date().toISOString(),
+          })
           return new HttpResponse(null, { status: 204 })
         },
       ),
     ]
   })(),
+  http.get('*/api/admin/reports', () => {
+    const user = currentUser()
+    if (!user) return bad('please sign in', 401)
+    if (!user.isAdmin) return bad('admin only', 403)
+    const out: ReportedReply[] = []
+    for (const [key, r] of db.reports) {
+      if (r.status !== 'open') continue
+      const [replyId, reporterId] = key.split('>')
+      let group = out.find((g) => g.reply.id === replyId)
+      if (!group) {
+        const post = db.posts.find((p) => db.replies.get(p.id)?.some((x) => x.id === replyId))
+        const reply = post && db.replies.get(post.id)?.find((x) => x.id === replyId)
+        if (!post || !reply) continue
+        group = {
+          reply,
+          postId: post.id,
+          postExcerpt: [...post.content].slice(0, 80).join(''),
+          reports: [],
+        }
+        out.push(group)
+      }
+      const reporter = db.users.find((u) => u.id === reporterId)
+      if (reporter)
+        group.reports.push({
+          reason: r.reason,
+          note: r.note ?? '',
+          createdAt: r.createdAt,
+          reporter: summary(reporter),
+        })
+    }
+    return HttpResponse.json(out)
+  }),
+
+  http.post<{ replyId: string }, ReportResolution>(
+    '*/api/admin/reports/:replyId',
+    async ({ params, request }) => {
+      const user = currentUser()
+      if (!user) return bad('please sign in', 401)
+      if (!user.isAdmin) return bad('admin only', 403)
+      const { action } = await request.json()
+      const post = db.posts.find((p) => db.replies.get(p.id)?.some((x) => x.id === params.replyId))
+      if (!post) return bad('reply not found', 404)
+      const mine = [...db.reports.keys()].filter((k) => k.startsWith(`${params.replyId}>`))
+      if (action === 'delete') {
+        db.replies.set(
+          post.id,
+          (db.replies.get(post.id) ?? []).filter((x) => x.id !== params.replyId),
+        )
+        post.replyCount--
+        for (const k of mine) db.reports.delete(k)
+      } else if (action === 'dismiss') {
+        for (const k of mine) {
+          const r = db.reports.get(k)
+          if (r) r.status = 'dismissed'
+        }
+      } else return bad('action must be delete or dismiss')
+      return new HttpResponse(null, { status: 204 })
+    },
+  ),
 ]
