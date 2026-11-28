@@ -176,8 +176,9 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
   Tests next to routes must be named `-*.test.tsx` so the router ignores them.
   `guide.zh.md` is the source; a test checks every translation has the same
   number of sections and callouts. Conventions (parsed by
-  `routes/guide.tsx`): `# Title` + intro, `## <emoji> Section` → card + TOC
-  entry, `> 💡/⚠️/🚨 …` → tip/warning/emergency callout, trailing `---` +
+  `routes/guide.tsx`): `# Title` + intro, `## Section` → numbered card + TOC
+  entry (plain-text title — no emoji or icon before chapters; a test
+  enforces it), `> 💡/⚠️/🚨 …` → tip/warning/emergency callout, trailing `---` +
   text → disclaimer. Keep medical advice hedged ("follow your vet");
   translations were written by Claude and should get native/vet review.
 - Tests render in 简体中文 by default; pass `{ lang }` to
@@ -190,8 +191,8 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
   `font-sans`, `--header-h` (sticky header height — offset any sticky/
   scroll-margin element by it).
 - Icons: lucide-react line icons, used sparingly; **no emoji in the UI**
-  (user content excepted). The guide's Markdown keeps emoji as section/
-  callout *markers* only; `routes/guide.tsx` maps them to lucide icons.
+  (user content excepted). The guide's Markdown keeps emoji only as callout
+  *markers*; `routes/guide.tsx` maps them to lucide icons.
 - Building blocks in `src/components/ui.tsx`: `PageHero` (every page starts
   with one), `Card`, `buttonClass.{primary,secondary,ghost,link}`,
   `inputClass`, `EmptyState`. Avatars: `components/CatAvatar.tsx` (inline

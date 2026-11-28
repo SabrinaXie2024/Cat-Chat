@@ -2,7 +2,7 @@
 
 From deciding to get a cat and bringing them home to keeping them company in old age, here's what you need to know. Every cat is different, so for anything about health or medication, follow your vet's advice.
 
-## 🐱 Choosing and adopting a cat
+## Choosing and adopting a cat
 
 **Think it through first**
 
@@ -30,7 +30,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 
 > 💡 Not sure you can commit long term? Sign up as a **foster home** for a shelter and try living with a cat first.
 
-## 🧺 Before your cat comes home
+## Before your cat comes home
 
 **Essentials**
 
@@ -51,7 +51,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 
 > ⚠️ Licking a little lily pollen (true lilies and daylilies) can cause acute kidney failure in cats. It's safest to keep lilies out of a cat home entirely.
 
-## 🏠 The first week
+## The first week
 
 - **Start with one quiet room** with a litter box, water, food and somewhere to hide (an open carrier or a cardboard box)
 - Let your cat come out on their own terms. **Don't force cuddles or stare.** Sitting quietly in the room doing your own thing is great company
@@ -62,7 +62,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 
 > 💡 A slow blink is how cats say they feel safe and friendly. Try slowly blinking at your cat first; they'll often blink back.
 
-## 🍽️ Food and feeding
+## Food and feeding
 
 **Choosing food**
 
@@ -97,7 +97,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 
 > ⚠️ Never give your cat human medicine. Acetaminophen (paracetamol, found in many cold and fever remedies) is extremely dangerous to cats even in tiny doses, and painkillers like ibuprofen are dangerous too.
 
-## 🚽 Litter boxes
+## Litter boxes
 
 - The rule of thumb is **one box per cat, plus one**: two cats, three boxes. In multi-storey homes, put at least one on each floor
 - Put them somewhere **quiet and easy to reach**, away from food and water and from noisy appliances like washing machines
@@ -108,7 +108,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 
 > 💡 A cat that stops using the litter box isn't taking revenge. Usually the box isn't clean enough or is in the wrong place, or your cat is unwell (urinary problems, joint pain). Get a vet check first.
 
-## 🩺 Vaccines, parasites and check-ups
+## Vaccines, parasites and check-ups
 
 **Vaccines**
 
@@ -134,7 +134,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 - Adults: **once a year**. Seniors: **every six months**, including weight, teeth and heart checks, with blood and urine tests recommended for older cats
 - Weigh your cat monthly at home and keep a record. Weight changes often reveal health problems before anything else does
 
-## ✨ Everyday care
+## Everyday care
 
 - **Brushing**: short-haired cats 1–2 times a week, long-haired cats ideally daily, paying attention to armpits, belly and behind the ears where knots form. Less shedding, fewer hairballs
 - **Nail trims**: every 2–3 weeks. Only trim the clear tip; **avoid the pink quick**. It's fine to do a few nails at a time over several days
@@ -143,7 +143,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 - **Eyes and ears**: wipe away eye discharge with a damp cotton pad; clean only the visible part of the ear and **never push cotton buds inside**. Lots of dark ear discharge may mean ear mites; see a vet
 - **Body check**: while brushing, feel for new lumps, wounds or sore spots
 
-## 🐾 Behavior, play and body language
+## Behavior, play and body language
 
 **Play every day**
 
@@ -170,7 +170,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 
 > 💡 Punishment and shouting only make a cat afraid of you. Offer an alternative and reward them when they get it right.
 
-## 🏡 Multi-cat homes
+## Multi-cat homes
 
 - **Plenty of resources, spread out**: bowls, water, litter boxes, scratchers and resting spots, each "one per cat plus one", in different places so no cat can guard them
 - Add **vertical space** (cat trees, cupboard tops, shelves) so cats can share a room at different heights and avoid face-offs
@@ -181,7 +181,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
   - Hissing or growling means go back a step. Don't let them "fight it out"
 - **Play or fight?** Play is quiet, with turn-taking and normal fur; real fights involve yowling, puffed fur and one cat fleeing or hiding for a long time
 
-## 🧠 Enrichment and training
+## Enrichment and training
 
 **A more interesting home**
 
@@ -197,7 +197,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 - The most useful things to train are **vet-related**: leave the carrier out as a bed with treats inside; handle paws, ears and mouth daily so nail trims and exams aren't scary
 - Keep sessions to **3–5 minutes** and stop while they're still interested
 
-## 🌡️ Seasons, travel and holidays
+## Seasons, travel and holidays
 
 **Summer: prevent heatstroke**
 
@@ -222,7 +222,7 @@ From deciding to get a cat and bringing them home to keeping them company in old
 - During fireworks, close windows and doors and give them a quiet hiding spot; don't drag them out to "comfort" them
 - Keep **ribbons, tinsel and garlands**, chocolate and lily bouquets out of reach
 
-## 🤒 Common health problems
+## Common health problems
 
 Cats are good at hiding illness. Talk to your vet if you notice:
 
@@ -270,7 +270,7 @@ Cats are good at hiding illness. Talk to your vet if you notice:
 - Facial changes: squinting eyes, whiskers pulled forward, ears turned out to the sides
 - Toileting outside the box, becoming grumpy
 
-## 📅 Life stages
+## Life stages
 
 **Kittens (0–12 months)**
 
@@ -289,7 +289,7 @@ Cats are good at hiding illness. Talk to your vet if you notice:
 - Joints may stiffen: add steps up to favorite spots, use a box with a low entry, and put beds somewhere warm and easy to reach
 - Some seniors develop **cognitive dysfunction**: loud night-time crying, getting lost, a reversed sleep cycle. Tell your vet; there are ways to help
 
-## 🚨 Emergencies
+## Emergencies
 
 Take your cat to a vet **right away**, without waiting, if you see:
 
@@ -310,7 +310,7 @@ Take your cat to a vet **right away**, without waiting, if you see:
 
 > 🚨 Save the address and number of your nearest **24-hour emergency vet** now. In a real emergency it saves precious time.
 
-## 🧰 First-aid kit and budgeting
+## First-aid kit and budgeting
 
 **Keep at home**
 
@@ -326,7 +326,7 @@ Take your cat to a vet **right away**, without waiting, if you see:
 - Yearly: vaccines and check-ups, plus blood tests for seniors
 - **The unexpected**: emergencies and surgery can cost a lot. Put a little into an **emergency fund** each month, or look into what pet insurance would cover
 
-## 🌈 Saying goodbye
+## Saying goodbye
 
 - As your cat ages, keep an eye on **quality of life** together with your vet: can they eat and drink, use the box on their own, are they in ongoing pain, do they still want to be with you?
 - In late-stage illness, **pain relief and comfort care** matter just as much: a soft bed, water and litter within easy reach, a quiet space

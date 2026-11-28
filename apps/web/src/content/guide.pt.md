@@ -2,7 +2,7 @@
 
 Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhice, aqui está o que você precisa saber. Cada gato é diferente: em tudo o que envolve saúde ou medicamentos, siga a orientação do seu veterinário.
 
-## 🐱 Escolher e adotar um gato
+## Escolher e adotar um gato
 
 **Pense bem antes**
 
@@ -30,7 +30,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 
 > 💡 Não tem certeza se consegue se comprometer a longo prazo? Seja **lar temporário** de um abrigo e experimente primeiro a convivência com um gato.
 
-## 🧺 Antes de o gato chegar
+## Antes de o gato chegar
 
 **O essencial**
 
@@ -51,7 +51,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 
 > ⚠️ Lamber um pouco de pólen de lírio (lírios verdadeiros e hemerocales) pode causar insuficiência renal aguda em gatos. O mais seguro é não ter lírios em casa.
 
-## 🏠 A primeira semana
+## A primeira semana
 
 - **Comece com um cômodo tranquilo** com caixa de areia, água, comida e um esconderijo (caixa de transporte aberta ou caixa de papelão)
 - Deixe o gato sair no tempo dele. **Não force colo nem fique encarando.** Ficar quieto no cômodo fazendo suas coisas já é ótima companhia
@@ -62,7 +62,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 
 > 💡 Piscar devagar é o jeito do gato dizer que se sente seguro e amigável. Pisque devagar para ele primeiro: muitas vezes ele responde.
 
-## 🍽️ Alimentação
+## Alimentação
 
 **Escolhendo a comida**
 
@@ -97,7 +97,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 
 > ⚠️ Nunca dê remédio humano ao seu gato. O paracetamol (presente em muitos antigripais e antitérmicos) é extremamente perigoso para gatos mesmo em doses mínimas, e analgésicos como o ibuprofeno também são perigosos.
 
-## 🚽 Caixas de areia
+## Caixas de areia
 
 - A regra: **uma caixa por gato, mais uma**. Dois gatos, três caixas. Em casas com vários andares, pelo menos uma por andar
 - Coloque-as em lugares **tranquilos e de fácil acesso**, longe da comida e da água e de eletrodomésticos barulhentos como a máquina de lavar
@@ -108,7 +108,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 
 > 💡 Um gato que para de usar a caixa não está se vingando. Normalmente a caixa não está limpa o suficiente, está no lugar errado, ou o gato não está bem (problemas urinários, dor nas articulações). Primeiro, uma consulta.
 
-## 🩺 Vacinas, parasitas e check-ups
+## Vacinas, parasitas e check-ups
 
 **Vacinas**
 
@@ -134,7 +134,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 - Adultos: **uma vez por ano**. Idosos: **a cada seis meses**, com peso, dentes e ausculta do coração, e exames de sangue e urina recomendados para os mais velhos
 - Pese seu gato todo mês em casa e anote. Mudanças de peso costumam revelar problemas antes de qualquer outra coisa
 
-## ✨ Cuidados diários
+## Cuidados diários
 
 - **Escovação**: pelo curto 1 a 2 vezes por semana, pelo longo de preferência todo dia, com atenção às axilas, barriga e atrás das orelhas, onde formam nós. Menos pelo solto, menos bolas de pelo
 - **Unhas**: a cada 2–3 semanas. Corte só a ponta transparente e **evite a parte rosada**. Tudo bem cortar algumas por dia, ao longo de vários dias
@@ -143,7 +143,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 - **Olhos e orelhas**: limpe as secreções dos olhos com algodão úmido; limpe só a parte visível da orelha e **nunca enfie cotonete**. Muita secreção escura pode indicar ácaros: leve ao veterinário
 - **Checagem do corpo**: ao escovar, apalpe em busca de caroços novos, feridas ou pontos doloridos
 
-## 🐾 Comportamento, brincadeiras e linguagem corporal
+## Comportamento, brincadeiras e linguagem corporal
 
 **Brinque todos os dias**
 
@@ -170,7 +170,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 
 > 💡 Castigos e gritos só ensinam o gato a ter medo de você. Ofereça uma alternativa e recompense quando ele acertar.
 
-## 🏡 Casas com vários gatos
+## Casas com vários gatos
 
 - **Muitos recursos e bem distribuídos**: comedouros, água, caixas de areia, arranhadores e cantinhos de descanso, cada um "um por gato mais um", em lugares diferentes para que nenhum gato os monopolize
 - Acrescente **espaço vertical** (arranhadores altos, topo de armários, prateleiras) para que os gatos dividam o cômodo em alturas diferentes e evitem confrontos
@@ -181,7 +181,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
   - Bufadas ou rosnados: volte uma etapa. Não deixe que "resolvam na briga"
 - **Brincadeira ou briga?** A brincadeira é silenciosa, com revezamento de papéis e pelo normal; numa briga de verdade há miados altos, pelo eriçado, e um gato foge ou fica escondido por muito tempo
 
-## 🧠 Enriquecimento ambiental e adestramento
+## Enriquecimento ambiental e adestramento
 
 **Uma casa mais interessante**
 
@@ -197,7 +197,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 - O mais útil é treinar o que **envolve o veterinário**: deixe a caixa de transporte aberta como caminha, com petiscos dentro; toque diariamente nas patas, orelhas e boca para que cortar unhas e exames não assustem
 - Sessões de **3 a 5 minutos**, encerrando enquanto ele ainda está interessado
 
-## 🌡️ Estações, viagens e datas festivas
+## Estações, viagens e datas festivas
 
 **Verão: evite a insolação**
 
@@ -222,7 +222,7 @@ Da decisão de ter um gato e do primeiro dia em casa até acompanhá-lo na velhi
 - Durante fogos de artifício, feche portas e janelas e ofereça um esconderijo tranquilo; não o tire à força para "consolar"
 - Mantenha **fitas, festões e enfeites brilhantes**, chocolate e buquês de lírios fora do alcance
 
-## 🤒 Problemas de saúde comuns
+## Problemas de saúde comuns
 
 Gatos escondem bem quando estão doentes. Fale com o veterinário se notar:
 
@@ -270,7 +270,7 @@ Gatos escondem bem quando estão doentes. Fale com o veterinário se notar:
 - Mudanças na expressão: olhos semicerrados, bigodes esticados para a frente, orelhas viradas para os lados
 - Faz as necessidades fora da caixa, fica mais irritado
 
-## 📅 Fases da vida
+## Fases da vida
 
 **Filhotes (0–12 meses)**
 
@@ -289,7 +289,7 @@ Gatos escondem bem quando estão doentes. Fale com o veterinário se notar:
 - As articulações podem enrijecer: coloque degraus até os lugares favoritos, uma caixa de areia com entrada baixa e caminhas quentes e fáceis de alcançar
 - Alguns idosos desenvolvem **disfunção cognitiva**: miados altos à noite, desorientação, sono trocado. Fale com o veterinário; há formas de ajudar
 
-## 🚨 Emergências
+## Emergências
 
 Leve seu gato ao veterinário **imediatamente**, sem esperar, se notar:
 
@@ -310,7 +310,7 @@ Leve seu gato ao veterinário **imediatamente**, sem esperar, se notar:
 
 > 🚨 Salve agora o endereço e o telefone do **hospital veterinário 24 horas** mais próximo. Numa emergência de verdade, isso economiza um tempo precioso.
 
-## 🧰 Kit de primeiros socorros e orçamento
+## Kit de primeiros socorros e orçamento
 
 **Tenha em casa**
 
@@ -326,7 +326,7 @@ Leve seu gato ao veterinário **imediatamente**, sem esperar, se notar:
 - Por ano: vacinas e check-ups, mais exames de sangue nos idosos
 - **O imprevisto**: emergências e cirurgias podem sair caro. Guarde um pouco todo mês numa **reserva de emergência** ou pesquise o que um plano de saúde pet cobriria
 
-## 🌈 Dizer adeus
+## Dizer adeus
 
 - Quando seu gato envelhecer, acompanhe com o veterinário a **qualidade de vida** dele: consegue comer e beber, ir sozinho à caixa, sente dor constante, ainda quer ficar com você?
 - Na fase final de uma doença, **aliviar a dor e oferecer conforto** importa tanto quanto: uma caminha macia, água e caixa por perto, um ambiente tranquilo

@@ -1,28 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  AlertTriangle,
-  ArrowUp,
-  BookOpen,
-  BriefcaseMedical,
-  Brush,
-  CalendarDays,
-  Cat,
-  Check,
-  HeartPulse,
-  House,
-  Lightbulb,
-  type LucideIcon,
-  PawPrint,
-  Puzzle,
-  Rainbow,
-  ShoppingBasket,
-  Siren,
-  Stethoscope,
-  Thermometer,
-  Toilet,
-  Users,
-  UtensilsCrossed,
-} from 'lucide-react'
+import { AlertTriangle, ArrowUp, BookOpen, Check, Lightbulb, Siren } from 'lucide-react'
 import {
   Children,
   isValidElement,
@@ -50,33 +27,14 @@ const loadGuide = (lang: string) =>
   (guides[`../content/guide.${lang}.md`] ?? guides['../content/guide.en.md'])?.() ??
   Promise.resolve('')
 
-/** Section marker emoji in the Markdown → the line icon shown in the UI. */
-const sectionIcons: Record<string, LucideIcon> = {
-  '🐱': Cat,
-  '🧺': ShoppingBasket,
-  '🏠': House,
-  '🍽️': UtensilsCrossed,
-  '🚽': Toilet,
-  '🩺': Stethoscope,
-  '✨': Brush,
-  '🐾': PawPrint,
-  '🏡': Users,
-  '🧠': Puzzle,
-  '🌡️': Thermometer,
-  '🤒': HeartPulse,
-  '📅': CalendarDays,
-  '🚨': Siren,
-  '🧰': BriefcaseMedical,
-  '🌈': Rainbow,
-}
-
 /**
  * Markdown conventions (see content/guide*.md):
  * - `# Title` + first paragraph → page header
- * - `## <emoji> Section` → a card and a table-of-contents entry
+ * - `## Section` → a numbered card and a table-of-contents entry (plain
+ *   text title, no icon)
  * - `> 💡 …` tip, `> ⚠️ …` warning, `> 🚨 …` emergency → coloured callouts
  */
-type Section = { id: string; icon: string; title: string; body: string }
+type Section = { id: string; title: string; body: string }
 
 const sectionId = (i: number) => `section-${i + 1}`
 
@@ -95,14 +53,7 @@ function parseGuide(md: string) {
       footer = body.slice(hr + 3).trim()
       body = body.slice(0, hr).trim()
     }
-    const [icon = '', ...rest] = heading.split(' ')
-    const hasIcon = !/^[\p{L}\p{N}]/u.test(icon)
-    return {
-      id: sectionId(i),
-      icon: hasIcon ? icon : '',
-      title: hasIcon ? rest.join(' ') : heading,
-      body,
-    }
+    return { id: sectionId(i), title: heading, body }
   })
   return { title, intro, sections, footer }
 }
@@ -175,18 +126,6 @@ const components: Components = {
       </aside>
     )
   },
-}
-
-function SectionIcon({ emoji }: { emoji: string }) {
-  const Icon = sectionIcons[emoji] ?? PawPrint
-  return (
-    <span
-      className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-50 to-orange-100 text-brand-600"
-      aria-hidden
-    >
-      <Icon className="size-5" strokeWidth={1.75} />
-    </span>
-  )
 }
 
 function Guide() {
@@ -334,16 +273,13 @@ function Guide() {
               aria-labelledby={`${s.id}-title`}
               className="scroll-mt-[calc(var(--header-h)+4rem)] space-y-4 rounded-2xl bg-white p-5 shadow-card ring-1 ring-stone-100 sm:p-7 lg:scroll-mt-[calc(var(--header-h)+1.5rem)]"
             >
-              <div className="flex items-center gap-3">
-                <SectionIcon emoji={s.icon} />
-                <div>
-                  <p className="text-xs font-medium tracking-wide text-brand-700/70">
-                    {t('guide.section', { n: String(i + 1).padStart(2, '0') })}
-                  </p>
-                  <h2 id={`${s.id}-title`} className="text-xl font-bold text-stone-900 sm:text-2xl">
-                    {s.title}
-                  </h2>
-                </div>
+              <div>
+                <p className="text-xs font-medium tracking-wide text-brand-700/70">
+                  {t('guide.section', { n: String(i + 1).padStart(2, '0') })}
+                </p>
+                <h2 id={`${s.id}-title`} className="text-xl font-bold text-stone-900 sm:text-2xl">
+                  {s.title}
+                </h2>
               </div>
               <div className="space-y-4 text-[15px] text-stone-700 sm:text-base">
                 <Markdown components={components}>{s.body}</Markdown>

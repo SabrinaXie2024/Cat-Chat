@@ -2,7 +2,7 @@
 
 De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jours, voici l’essentiel à savoir. Chaque chat est différent : pour tout ce qui concerne la santé ou les médicaments, suivez les conseils de votre vétérinaire.
 
-## 🐱 Choisir et adopter un chat
+## Choisir et adopter un chat
 
 **Bien réfléchir d’abord**
 
@@ -30,7 +30,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 
 > 💡 Pas sûr de pouvoir vous engager sur la durée ? Devenez **famille d’accueil** pour un refuge et essayez d’abord la vie avec un chat.
 
-## 🧺 Avant l’arrivée du chat
+## Avant l’arrivée du chat
 
 **L’essentiel**
 
@@ -51,7 +51,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 
 > ⚠️ Lécher un peu de pollen de lys (vrais lys et hémérocalles) peut provoquer une insuffisance rénale aiguë chez le chat. Le plus sûr est de n’avoir aucun lys chez soi.
 
-## 🏠 La première semaine
+## La première semaine
 
 - **Commencez par une pièce calme** avec litière, eau, nourriture et une cachette (caisse de transport ouverte ou carton)
 - Laissez le chat sortir à son rythme. **Ne le forcez pas à des câlins et ne le fixez pas.** Rester tranquillement dans la pièce à vaquer à vos occupations est une excellente compagnie
@@ -62,7 +62,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 
 > 💡 Un clignement lent, c’est la façon dont le chat dit qu’il se sent en sécurité et amical. Clignez lentement des yeux en premier : il vous répondra souvent.
 
-## 🍽️ Alimentation
+## Alimentation
 
 **Choisir la nourriture**
 
@@ -97,7 +97,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 
 > ⚠️ Ne donnez jamais de médicament humain à votre chat. Le paracétamol (présent dans beaucoup de médicaments contre le rhume et la fièvre) est extrêmement dangereux pour le chat, même à très faible dose, et les antidouleurs comme l’ibuprofène le sont aussi.
 
-## 🚽 Litières
+## Litières
 
 - La règle : **un bac par chat, plus un** — deux chats, trois bacs. Dans une maison à étages, au moins un par niveau
 - Placez-les dans un endroit **calme et facile d’accès**, loin de la nourriture et de l’eau et des appareils bruyants comme le lave-linge
@@ -108,7 +108,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 
 > 💡 Un chat qui n’utilise plus sa litière ne se venge pas. Le plus souvent, le bac n’est pas assez propre ou mal placé, ou le chat ne va pas bien (troubles urinaires, douleurs articulaires). Consultez d’abord.
 
-## 🩺 Vaccins, parasites et bilans
+## Vaccins, parasites et bilans
 
 **Vaccins**
 
@@ -134,7 +134,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 - Adulte : **une fois par an**. Senior : **tous les six mois**, avec poids, dents et auscultation cardiaque, et analyses de sang et d’urine recommandées pour les plus âgés
 - Pesez votre chat chaque mois à la maison et notez-le. Les variations de poids révèlent souvent un problème avant tout autre signe
 
-## ✨ Soins quotidiens
+## Soins quotidiens
 
 - **Brossage** : chats à poil court 1 à 2 fois par semaine, à poil long idéalement chaque jour, en insistant sur les aisselles, le ventre et derrière les oreilles où se forment les nœuds. Moins de poils perdus, moins de boules de poils
 - **Griffes** : toutes les 2 à 3 semaines. Coupez seulement la pointe transparente, **évitez la partie rose vascularisée**. On peut en faire quelques-unes à la fois sur plusieurs jours
@@ -143,7 +143,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 - **Yeux et oreilles** : retirez les sécrétions oculaires avec un coton humide ; nettoyez seulement la partie visible de l’oreille et **n’introduisez jamais de coton-tige**. Beaucoup de sécrétions noires peuvent signaler la gale des oreilles : consultez
 - **Contrôle du corps** : en le brossant, palpez à la recherche de nouvelles boules, de plaies ou de zones douloureuses
 
-## 🐾 Comportement, jeu et langage corporel
+## Comportement, jeu et langage corporel
 
 **Jouer chaque jour**
 
@@ -170,7 +170,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 
 > 💡 Les punitions et les cris ne font qu’apprendre au chat à avoir peur de vous. Proposez une alternative et récompensez-le quand il fait bien.
 
-## 🏡 Plusieurs chats à la maison
+## Plusieurs chats à la maison
 
 - **Beaucoup de ressources, bien réparties** : gamelles, eau, litières, griffoirs et couchages, chacun « un par chat plus un », à des endroits différents pour qu’aucun chat ne puisse les monopoliser
 - Ajoutez de la **hauteur** (arbres à chat, dessus de placards, étagères) pour que les chats partagent une pièce à des niveaux différents et évitent les confrontations
@@ -181,7 +181,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
   - Feulements ou grognements : revenez une étape en arrière. Ne les laissez pas « régler ça » en se battant
 - **Jeu ou bagarre ?** Le jeu est silencieux, avec des rôles qui s’inversent et un poil normal ; une vraie bagarre s’accompagne de cris, de poils hérissés, et l’un des chats fuit ou se cache longtemps
 
-## 🧠 Enrichissement et éducation
+## Enrichissement et éducation
 
 **Une maison plus stimulante**
 
@@ -197,7 +197,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 - Le plus utile : tout ce qui **concerne le vétérinaire**. Laissez la caisse ouverte comme couchage avec des friandises dedans ; manipulez pattes, oreilles et bouche chaque jour pour que coupe des griffes et examens ne fassent pas peur
 - Des séances de **3 à 5 minutes**, à arrêter tant qu’il est encore intéressé
 
-## 🌡️ Saisons, voyages et fêtes
+## Saisons, voyages et fêtes
 
 **Été : prévenir le coup de chaleur**
 
@@ -222,7 +222,7 @@ De la décision d’adopter et du premier jour à la maison jusqu’aux vieux jo
 - Pendant les feux d’artifice, fermez portes et fenêtres et offrez une cachette calme ; ne le sortez pas de force pour le « réconforter »
 - Gardez **rubans, guirlandes et cheveux d’ange**, chocolat et bouquets de lys hors de portée
 
-## 🤒 Problèmes de santé fréquents
+## Problèmes de santé fréquents
 
 Le chat cache bien ses maux. Parlez-en à votre vétérinaire si vous remarquez :
 
@@ -270,7 +270,7 @@ Le chat cache bien ses maux. Parlez-en à votre vétérinaire si vous remarquez 
 - Changements d’expression : yeux plissés, moustaches tendues vers l’avant, oreilles tournées sur les côtés
 - Fait ses besoins hors du bac, devient grognon
 
-## 📅 Les étapes de la vie
+## Les étapes de la vie
 
 **Chatons (0–12 mois)**
 
@@ -289,7 +289,7 @@ Le chat cache bien ses maux. Parlez-en à votre vétérinaire si vous remarquez 
 - Les articulations peuvent se raidir : ajoutez des marches vers ses endroits préférés, un bac à bord bas, un couchage chaud et facile d’accès
 - Certains seniors développent un **syndrome de dysfonctionnement cognitif** : miaulements nocturnes, désorientation, rythme veille-sommeil inversé. Parlez-en au vétérinaire, il existe des solutions
 
-## 🚨 Urgences
+## Urgences
 
 Emmenez votre chat chez un vétérinaire **immédiatement**, sans attendre, si vous constatez :
 
@@ -310,7 +310,7 @@ Emmenez votre chat chez un vétérinaire **immédiatement**, sans attendre, si v
 
 > 🚨 Notez dès maintenant l’adresse et le numéro de la **clinique vétérinaire d’urgence 24 h/24** la plus proche. En cas d’urgence, vous gagnerez un temps précieux.
 
-## 🧰 Trousse de secours et budget
+## Trousse de secours et budget
 
 **À avoir à la maison**
 
@@ -326,7 +326,7 @@ Emmenez votre chat chez un vétérinaire **immédiatement**, sans attendre, si v
 - Chaque année : vaccins et bilans, plus les analyses de sang pour les seniors
 - **L’imprévu** : urgences et chirurgies peuvent coûter cher. Mettez un peu de côté chaque mois dans un **fonds d’urgence**, ou renseignez-vous sur ce que couvrirait une mutuelle pour animaux
 
-## 🌈 Dire au revoir
+## Dire au revoir
 
 - Quand votre chat vieillit, surveillez sa **qualité de vie** avec votre vétérinaire : peut-il manger et boire, aller seul à la litière, souffre-t-il en permanence, a-t-il encore envie d’être avec vous ?
 - En fin de maladie, **soulager la douleur et apporter du confort** compte tout autant : un couchage moelleux, eau et litière à portée, un endroit calme

@@ -2,7 +2,7 @@
 
 Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vejez, aquí tienes lo que conviene saber. Cada gato es distinto: para todo lo relacionado con la salud o los medicamentos, sigue los consejos de tu veterinario.
 
-## 🐱 Elegir y adoptar un gato
+## Elegir y adoptar un gato
 
 **Piénsalo bien primero**
 
@@ -30,7 +30,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 
 > 💡 ¿No sabes si podrás comprometerte a largo plazo? Hazte **casa de acogida** de una protectora y prueba primero a convivir con un gato.
 
-## 🧺 Antes de que llegue a casa
+## Antes de que llegue a casa
 
 **Lo imprescindible**
 
@@ -51,7 +51,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 
 > ⚠️ Lamer un poco de polen de lirio (lirios verdaderos y hemerocallis) puede provocar insuficiencia renal aguda en un gato. Lo más seguro es no tener lirios en casa.
 
-## 🏠 La primera semana
+## La primera semana
 
 - **Empieza con una habitación tranquila** con arenero, agua, comida y un escondite (un transportín abierto o una caja de cartón)
 - Deja que salga cuando quiera. **No lo obligues a recibir mimos ni te lo quedes mirando.** Estar tranquilamente en la habitación haciendo tus cosas es una compañía estupenda
@@ -62,7 +62,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 
 > 💡 Parpadear despacio es la forma en que un gato dice que se siente seguro y amistoso. Prueba a parpadear tú primero despacio: a menudo te devolverá el gesto.
 
-## 🍽️ Alimentación
+## Alimentación
 
 **Elegir la comida**
 
@@ -97,7 +97,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 
 > ⚠️ Nunca le des a tu gato medicamentos para personas. El paracetamol (presente en muchos antigripales y antitérmicos) es extremadamente peligroso para los gatos incluso en dosis mínimas, y analgésicos como el ibuprofeno también lo son.
 
-## 🚽 Areneros
+## Areneros
 
 - La regla: **un arenero por gato, más uno**. Dos gatos, tres areneros. En casas de varias plantas, al menos uno por planta
 - Colócalos en un lugar **tranquilo y accesible**, lejos de la comida y el agua y de electrodomésticos ruidosos como la lavadora
@@ -108,7 +108,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 
 > 💡 Un gato que deja de usar el arenero no se está vengando. Normalmente el arenero no está lo bastante limpio, está mal ubicado o el gato no se encuentra bien (problemas urinarios, dolor articular). Primero, al veterinario.
 
-## 🩺 Vacunas, parásitos y revisiones
+## Vacunas, parásitos y revisiones
 
 **Vacunas**
 
@@ -134,7 +134,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 - Adultos: **una vez al año**. Mayores: **cada seis meses**, con peso, dientes y auscultación cardíaca, y análisis de sangre y orina recomendados para los mayores
 - Pésalo en casa cada mes y apúntalo. Los cambios de peso suelen delatar problemas antes que cualquier otra cosa
 
-## ✨ Cuidados diarios
+## Cuidados diarios
 
 - **Cepillado**: gatos de pelo corto 1–2 veces por semana, de pelo largo idealmente a diario, con atención a axilas, barriga y detrás de las orejas, donde se forman nudos. Menos pelo suelto, menos bolas de pelo
 - **Uñas**: cada 2–3 semanas. Corta solo la punta transparente, **evita la parte rosa**. No pasa nada por cortar unas pocas cada día
@@ -143,7 +143,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 - **Ojos y orejas**: limpia las legañas con un algodón húmedo; limpia solo la parte visible de la oreja y **nunca metas bastoncillos**. Mucha secreción oscura puede indicar ácaros: al veterinario
 - **Revisión del cuerpo**: al cepillarlo, palpa si hay bultos nuevos, heridas o zonas doloridas
 
-## 🐾 Comportamiento, juego y lenguaje corporal
+## Comportamiento, juego y lenguaje corporal
 
 **Juega cada día**
 
@@ -170,7 +170,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 
 > 💡 Los castigos y los gritos solo le enseñan a tenerte miedo. Ofrécele una alternativa y prémialo cuando lo haga bien.
 
-## 🏡 Hogares con varios gatos
+## Hogares con varios gatos
 
 - **Muchos recursos y repartidos**: comederos, agua, areneros, rascadores y zonas de descanso, cada uno «uno por gato más uno», en lugares distintos para que ningún gato los acapare
 - Añade **espacio vertical** (árboles para gatos, partes altas de muebles, estantes) para que compartan la habitación a distintas alturas y eviten enfrentamientos
@@ -181,7 +181,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
   - Si bufan o gruñen, vuelve un paso atrás. No dejes que «lo arreglen peleando»
 - **¿Juego o pelea?** El juego es silencioso, con turnos y el pelo normal; en una pelea de verdad hay maullidos fuertes, pelo erizado, y uno huye o se esconde mucho tiempo
 
-## 🧠 Enriquecimiento y adiestramiento
+## Enriquecimiento y adiestramiento
 
 **Una casa más interesante**
 
@@ -197,7 +197,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 - Lo más útil es todo lo **relacionado con el veterinario**: deja el transportín abierto como cama con premios dentro; toca a diario patas, orejas y boca para que cortar uñas y las revisiones no den miedo
 - Sesiones de **3–5 minutos**, y termina mientras aún le interese
 
-## 🌡️ Estaciones, viajes y fiestas
+## Estaciones, viajes y fiestas
 
 **Verano: evita el golpe de calor**
 
@@ -222,7 +222,7 @@ Desde que decides tener un gato y llega a casa hasta que lo acompañas en su vej
 - Durante los fuegos artificiales, cierra puertas y ventanas y ofrécele un escondite tranquilo; no lo saques a la fuerza para «consolarlo»
 - Mantén **cintas, espumillón y guirnaldas**, chocolate y ramos de lirios fuera de su alcance
 
-## 🤒 Problemas de salud frecuentes
+## Problemas de salud frecuentes
 
 Los gatos esconden muy bien las enfermedades. Consulta al veterinario si notas:
 
@@ -270,7 +270,7 @@ Los gatos esconden muy bien las enfermedades. Consulta al veterinario si notas:
 - Cambios en la cara: ojos entornados, bigotes tensos hacia delante, orejas giradas hacia los lados
 - Hace sus necesidades fuera del arenero, está más irritable
 
-## 📅 Etapas de la vida
+## Etapas de la vida
 
 **Gatitos (0–12 meses)**
 
@@ -289,7 +289,7 @@ Los gatos esconden muy bien las enfermedades. Consulta al veterinario si notas:
 - Las articulaciones pueden resentirse: pon escalones hacia sus sitios favoritos, un arenero de entrada baja y camas cálidas y accesibles
 - Algunos desarrollan **disfunción cognitiva**: maullidos fuertes por la noche, desorientación, horario de sueño invertido. Coméntalo con el veterinario; hay formas de ayudar
 
-## 🚨 Urgencias
+## Urgencias
 
 Lleva a tu gato al veterinario **inmediatamente**, sin esperar, si ves:
 
@@ -310,7 +310,7 @@ Lleva a tu gato al veterinario **inmediatamente**, sin esperar, si ves:
 
 > 🚨 Guarda ya la dirección y el teléfono de la **clínica veterinaria de urgencias 24 horas** más cercana. En una emergencia real, ahorrarás un tiempo valioso.
 
-## 🧰 Botiquín y presupuesto
+## Botiquín y presupuesto
 
 **Ten en casa**
 
@@ -326,7 +326,7 @@ Lleva a tu gato al veterinario **inmediatamente**, sin esperar, si ves:
 - Cada año: vacunas y revisiones, más análisis de sangre en los mayores
 - **Lo imprevisto**: urgencias y cirugías pueden costar mucho. Aparta un poco cada mes en un **fondo de emergencia** o infórmate de lo que cubriría un seguro para mascotas
 
-## 🌈 Despedirse
+## Despedirse
 
 - Cuando tu gato envejezca, observad junto al veterinario su **calidad de vida**: ¿puede comer y beber, ir solo al arenero, tiene dolor constante, todavía quiere estar contigo?
 - En la fase final de una enfermedad, **aliviar el dolor y dar confort** importa igual: una cama blanda, agua y arenero a mano, tranquilidad

@@ -2,7 +2,7 @@
 
 Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe Alter: Hier steht, was du wissen solltest. Jede Katze ist anders – bei allem rund um Gesundheit und Medikamente folge bitte dem Rat deiner Tierärztin oder deines Tierarztes.
 
-## 🐱 Eine Katze aussuchen und adoptieren
+## Eine Katze aussuchen und adoptieren
 
 **Erst gut überlegen**
 
@@ -30,7 +30,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 
 > 💡 Unsicher, ob du dich langfristig binden kannst? Werde **Pflegestelle** für ein Tierheim und probier das Zusammenleben mit einer Katze erst einmal aus.
 
-## 🧺 Bevor die Katze einzieht
+## Bevor die Katze einzieht
 
 **Das Wichtigste**
 
@@ -51,7 +51,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 
 > ⚠️ Schon ein wenig abgeleckter Lilienpollen (echte Lilien und Taglilien) kann bei Katzen akutes Nierenversagen auslösen. Am sichersten ist ein Katzenhaushalt ganz ohne Lilien.
 
-## 🏠 Die erste Woche
+## Die erste Woche
 
 - **Beginne mit einem ruhigen Raum** mit Katzenklo, Wasser, Futter und einem Versteck (offene Transportbox oder Karton)
 - Lass die Katze in ihrem Tempo herauskommen. **Nicht zum Kuscheln zwingen und nicht anstarren.** Ruhig im Raum sitzen und eigenen Dingen nachgehen ist tolle Gesellschaft
@@ -62,7 +62,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 
 > 💡 Langsames Blinzeln ist die Art, wie Katzen sagen, dass sie sich sicher und freundlich fühlen. Blinzle zuerst langsam – oft blinzelt sie zurück.
 
-## 🍽️ Futter und Fütterung
+## Futter und Fütterung
 
 **Futter auswählen**
 
@@ -97,7 +97,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 
 > ⚠️ Gib deiner Katze niemals Medikamente für Menschen. Paracetamol (in vielen Erkältungs- und Fiebermitteln) ist für Katzen schon in winzigen Mengen extrem gefährlich, und Schmerzmittel wie Ibuprofen sind ebenfalls gefährlich.
 
-## 🚽 Katzenklos
+## Katzenklos
 
 - Faustregel: **ein Klo pro Katze plus eins** – zwei Katzen, drei Klos. In mehrstöckigen Wohnungen mindestens eins pro Etage
 - Stell sie **ruhig und gut erreichbar** auf, weg von Futter und Wasser und von lauten Geräten wie der Waschmaschine
@@ -108,7 +108,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 
 > 💡 Eine Katze, die nicht mehr aufs Klo geht, rächt sich nicht. Meist ist das Klo nicht sauber genug oder steht falsch, oder die Katze ist krank (Harnwegsprobleme, Gelenkschmerzen). Zuerst zum Tierarzt.
 
-## 🩺 Impfungen, Parasiten und Vorsorge
+## Impfungen, Parasiten und Vorsorge
 
 **Impfungen**
 
@@ -134,7 +134,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 - Erwachsene: **einmal im Jahr**. Senioren: **alle sechs Monate**, mit Gewicht, Zähnen und Abhören des Herzens; bei älteren Katzen werden Blut- und Urinuntersuchungen empfohlen
 - Wiege deine Katze monatlich zu Hause und notiere es. Gewichtsveränderungen zeigen Probleme oft früher als alles andere
 
-## ✨ Tägliche Pflege
+## Tägliche Pflege
 
 - **Bürsten**: Kurzhaarkatzen 1–2-mal pro Woche, Langhaarkatzen am besten täglich, besonders Achseln, Bauch und hinter den Ohren, wo Knoten entstehen. Weniger Haare, weniger Haarballen
 - **Krallen**: alle 2–3 Wochen. Nur die durchsichtige Spitze schneiden, **das rosa Leben aussparen**. Ruhig ein paar Krallen pro Tag über mehrere Tage
@@ -143,7 +143,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 - **Augen und Ohren**: Augenausfluss mit einem feuchten Wattepad abwischen; nur den sichtbaren Teil des Ohrs reinigen und **niemals Wattestäbchen hineinstecken**. Viel dunkles Ohrsekret kann auf Ohrmilben hindeuten – zum Tierarzt
 - **Körper abtasten**: Beim Bürsten nach neuen Knoten, Wunden oder schmerzhaften Stellen tasten
 
-## 🐾 Verhalten, Spiel und Körpersprache
+## Verhalten, Spiel und Körpersprache
 
 **Jeden Tag spielen**
 
@@ -170,7 +170,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 
 > 💡 Strafen und Schimpfen lehren die Katze nur, Angst vor dir zu haben. Biete eine Alternative und belohne sie, wenn sie es richtig macht.
 
-## 🏡 Mehrkatzenhaushalt
+## Mehrkatzenhaushalt
 
 - **Viele Ressourcen, gut verteilt**: Näpfe, Wasser, Klos, Kratzmöglichkeiten und Liegeplätze jeweils „pro Katze plus eins“, an verschiedenen Orten, damit keine Katze sie bewachen kann
 - Schaffe **Höhe** (Kratzbäume, Schrankoberseiten, Wandregale), damit Katzen einen Raum auf unterschiedlichen Ebenen teilen und Konfrontationen ausweichen können
@@ -181,7 +181,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
   - Fauchen oder Knurren heißt: einen Schritt zurück. Lass sie es nicht „ausfechten“
 - **Spiel oder Streit?** Spiel ist leise, mit wechselnden Rollen und normalem Fell; echte Kämpfe gehen mit Kreischen und gesträubtem Fell einher, und eine Katze flieht oder versteckt sich lange
 
-## 🧠 Beschäftigung und Training
+## Beschäftigung und Training
 
 **Eine spannendere Wohnung**
 
@@ -197,7 +197,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 - Am nützlichsten ist alles **rund um den Tierarztbesuch**: die Box offen als Schlafplatz mit Leckerlis darin stehen lassen; täglich Pfoten, Ohren und Maul berühren, damit Krallenschneiden und Untersuchungen nicht beängstigend sind
 - Einheiten von **3–5 Minuten**, aufhören, solange sie noch Interesse hat
 
-## 🌡️ Jahreszeiten, Reisen und Feiertage
+## Jahreszeiten, Reisen und Feiertage
 
 **Sommer: Hitzschlag vorbeugen**
 
@@ -222,7 +222,7 @@ Von der Entscheidung für eine Katze über den ersten Tag zu Hause bis ins hohe 
 - Bei Feuerwerk Fenster und Türen schließen und ein ruhiges Versteck anbieten; die Katze nicht herauszerren, um sie zu „trösten“
 - **Geschenkband, Lametta und Girlanden**, Schokolade und Lilienstrauße außer Reichweite halten
 
-## 🤒 Häufige Gesundheitsprobleme
+## Häufige Gesundheitsprobleme
 
 Katzen verbergen Krankheiten gut. Sprich mit der Tierarztpraxis, wenn dir auffällt:
 
@@ -270,7 +270,7 @@ Katzen verbergen Krankheiten gut. Sprich mit der Tierarztpraxis, wenn dir auffä
 - Veränderte Mimik: zusammengekniffene Augen, nach vorn gespannte Schnurrhaare, seitlich gedrehte Ohren
 - Unsauberkeit, wird grantig
 
-## 📅 Lebensphasen
+## Lebensphasen
 
 **Kitten (0–12 Monate)**
 
@@ -289,7 +289,7 @@ Katzen verbergen Krankheiten gut. Sprich mit der Tierarztpraxis, wenn dir auffä
 - Gelenke können steifer werden: Stufen zu Lieblingsplätzen, ein Klo mit niedrigem Einstieg, Schlafplätze warm und leicht erreichbar
 - Manche Senioren entwickeln eine **kognitive Dysfunktion**: lautes nächtliches Miauen, Orientierungslosigkeit, umgekehrter Schlafrhythmus. Sag es dem Tierarzt – es gibt Hilfen
 
-## 🚨 Notfälle
+## Notfälle
 
 Bring deine Katze **sofort** zum Tierarzt, ohne abzuwarten, wenn du siehst:
 
@@ -310,7 +310,7 @@ Bring deine Katze **sofort** zum Tierarzt, ohne abzuwarten, wenn du siehst:
 
 > 🚨 Speichere schon jetzt Adresse und Telefonnummer der nächsten **Tierklinik mit 24-Stunden-Notdienst**. Im Ernstfall spart das wertvolle Zeit.
 
-## 🧰 Notfallset und Budget
+## Notfallset und Budget
 
 **Zu Hause bereithalten**
 
@@ -326,7 +326,7 @@ Bring deine Katze **sofort** zum Tierarzt, ohne abzuwarten, wenn du siehst:
 - Jährlich: Impfungen und Vorsorge, bei Senioren zusätzlich Blutuntersuchungen
 - **Das Unerwartete**: Notfälle und Operationen können teuer werden. Leg jeden Monat etwas in einen **Notfallfonds** oder informiere dich, was eine Tierkrankenversicherung abdecken würde
 
-## 🌈 Abschied nehmen
+## Abschied nehmen
 
 - Wenn deine Katze älter wird, achtet gemeinsam mit der Tierarztpraxis auf ihre **Lebensqualität**: Kann sie fressen und trinken, selbst aufs Klo gehen, hat sie anhaltende Schmerzen, möchte sie noch bei dir sein?
 - Im Endstadium einer Krankheit sind **Schmerzlinderung und Wohlfühlpflege** genauso wichtig: ein weicher Platz, Wasser und Klo in Reichweite, Ruhe

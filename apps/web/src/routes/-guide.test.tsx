@@ -172,5 +172,8 @@ describe('guide translations', () => {
     expect(sectionCount(md)).toBe(sectionCount(zh))
     expect(calloutCount(md)).toBe(calloutCount(zh))
     expect(md).toMatch(/^---$/m) // disclaimer footer
+    // Chapter titles are plain text: no emoji before them.
+    const headings = md.match(/^## .*$/gm) ?? []
+    for (const h of headings) expect(h, h).toMatch(/^## [\p{L}\p{N}]/u)
   })
 })
