@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -69,6 +70,20 @@ func run() error {
 		return err
 	}
 
+	admins := parseAdmins(os.Getenv("ADMIN_EMAILS"))
+	adminEmail, err := ensureAdmin(ctx, pg, adminBootstrap{
+		Email:      os.Getenv("ADMIN_EMAIL"),
+		Password:   os.Getenv("ADMIN_PASSWORD"),
+		Nickname:   os.Getenv("ADMIN_NICKNAME"),
+		Production: os.Getenv("RESEND_API_KEY") != "",
+	})
+	if err != nil {
+		return fmt.Errorf("admin bootstrap: %w", err)
+	}
+	if adminEmail != "" {
+		admins[adminEmail] = true // the bootstrap account is always an admin
+	}
+
 	if _, err := exec.LookPath(envOr("FFMPEG", "ffmpeg")); err != nil {
 		slog.Warn("ffmpeg not found; video uploads will fail", "err", err)
 	}
@@ -83,7 +98,7 @@ func run() error {
 			VideoBlobs:   blob.Local{Dir: videoDir, Ext: ".video"},
 			Videos:       videos.Processor{FFmpeg: os.Getenv("FFMPEG")},
 			VideoWorkDir: filepath.Join(videoDir, ".tmp"),
-			AdminEmails:  parseAdmins(os.Getenv("ADMIN_EMAILS")),
+			AdminEmails:  admins,
 			Mailer:       mailer,
 			SendLimiter:  newSendLimiter(),
 			FixedCode:    fixedCode,

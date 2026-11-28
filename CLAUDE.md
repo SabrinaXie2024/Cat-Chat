@@ -117,7 +117,14 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
 
 ## 我的猫咪 gallery (admin)
 
-- Admins = `ADMIN_EMAILS` (comma list, case-insensitive). Locally it lives in
+- Bootstrap admin: on every start `main` ensures an account for
+  `ADMIN_EMAIL` exists (`cmd/server/bootstrap.go`), creating it with
+  `ADMIN_PASSWORD` / `ADMIN_NICKNAME` (default `admin`) if missing; an
+  existing account is never touched, so a password changed in the app
+  sticks. That email is always an admin. Production (`RESEND_API_KEY` set)
+  refuses passwords under 12 characters; dev only warns. Values live in
+  `.env.local` / deployment secrets, never in git.
+- Admins = `ADMIN_EMAILS` (comma list, case-insensitive) plus `ADMIN_EMAIL`. Locally it lives in
   gitignored `apps/api/.env.local` (see `.env.example`), loaded by
   `pnpm dev:api`. Never commit real emails. `User.isAdmin` is computed per
   request, not stored.
