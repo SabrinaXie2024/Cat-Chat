@@ -203,14 +203,22 @@ Windows). Override either URL with `DATABASE_URL` / `TEST_DATABASE_URL` in
 
 ## Profiles & follows
 
-- Avatars are presets only: the 13 values of the `Avatar` enum in the spec
-  (orange, black, white, gray, calico, siamese, tuxedo, tabby, silver,
-  tortie, cream, orange-white, lihua 狸花). No custom uploads. New users default to
-  `orange`. Adding one touches: the enum, a new migration replacing the
-  `users_avatar_check` CHECK (latest: 00008), a design in `CatAvatar.tsx`
-  (`Record<Avatar, …>`, so a missing one fails typecheck), an
-  `avatar.<id>` name in all 10 languages, and the list in the store
-  conformance test (which checks the CHECK accepts every enum value).
+- Avatars are built from preset parts (no custom uploads): the `Avatar`
+  object `{breed, coat, pattern, eyes}` — breed shorthair/fold/longhair/
+  maine, coat orange/cream/brown/gray/silver/black/white, pattern solid/
+  tabby/mackerel/bicolor/patches/pointed, eyes green/yellow/blue/amber/odd.
+  Stored in `users.avatar` as `breed.coat.pattern.eyes` (`api.Avatar.String`
+  / `api.ParseAvatar`; a regex CHECK since migration 00010 — the
+  conformance test inserts all 840 combinations). New users default to
+  `shorthair.orange.tabby.green`. The 13 classic looks (orange … lihua)
+  are kept as one-click presets (`AVATAR_PRESETS` in `CatAvatar.tsx`,
+  names `avatar.<name>`); migration 00010 mapped old values to them.
+  Adding a part value touches: the spec enum, a new migration replacing
+  the CHECK, `CatAvatar.tsx` (option list + drawing), `avatar.<part>.<value>`
+  in all 10 languages, and the conformance test's lists.
+- Editor: `features/profile/AvatarBuilder.tsx` — live preview, presets
+  (keep the chosen breed), then one radio group per part, each option
+  previewed on the current cat.
 - `PATCH /auth/me/profile` (nickname/avatar), `GET /users/{id}` (public:
   counts + `followedByMe`), `GET /users/{id}/posts`, `PUT|DELETE
   /users/{id}/follow` (idempotent; self-follow → 400).

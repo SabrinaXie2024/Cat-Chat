@@ -77,7 +77,7 @@ func (m *Memory) CreateUser(_ context.Context, email, nickname, hash string) (ap
 	if _, taken := m.byEmail[email]; taken {
 		return api.User{}, api.ErrEmailTaken
 	}
-	u := api.User{Id: newID(), Email: email, Nickname: nickname, Avatar: api.Orange, CreatedAt: m.now().UTC()}
+	u := api.User{Id: newID(), Email: email, Nickname: nickname, Avatar: api.DefaultAvatar, CreatedAt: m.now().UTC()}
 	m.users[u.Id] = userRow{user: u, hash: hash}
 	m.byEmail[email] = u.Id
 	return u, nil

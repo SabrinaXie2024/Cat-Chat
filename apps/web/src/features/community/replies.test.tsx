@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Reply } from '../../api/generated/model'
+import { AVATAR_PRESETS } from '../../components/CatAvatar'
 import { DEMO_USER, db } from '../../mocks/handlers'
 import { renderApp } from '../../test/render'
 
@@ -29,7 +30,7 @@ function seedReplies(n: number) {
     postId: SEED_POST,
     authorId: 'demo',
     author: '路人',
-    authorAvatar: 'gray',
+    authorAvatar: AVATAR_PRESETS.gray,
     pinned: false,
     content: `第 ${i + 1} 条回复`,
     images: [],

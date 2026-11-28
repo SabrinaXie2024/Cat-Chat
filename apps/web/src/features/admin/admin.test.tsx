@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Avatar } from '../../api/generated/model'
+import { AVATAR_PRESETS } from '../../components/CatAvatar'
 import { db, resetDb, SEED_AUTHOR_ID } from '../../mocks/handlers'
 import { renderApp } from '../../test/render'
 
@@ -13,10 +13,15 @@ beforeEach(() => {
     nickname: '捣蛋鬼',
     password: 'password123',
     isAdmin: false,
-    avatar: Avatar.black,
+    avatar: AVATAR_PRESETS.black,
     createdAt: new Date().toISOString(),
   })
-  const base = { postId: 'seed-1', authorId: 'troll', author: '捣蛋鬼', authorAvatar: Avatar.black }
+  const base = {
+    postId: 'seed-1',
+    authorId: 'troll',
+    author: '捣蛋鬼',
+    authorAvatar: AVATAR_PRESETS.black,
+  }
   db.replies.set('seed-1', [
     {
       ...base,

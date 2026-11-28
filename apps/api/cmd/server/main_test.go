@@ -870,18 +870,19 @@ func TestFixedCodeIsUsedWhenSet(t *testing.T) {
 
 func TestProfileAndFollow(t *testing.T) {
 	c := newClient(t)
-	c.mustStatus(401, "PATCH", "/api/auth/me/profile", `{"avatar":"calico"}`)
+	c.mustStatus(401, "PATCH", "/api/auth/me/profile", `{"avatar":{"breed":"fold","coat":"white","pattern":"patches","eyes":"odd"}}`)
 	c.signUp()
 	var me api.User
 	_ = json.Unmarshal([]byte(c.mustStatus(200, "GET", "/api/auth/me", "")), &me)
-	if me.Avatar != api.Orange {
+	if me.Avatar != api.DefaultAvatar {
 		t.Fatalf("default avatar %q", me.Avatar)
 	}
 	c.mustStatus(400, "PATCH", "/api/auth/me/profile", `{"avatar":"https://evil.example/x.png"}`)
+	c.mustStatus(400, "PATCH", "/api/auth/me/profile", `{"avatar":{"breed":"dog","coat":"white","pattern":"solid","eyes":"blue"}}`)
 	c.mustStatus(400, "PATCH", "/api/auth/me/profile", `{"nickname":"   "}`)
 	c.mustStatus(400, "PATCH", "/api/auth/me/profile", `{"nickname":"`+strings.Repeat("猫", 21)+`"}`)
-	body := c.mustStatus(200, "PATCH", "/api/auth/me/profile", `{"nickname":" 小橘 ","avatar":"calico"}`)
-	if !strings.Contains(body, `"nickname":"小橘"`) || !strings.Contains(body, `"avatar":"calico"`) {
+	body := c.mustStatus(200, "PATCH", "/api/auth/me/profile", `{"nickname":" 小橘 ","avatar":{"breed":"fold","coat":"white","pattern":"patches","eyes":"odd"}}`)
+	if !strings.Contains(body, `"nickname":"小橘"`) || !strings.Contains(body, `"avatar":{"breed":"fold","coat":"white","eyes":"odd","pattern":"patches"}`) {
 		t.Fatalf("update: %s", body)
 	}
 	c.mustStatus(201, "POST", "/api/posts", `{"content":"hello","images":[]}`)
@@ -899,7 +900,7 @@ func TestProfileAndFollow(t *testing.T) {
 		t.Fatalf("profile %+v", p)
 	}
 	posts := other.mustStatus(200, "GET", "/api/users/"+me.Id+"/posts", "")
-	if !strings.Contains(posts, `"authorAvatar":"calico"`) || !strings.Contains(posts, `"authorId":"`+me.Id+`"`) {
+	if !strings.Contains(posts, `"authorAvatar":{"breed":"fold","coat":"white","eyes":"odd","pattern":"patches"}`) || !strings.Contains(posts, `"authorId":"`+me.Id+`"`) {
 		t.Fatalf("posts: %s", posts)
 	}
 	c.mustStatus(400, "PUT", "/api/users/"+me.Id+"/follow", "")

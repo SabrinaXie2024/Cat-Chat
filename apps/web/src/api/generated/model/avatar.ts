@@ -13,27 +13,18 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { AvatarBreed } from './avatarBreed';
+import type { AvatarCoat } from './avatarCoat';
+import type { AvatarEyes } from './avatarEyes';
+import type { AvatarPattern } from './avatarPattern';
 
 /**
- * One of the site's preset cat avatars (custom uploads aren't allowed).
- * The users.avatar CHECK constraint repeats this list (latest:
- * migration 00007).
+ * A cat face assembled from preset parts (no custom uploads). Stored as
+ * "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
  */
-export type Avatar = typeof Avatar[keyof typeof Avatar];
-
-
-export const Avatar = {
-  orange: 'orange',
-  black: 'black',
-  white: 'white',
-  gray: 'gray',
-  calico: 'calico',
-  siamese: 'siamese',
-  tuxedo: 'tuxedo',
-  tabby: 'tabby',
-  silver: 'silver',
-  tortie: 'tortie',
-  cream: 'cream',
-  'orange-white': 'orange-white',
-  lihua: 'lihua',
-} as const;
+export interface Avatar {
+  breed: AvatarBreed;
+  coat: AvatarCoat;
+  pattern: AvatarPattern;
+  eyes: AvatarEyes;
+}

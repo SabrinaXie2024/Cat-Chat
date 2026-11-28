@@ -55,7 +55,7 @@ func (p *Postgres) CompleteRegistration(ctx context.Context, email string) (api.
 		if err != nil {
 			return err
 		}
-		out = api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, Avatar: api.Avatar(r.Avatar), CreatedAt: r.CreatedAt.UTC()}
+		out = api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, Avatar: api.ParseAvatar(r.Avatar), CreatedAt: r.CreatedAt.UTC()}
 		return q.DeletePendingRegistration(ctx, email)
 	})
 	return out, err

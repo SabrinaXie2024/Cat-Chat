@@ -44,21 +44,40 @@ func TestPostgres(t *testing.T) {
 		if err == nil {
 			t.Fatal("non-lowercase email should be rejected")
 		}
-		// The users.avatar CHECK must accept exactly the API's Avatar enum.
-		all := []api.Avatar{
-			api.Orange, api.Black, api.White, api.Gray, api.Calico, api.Siamese,
-			api.Tuxedo, api.Tabby, api.Silver, api.Tortie, api.Cream, api.OrangeWhite, api.Lihua,
-		}
-		for _, a := range all {
-			if !a.Valid() {
-				t.Fatalf("%q is not in the Avatar enum", a)
+		// The users.avatar CHECK must accept every combination of the Avatar
+		// parts and nothing else.
+		breeds := []api.AvatarBreed{api.Shorthair, api.Fold, api.Longhair, api.Maine}
+		coats := []api.AvatarCoat{api.Orange, api.Cream, api.Brown, api.Gray, api.Silver, api.Black, api.White}
+		patterns := []api.AvatarPattern{api.Solid, api.Tabby, api.Mackerel, api.Bicolor, api.Patches, api.Pointed}
+		eyes := []api.AvatarEyes{api.Green, api.Yellow, api.Blue, api.Amber, api.Odd}
+		var combos []string
+		for _, b := range breeds {
+			for _, c := range coats {
+				for _, p := range patterns {
+					for _, e := range eyes {
+						a := api.Avatar{Breed: b, Coat: c, Pattern: p, Eyes: e}
+						if !a.Valid() || api.ParseAvatar(a.String()) != a {
+							t.Fatalf("%v doesn't round-trip", a)
+						}
+						combos = append(combos, a.String())
+					}
+				}
 			}
-			if _, err := pool.Exec(ctx, `UPDATE users SET avatar = $2 WHERE id = $1`, u.Id, string(a)); err != nil {
-				t.Fatalf("CHECK rejects enum avatar %q: %v", a, err)
+		}
+		if _, err := pool.Exec(ctx, `CREATE TEMP TABLE avatar_probe (LIKE users INCLUDING CONSTRAINTS)`); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `INSERT INTO avatar_probe (id, email, nickname, password_hash, created_at, avatar)
+			SELECT uuidv7(), 'p' || i || '@b.co', 'p', 'h', now(), a FROM unnest($1::text[]) WITH ORDINALITY AS t(a, i)`, combos); err != nil {
+			t.Fatalf("CHECK rejects a valid combination: %v", err)
+		}
+		for _, bad := range []string{"orange", "dog.orange.tabby.green", "shorthair.orange.tabby", "shorthair.orange.tabby.green.x"} {
+			if _, err := pool.Exec(ctx, `UPDATE users SET avatar = $2 WHERE id = $1`, u.Id, bad); err == nil {
+				t.Fatalf("avatar %q should violate the CHECK", bad)
 			}
 		}
-		if _, err := pool.Exec(ctx, `UPDATE users SET avatar = 'dog' WHERE id = $1`, u.Id); err == nil {
-			t.Fatal("avatar outside the enum should violate the CHECK")
+		if _, err := pool.Exec(ctx, `DROP TABLE avatar_probe`); err != nil {
+			t.Fatal(err)
 		}
 	})
 
@@ -190,19 +209,19 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		s := newStore(t)
 		a := seedUser(t, s, "a@b.co")
 		b := seedUser(t, s, "c@d.co")
-		if a.Avatar != api.Orange {
+		if a.Avatar != api.DefaultAvatar {
 			t.Fatalf("default avatar = %q", a.Avatar)
 		}
 		post, _ := s.CreatePost(ctx, a, api.NewPost{Content: "hi"})
-		if post.AuthorId != a.Id || post.AuthorAvatar != api.Orange {
+		if post.AuthorId != a.Id || post.AuthorAvatar != api.DefaultAvatar {
 			t.Fatalf("post author fields %+v", post)
 		}
-		name, av := "新名字", api.Calico
+		name, av := "新名字", api.Avatar{Breed: api.Fold, Coat: api.White, Pattern: api.Patches, Eyes: api.Odd}
 		u, err := s.UpdateProfile(ctx, a.Id, &name, &av)
 		if err != nil || u.Nickname != name || u.Avatar != av || u.Email != "a@b.co" {
 			t.Fatalf("UpdateProfile = %+v %v", u, err)
 		}
-		av2 := api.Black
+		av2 := api.Avatar{Breed: api.Maine, Coat: api.Black, Pattern: api.Solid, Eyes: api.Yellow}
 		if u, _ := s.UpdateProfile(ctx, a.Id, nil, &av2); u.Nickname != name || u.Avatar != av2 {
 			t.Fatalf("nil nickname must be kept: %+v", u)
 		}
@@ -328,7 +347,7 @@ func runConformance(t *testing.T, newStore func(*testing.T) api.Store) {
 		_ = s.Follow(ctx, b.Id, a.Id)
 		_ = s.Follow(ctx, c.Id, a.Id)
 		fs, err := s.ListFollowers(ctx, a.Id)
-		if err != nil || len(fs) != 2 || fs[0].Id != c.Id || fs[1].Id != b.Id || fs[0].Avatar != api.Orange {
+		if err != nil || len(fs) != 2 || fs[0].Id != c.Id || fs[1].Id != b.Id || fs[0].Avatar != api.DefaultAvatar {
 			t.Fatalf("followers = %+v %v", fs, err)
 		}
 		fg, err := s.ListFollowing(ctx, b.Id)

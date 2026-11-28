@@ -12,9 +12,10 @@ import {
   useGetProfile,
   useUnfollowUser,
 } from '../api/generated/users/users'
-import { AVATARS, CatAvatar } from '../components/CatAvatar'
+import { CatAvatar } from '../components/CatAvatar'
 import { buttonClass, Card, EmptyState, inputClass } from '../components/ui'
 import { meQueryKey, useCurrentUser } from '../features/auth/useCurrentUser'
+import { AvatarBuilder } from '../features/profile/AvatarBuilder'
 import { ProfileTabs } from '../features/profile/ProfileTabs'
 import { useI18n } from '../i18n/I18nProvider'
 import type { MessageKey } from '../i18n/messages'
@@ -205,28 +206,7 @@ function EditProfile({ me, onDone }: { me: User; onDone: () => void }) {
           </p>
         )}
       </div>
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-stone-700">{t('profile.avatar')}</legend>
-        <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
-          {AVATARS.map((a) => (
-            <label
-              key={a}
-              className="flex cursor-pointer flex-col items-center gap-1 rounded-xl p-1.5 text-xs text-stone-600 ring-2 ring-transparent transition has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700 has-[:checked]:ring-brand-400 has-[:focus-visible]:ring-brand-500 hover:bg-stone-50"
-            >
-              <input
-                type="radio"
-                name="avatar"
-                value={a}
-                checked={avatar === a}
-                onChange={() => setAvatar(a)}
-                className="sr-only"
-              />
-              <CatAvatar avatar={a} size="md" className="size-12" />
-              {t(`avatar.${a}`)}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <AvatarBuilder value={avatar} onChange={setAvatar} />
       <div className="flex justify-end gap-2">
         <button type="button" className={buttonClass.secondary} onClick={onDone}>
           {t('profile.cancel')}

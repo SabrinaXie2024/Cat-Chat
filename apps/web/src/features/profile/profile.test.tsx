@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { AVATARS } from '../../components/CatAvatar'
+import { DEFAULT_AVATAR, PRESET_NAMES } from '../../components/CatAvatar'
 import { db, resetDb, SEED_AUTHOR_ID } from '../../mocks/handlers'
 import { renderApp } from '../../test/render'
 
@@ -58,7 +58,7 @@ describe('profile page', () => {
     Object.assign(db.posts[0] ?? {}, {
       authorId: 'demo',
       author: '演示用户',
-      authorAvatar: 'orange',
+      authorAvatar: DEFAULT_AVATAR,
     })
     const user = userEvent.setup()
     renderApp('/')
@@ -77,17 +77,34 @@ describe('profile page', () => {
     expect(within(form).getByText('请输入昵称')).toBeInTheDocument()
 
     await user.type(name, '小橘')
-    // Only the presets are offered — all of them, each with its name.
-    expect(within(form).getAllByRole('radio')).toHaveLength(AVATARS.length)
-    expect(AVATARS).toHaveLength(13)
+    // The 13 classic looks stay available as one-click presets.
+    const presets = within(within(form).getByRole('group', { name: '经典款' }))
+    expect(presets.getAllByRole('radio')).toHaveLength(PRESET_NAMES.length)
+    expect(PRESET_NAMES).toHaveLength(13)
     for (const name of ['银虎斑', '玳瑁', '奶油猫', '橘白', '狸花']) {
-      expect(within(form).getByRole('radio', { name })).toBeInTheDocument()
+      expect(presets.getByRole('radio', { name })).toBeInTheDocument()
     }
-    await user.click(within(form).getByRole('radio', { name: '三花' }))
+    // Then every part can be changed, only from the offered options.
+    const group = (name: string) => within(within(form).getByRole('group', { name }))
+    expect(group('品种').getAllByRole('radio')).toHaveLength(4)
+    expect(group('毛色').getAllByRole('radio')).toHaveLength(7)
+    expect(group('花纹').getAllByRole('radio')).toHaveLength(6)
+    expect(group('眼睛').getAllByRole('radio')).toHaveLength(5)
+
+    await user.click(presets.getByRole('radio', { name: '三花' }))
+    expect(group('花纹').getByRole('radio', { name: '花斑' })).toBeChecked()
+    await user.click(group('品种').getByRole('radio', { name: '折耳' }))
+    await user.click(group('眼睛').getByRole('radio', { name: '异瞳' }))
+    expect(presets.getByRole('radio', { name: '三花' })).not.toBeChecked() // eyes changed
     await user.click(within(form).getByRole('button', { name: '保存' }))
 
     expect(await screen.findByRole('heading', { level: 1, name: '小橘' })).toBeInTheDocument()
-    expect(db.users.find((u) => u.id === 'demo')?.avatar).toBe('calico')
+    expect(db.users.find((u) => u.id === 'demo')?.avatar).toEqual({
+      breed: 'fold',
+      coat: 'white',
+      pattern: 'patches',
+      eyes: 'odd',
+    })
     expect(await screen.findByRole('listitem', { name: '小橘 的帖子' })).toBeInTheDocument()
     expect(within(banner).getByRole('button', { name: /小橘/ })).toBeInTheDocument()
   })

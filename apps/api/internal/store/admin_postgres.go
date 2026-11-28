@@ -27,7 +27,7 @@ func (p *Postgres) ListOpenReports(ctx context.Context) ([]api.ReportedReply, er
 				PostExcerpt: r.PostExcerpt,
 				Reply: api.Reply{
 					Id: id, PostId: r.PostID.String(), AuthorId: r.AuthorID.String(), Author: r.Author,
-					AuthorAvatar: api.Avatar(r.AuthorAvatar), Content: r.Content, Images: nonNil(r.Images),
+					AuthorAvatar: api.ParseAvatar(r.AuthorAvatar), Content: r.Content, Images: nonNil(r.Images),
 					Pinned: r.Pinned, CreatedAt: r.ReplyCreatedAt.UTC(),
 				},
 				Reports: []api.ReportEntry{},
@@ -35,7 +35,7 @@ func (p *Postgres) ListOpenReports(ctx context.Context) ([]api.ReportedReply, er
 		}
 		out[i].Reports = append(out[i].Reports, api.ReportEntry{
 			Reason: api.ReportReason(r.Reason), Note: r.Note, CreatedAt: r.ReportCreatedAt.UTC(),
-			Reporter: api.UserSummary{Id: r.ReporterID.String(), Nickname: r.Reporter, Avatar: api.Avatar(r.ReporterAvatar)},
+			Reporter: api.UserSummary{Id: r.ReporterID.String(), Nickname: r.Reporter, Avatar: api.ParseAvatar(r.ReporterAvatar)},
 		})
 	}
 	return out, nil

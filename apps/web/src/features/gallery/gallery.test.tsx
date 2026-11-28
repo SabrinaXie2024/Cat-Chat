@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GalleryItem } from '../../api/generated/model'
+import { AVATAR_PRESETS } from '../../components/CatAvatar'
 import { db } from '../../mocks/handlers'
 import { renderApp } from '../../test/render'
 
@@ -70,7 +71,7 @@ describe('gallery (visitor)', () => {
       nickname: '路人',
       password: 'password123',
       isAdmin: false,
-      avatar: 'orange',
+      avatar: AVATAR_PRESETS.orange,
       createdAt: new Date().toISOString(),
     })
     db.sessionUserId = 'u2'

@@ -1,26 +1,33 @@
 import { HttpResponse, http } from 'msw'
-import {
-  Avatar,
-  type ChangePasswordRequest,
-  type GalleryItem,
-  type LoginRequest,
-  type NewGalleryItem,
-  type NewPost,
-  type NewReply,
-  type NewReport,
-  type PasswordResetCompleteRequest,
-  type PasswordResetStartRequest,
-  type Post,
-  type Profile,
-  type ProfileUpdate,
-  type RegisterRequest,
-  type Reply,
-  type ReportedReply,
-  type ReportResolution,
-  type User,
-  type VerifyRegistrationRequest,
+import type {
+  ChangePasswordRequest,
+  GalleryItem,
+  LoginRequest,
+  NewGalleryItem,
+  NewPost,
+  NewReply,
+  NewReport,
+  PasswordResetCompleteRequest,
+  PasswordResetStartRequest,
+  Post,
+  Profile,
+  ProfileUpdate,
+  RegisterRequest,
+  Reply,
+  ReportedReply,
+  ReportResolution,
+  User,
+  VerifyRegistrationRequest,
 } from '../api/generated/model'
 import { getGetHealthMockHandler } from '../api/generated/system/system.msw'
+import {
+  AVATAR_PRESETS,
+  BREEDS,
+  COATS,
+  DEFAULT_AVATAR,
+  EYES,
+  PATTERNS,
+} from '../components/CatAvatar'
 import {
   charCount,
   GALLERY_CAPTION_MAX_CHARS,
@@ -107,7 +114,7 @@ export function resetDb(seed: Post[] = defaultSeed()) {
       id: 'demo',
       createdAt: new Date(0).toISOString(),
       isAdmin: true,
-      avatar: Avatar.orange,
+      avatar: DEFAULT_AVATAR,
       ...DEMO_USER,
     },
     {
@@ -116,7 +123,7 @@ export function resetDb(seed: Post[] = defaultSeed()) {
       nickname: '橘子妈',
       password: crypto.randomUUID(),
       isAdmin: false,
-      avatar: Avatar.calico,
+      avatar: AVATAR_PRESETS.calico,
       createdAt: new Date(0).toISOString(),
     },
   ]
@@ -176,7 +183,7 @@ function defaultSeed(): Post[] {
       id: 'seed-1',
       authorId: SEED_AUTHOR_ID,
       author: '橘子妈',
-      authorAvatar: Avatar.calico,
+      authorAvatar: AVATAR_PRESETS.calico,
       likeCount: 0,
       likedByMe: false,
       favoritedByMe: false,
@@ -255,7 +262,7 @@ export const handlers = [
       nickname: p.nickname,
       password: p.password,
       isAdmin: false,
-      avatar: Avatar.orange,
+      avatar: DEFAULT_AVATAR,
       createdAt: new Date().toISOString(),
     }
     db.users.push(user)
@@ -530,8 +537,14 @@ export const handlers = [
       user.nickname = n
     }
     if (body.avatar !== undefined) {
-      if (!Object.values(Avatar).includes(body.avatar)) return bad('unknown avatar')
-      user.avatar = body.avatar
+      const a = body.avatar
+      const ok =
+        BREEDS.includes(a.breed) &&
+        COATS.includes(a.coat) &&
+        PATTERNS.includes(a.pattern) &&
+        EYES.includes(a.eyes)
+      if (!ok) return bad('unknown avatar')
+      user.avatar = { breed: a.breed, coat: a.coat, pattern: a.pattern, eyes: a.eyes }
     }
     // Posts and replies show the author's current name/avatar (server joins).
     const sync = (x: Post | Reply) => {

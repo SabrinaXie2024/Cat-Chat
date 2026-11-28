@@ -18,51 +18,114 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Defines values for Avatar.
+// Defines values for AvatarBreed.
 const (
-	Black       Avatar = "black"
-	Calico      Avatar = "calico"
-	Cream       Avatar = "cream"
-	Gray        Avatar = "gray"
-	Lihua       Avatar = "lihua"
-	Orange      Avatar = "orange"
-	OrangeWhite Avatar = "orange-white"
-	Siamese     Avatar = "siamese"
-	Silver      Avatar = "silver"
-	Tabby       Avatar = "tabby"
-	Tortie      Avatar = "tortie"
-	Tuxedo      Avatar = "tuxedo"
-	White       Avatar = "white"
+	Fold      AvatarBreed = "fold"
+	Longhair  AvatarBreed = "longhair"
+	Maine     AvatarBreed = "maine"
+	Shorthair AvatarBreed = "shorthair"
 )
 
-// Valid indicates whether the value is a known member of the Avatar enum.
-func (e Avatar) Valid() bool {
+// Valid indicates whether the value is a known member of the AvatarBreed enum.
+func (e AvatarBreed) Valid() bool {
+	switch e {
+	case Fold:
+		return true
+	case Longhair:
+		return true
+	case Maine:
+		return true
+	case Shorthair:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AvatarCoat.
+const (
+	Black  AvatarCoat = "black"
+	Brown  AvatarCoat = "brown"
+	Cream  AvatarCoat = "cream"
+	Gray   AvatarCoat = "gray"
+	Orange AvatarCoat = "orange"
+	Silver AvatarCoat = "silver"
+	White  AvatarCoat = "white"
+)
+
+// Valid indicates whether the value is a known member of the AvatarCoat enum.
+func (e AvatarCoat) Valid() bool {
 	switch e {
 	case Black:
 		return true
-	case Calico:
+	case Brown:
 		return true
 	case Cream:
 		return true
 	case Gray:
 		return true
-	case Lihua:
-		return true
 	case Orange:
-		return true
-	case OrangeWhite:
-		return true
-	case Siamese:
 		return true
 	case Silver:
 		return true
-	case Tabby:
-		return true
-	case Tortie:
-		return true
-	case Tuxedo:
-		return true
 	case White:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AvatarEyes.
+const (
+	Amber  AvatarEyes = "amber"
+	Blue   AvatarEyes = "blue"
+	Green  AvatarEyes = "green"
+	Odd    AvatarEyes = "odd"
+	Yellow AvatarEyes = "yellow"
+)
+
+// Valid indicates whether the value is a known member of the AvatarEyes enum.
+func (e AvatarEyes) Valid() bool {
+	switch e {
+	case Amber:
+		return true
+	case Blue:
+		return true
+	case Green:
+		return true
+	case Odd:
+		return true
+	case Yellow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AvatarPattern.
+const (
+	Bicolor  AvatarPattern = "bicolor"
+	Mackerel AvatarPattern = "mackerel"
+	Patches  AvatarPattern = "patches"
+	Pointed  AvatarPattern = "pointed"
+	Solid    AvatarPattern = "solid"
+	Tabby    AvatarPattern = "tabby"
+)
+
+// Valid indicates whether the value is a known member of the AvatarPattern enum.
+func (e AvatarPattern) Valid() bool {
+	switch e {
+	case Bicolor:
+		return true
+	case Mackerel:
+		return true
+	case Patches:
+		return true
+	case Pointed:
+		return true
+	case Solid:
+		return true
+	case Tabby:
 		return true
 	default:
 		return false
@@ -162,10 +225,26 @@ func (e ReportResolutionAction) Valid() bool {
 	}
 }
 
-// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
-// The users.avatar CHECK constraint repeats this list (latest:
-// migration 00007).
-type Avatar string
+// Avatar A cat face assembled from preset parts (no custom uploads). Stored as
+// "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
+type Avatar struct {
+	Breed   AvatarBreed   `json:"breed"`
+	Coat    AvatarCoat    `json:"coat"`
+	Eyes    AvatarEyes    `json:"eyes"`
+	Pattern AvatarPattern `json:"pattern"`
+}
+
+// AvatarBreed defines model for Avatar.Breed.
+type AvatarBreed string
+
+// AvatarCoat defines model for Avatar.Coat.
+type AvatarCoat string
+
+// AvatarEyes defines model for Avatar.Eyes.
+type AvatarEyes string
+
+// AvatarPattern defines model for Avatar.Pattern.
+type AvatarPattern string
 
 // ChangePasswordRequest defines model for ChangePasswordRequest.
 type ChangePasswordRequest struct {
@@ -282,9 +361,8 @@ type PasswordResetStartRequest struct {
 type Post struct {
 	Author string `json:"author"`
 
-	// AuthorAvatar One of the site's preset cat avatars (custom uploads aren't allowed).
-	// The users.avatar CHECK constraint repeats this list (latest:
-	// migration 00007).
+	// AuthorAvatar A cat face assembled from preset parts (no custom uploads). Stored as
+	// "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
 	AuthorAvatar Avatar    `json:"authorAvatar"`
 	AuthorId     string    `json:"authorId"`
 	Content      string    `json:"content"`
@@ -303,9 +381,8 @@ type Post struct {
 
 // Profile defines model for Profile.
 type Profile struct {
-	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
-	// The users.avatar CHECK constraint repeats this list (latest:
-	// migration 00007).
+	// Avatar A cat face assembled from preset parts (no custom uploads). Stored as
+	// "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
 	Avatar    Avatar    `json:"avatar"`
 	CreatedAt time.Time `json:"createdAt"`
 
@@ -320,9 +397,8 @@ type Profile struct {
 
 // ProfileUpdate defines model for ProfileUpdate.
 type ProfileUpdate struct {
-	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
-	// The users.avatar CHECK constraint repeats this list (latest:
-	// migration 00007).
+	// Avatar A cat face assembled from preset parts (no custom uploads). Stored as
+	// "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
 	Avatar   *Avatar `json:"avatar,omitempty"`
 	Nickname *string `json:"nickname,omitempty"`
 }
@@ -345,9 +421,8 @@ type RegisterRequest struct {
 type Reply struct {
 	Author string `json:"author"`
 
-	// AuthorAvatar One of the site's preset cat avatars (custom uploads aren't allowed).
-	// The users.avatar CHECK constraint repeats this list (latest:
-	// migration 00007).
+	// AuthorAvatar A cat face assembled from preset parts (no custom uploads). Stored as
+	// "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
 	AuthorAvatar Avatar     `json:"authorAvatar"`
 	AuthorId     string     `json:"authorId"`
 	Content      string     `json:"content"`
@@ -390,9 +465,8 @@ type ReportedReply struct {
 
 // User defines model for User.
 type User struct {
-	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
-	// The users.avatar CHECK constraint repeats this list (latest:
-	// migration 00007).
+	// Avatar A cat face assembled from preset parts (no custom uploads). Stored as
+	// "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
 	Avatar    Avatar    `json:"avatar"`
 	CreatedAt time.Time `json:"createdAt"`
 	Email     string    `json:"email"`
@@ -405,9 +479,8 @@ type User struct {
 
 // UserSummary defines model for UserSummary.
 type UserSummary struct {
-	// Avatar One of the site's preset cat avatars (custom uploads aren't allowed).
-	// The users.avatar CHECK constraint repeats this list (latest:
-	// migration 00007).
+	// Avatar A cat face assembled from preset parts (no custom uploads). Stored as
+	// "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
 	Avatar   Avatar `json:"avatar"`
 	Id       string `json:"id"`
 	Nickname string `json:"nickname"`

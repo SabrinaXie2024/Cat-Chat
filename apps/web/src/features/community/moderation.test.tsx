@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Reply } from '../../api/generated/model'
+import { AVATAR_PRESETS } from '../../components/CatAvatar'
 import { db, resetDb, SEED_AUTHOR_ID } from '../../mocks/handlers'
 import { renderApp } from '../../test/render'
 
@@ -10,7 +11,7 @@ const reply = (id: string, authorId: string, content: string, minutesAgo: number
   postId: 'seed-1',
   authorId,
   author: authorId === 'demo' ? '演示用户' : '橘子妈',
-  authorAvatar: 'gray',
+  authorAvatar: AVATAR_PRESETS.gray,
   content,
   images: [],
   pinned: false,

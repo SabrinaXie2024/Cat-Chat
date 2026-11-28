@@ -16,14 +16,14 @@ func (p *Postgres) UpdateProfile(ctx context.Context, userID string, nickname *s
 	}
 	var av *string
 	if avatar != nil {
-		s := string(*avatar)
+		s := avatar.String()
 		av = &s
 	}
 	r, err := p.q.UpdateProfile(ctx, dbq.UpdateProfileParams{ID: uid, Nickname: nickname, Avatar: av})
 	if err != nil {
 		return api.User{}, notFound(err)
 	}
-	return api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, Avatar: api.Avatar(r.Avatar), CreatedAt: r.CreatedAt.UTC()}, nil
+	return api.User{Id: r.ID.String(), Email: r.Email, Nickname: r.Nickname, Avatar: api.ParseAvatar(r.Avatar), CreatedAt: r.CreatedAt.UTC()}, nil
 }
 
 func (p *Postgres) Profile(ctx context.Context, userID, viewerID string) (api.Profile, error) {
@@ -36,7 +36,7 @@ func (p *Postgres) Profile(ctx context.Context, userID, viewerID string) (api.Pr
 		return api.Profile{}, notFound(err)
 	}
 	return api.Profile{
-		Id: r.ID.String(), Nickname: r.Nickname, Avatar: api.Avatar(r.Avatar), CreatedAt: r.CreatedAt.UTC(),
+		Id: r.ID.String(), Nickname: r.Nickname, Avatar: api.ParseAvatar(r.Avatar), CreatedAt: r.CreatedAt.UTC(),
 		PostCount: int(r.PostCount), FollowerCount: int(r.FollowerCount), FollowingCount: int(r.FollowingCount),
 		FollowedByMe: r.FollowedByMe,
 	}, nil

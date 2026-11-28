@@ -777,12 +777,16 @@ components:
         nickname: { type: string }
         avatar: { $ref: "#/components/schemas/Avatar" }
     Avatar:
-      type: string
+      type: object
       description: |
-        One of the site's preset cat avatars (custom uploads aren't allowed).
-        The users.avatar CHECK constraint repeats this list (latest:
-        migration 00007).
-      enum: [orange, black, white, gray, calico, siamese, tuxedo, tabby, silver, tortie, cream, orange-white, lihua]
+        A cat face assembled from preset parts (no custom uploads). Stored as
+        "breed.coat.pattern.eyes", e.g. shorthair.orange.tabby.green.
+      required: [breed, coat, pattern, eyes]
+      properties:
+        breed: { type: string, enum: [shorthair, fold, longhair, maine] }
+        coat: { type: string, enum: [orange, cream, brown, gray, silver, black, white] }
+        pattern: { type: string, enum: [solid, tabby, mackerel, bicolor, patches, pointed] }
+        eyes: { type: string, enum: [green, yellow, blue, amber, odd] }
     ProfileUpdate:
       type: object
       properties:

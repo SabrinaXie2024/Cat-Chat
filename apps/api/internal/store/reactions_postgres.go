@@ -35,7 +35,7 @@ func postRows(rows []dbq.ListPostsRow) []api.Post {
 	out := make([]api.Post, len(rows))
 	for i, r := range rows {
 		out[i] = api.Post{
-			Id: r.ID.String(), AuthorId: r.AuthorID.String(), Author: r.Author, AuthorAvatar: api.Avatar(r.AuthorAvatar),
+			Id: r.ID.String(), AuthorId: r.AuthorID.String(), Author: r.Author, AuthorAvatar: api.ParseAvatar(r.AuthorAvatar),
 			Content: r.Content, Images: nonNil(r.Images), ReplyCount: int(r.ReplyCount), CreatedAt: r.CreatedAt.UTC(),
 			LikeCount: int(r.LikeCount), LikedByMe: r.LikedByMe, FavoritedByMe: r.FavoritedByMe,
 		}
@@ -115,7 +115,7 @@ func summaries[T dbq.ListFollowersRow | dbq.ListFollowingRow](rows []T) []api.Us
 	out := make([]api.UserSummary, len(rows))
 	for i, r := range rows {
 		f := dbq.ListFollowersRow(r)
-		out[i] = api.UserSummary{Id: f.ID.String(), Nickname: f.Nickname, Avatar: api.Avatar(f.Avatar)}
+		out[i] = api.UserSummary{Id: f.ID.String(), Nickname: f.Nickname, Avatar: api.ParseAvatar(f.Avatar)}
 	}
 	return out
 }

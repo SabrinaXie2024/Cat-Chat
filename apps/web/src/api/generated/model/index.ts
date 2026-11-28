@@ -15,6 +15,10 @@
  */
 
 export * from './avatar';
+export * from './avatarBreed';
+export * from './avatarCoat';
+export * from './avatarEyes';
+export * from './avatarPattern';
 export * from './badRequestResponse';
 export * from './changePasswordRequest';
 export * from './codeRejected';
