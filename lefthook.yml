@@ -7,7 +7,8 @@ pre-commit:
     - name: gofmt
       root: apps/api/
       glob: "*.go"
-      run: test -z "$(gofmt -l {staged_files})" || (gofmt -l {staged_files}; exit 1)
+      # Node, not a sh one-liner: must work on Windows too (see the script).
+      run: node ../../scripts/gofmt-check.mjs {staged_files}
 pre-push:
   jobs:
     - name: ghsa
